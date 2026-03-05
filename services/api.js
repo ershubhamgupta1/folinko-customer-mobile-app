@@ -56,7 +56,7 @@ const apiRequest = async (endpoint, options = {}) => {
 
   try {
     const response = await fetch(url, config);
-    
+    console.log('response========', response, url);
     if (!response.ok) {
       const errorData = await response.json().catch(() => ({}));
       
@@ -71,7 +71,15 @@ const apiRequest = async (endpoint, options = {}) => {
       throw new Error(errorData.message || `HTTP error! status: ${response.status}`);
     }
 
-    return await response.json();
+    // Handle different response types
+    const contentType = response.headers.get('content-type');
+    
+    if (contentType && contentType.includes('svg')) {
+        return response.text();
+    } else {
+      // For JSON responses, parse as JSON
+      return await response.json();
+    }
   } catch (error) {
     console.error('API request error:', error);
     

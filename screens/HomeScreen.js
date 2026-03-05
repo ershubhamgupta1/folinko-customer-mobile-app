@@ -1,16 +1,19 @@
 import React, { useState, useEffect } from 'react';
-import { Image, View, Text, StyleSheet, ScrollView, ActivityIndicator, TouchableOpacity } from 'react-native';
-import { shop } from '../services/api';
-import Header from '../components/Header';
+import { View, Text, StyleSheet, ScrollView, TouchableOpacity, ActivityIndicator, Alert } from 'react-native';
+import { Image } from 'react-native';
 import { FontAwesome5 } from '@expo/vector-icons';
 import * as MediaLibrary from "expo-media-library";
 import * as FileSystem from "expo-file-system/legacy";
 import * as Sharing from "expo-sharing";
 import * as Clipboard from "expo-clipboard";
+import { SvgXml } from "react-native-svg";
+import Header from '../components/Header';
+import { shop } from '../services/api';
 
 const HomeScreen = ({ navigation }) => {
   const [loading, setLoading] = useState(true);
   const [shopData, setShopData] = useState(null);
+  const [qrImageUrl, setQrImageUrl] = useState(null);
   const uniqueLink = 'e-kom.io/yourshop';
 
   useEffect(() => {
@@ -21,7 +24,13 @@ const HomeScreen = ({ navigation }) => {
     try {
       setLoading(true);
       const shopResponse = await shop.getMyShop();
+      console.log('shopResponse========', shopResponse)
+      let qrCode = await shop.getQRCode();
+      qrCode = qrCode.replace(/svg:/g, "")
+      .replace(/xmlns:svg="[^"]*"/g, "");
+
       setShopData(shopResponse);
+      setQrImageUrl(qrCode)
     } catch (error) {
       console.error('Error fetching shop data:', error);
     } finally {
@@ -84,14 +93,10 @@ const HomeScreen = ({ navigation }) => {
       console.log(err);
     }
   };
-  const qrImageUrl =
-    "https://api.qrserver.com/v1/create-qr-code/?size=300x300&data=https://example.com";
-
-    const handleCopy = async () => {
+  const handleCopy = async () => {
     await Clipboard.setStringAsync(uniqueLink);
     setCopied(true);
   };
-
   return (
     <ScrollView style={styles.container}>
       <Header 
@@ -99,7 +104,6 @@ const HomeScreen = ({ navigation }) => {
         onNotificationPress={() => console.log('Notification pressed')}
         onProfilePress={() => navigation.navigate('Settings')}
       />
-
       <View style={styles.content}>
         <View style={styles.qrSection}>
           <Text style={styles.sectionTitle}>Your Shop QR</Text>
@@ -107,10 +111,11 @@ const HomeScreen = ({ navigation }) => {
 
           <View style={styles.qrPlaceholder}>
             <View style={styles.qrWrapper}>
-            <Image
-              source={{ uri: qrImageUrl }}
+            <SvgXml
+              xml={qrImageUrl}
+              width={150}
               style={styles.qrImage}
-              resizeMode="contain"
+              height={150}
             />
             </View>
           </View>
@@ -135,7 +140,7 @@ const HomeScreen = ({ navigation }) => {
           <View style={styles.bioLink}>
             <View style={styles.bioUrlContainer}>
               <Text style={styles.bioUrlTitle}>YOUR UNIQUE LINK</Text>
-              <Text style={styles.bioUrl}>{uniqueLink}</Text>
+              <Text style={styles.bioUrl}>{shopData.shop.bio_link}</Text>
             </View>
             <TouchableOpacity style={styles.copyButton} onPress={handleCopy}>
                 <FontAwesome5 name="copy" size={12} color="#fff"/>
@@ -193,6 +198,7 @@ const styles = StyleSheet.create({
     backgroundColor: '#fff',
   },
   content: {
+    flex: 1,
     paddingHorizontal: 20,
   },
   qrSection: {
@@ -229,8 +235,6 @@ const styles = StyleSheet.create({
     shadowRadius: 10,
   },
   qrImage: {
-    width: 150,
-    height: 150,
   },
   qrButtons: {
     flexDirection: 'row',

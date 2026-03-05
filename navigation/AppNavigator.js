@@ -8,12 +8,17 @@ import Octicons from '@expo/vector-icons/Octicons';
 
 import HomeScreen from '../screens/HomeScreen';
 import OrdersScreen from '../screens/OrdersScreen';
+import InventoryScreen from '../screens/InventoryScreen';
+
 import AddProductScreen from '../screens/AddProductScreen';
 import SettingsScreen from '../screens/SettingsScreen';
 import AnalyticsScreen from '../screens/AnalyticsScreen';
 import LoginScreen from '../screens/LoginScreen';
+import { NavigationContainer } from '@react-navigation/native';
+import { createStackNavigator } from '@react-navigation/stack';
 
 const Tab = createBottomTabNavigator();
+const Stack = createStackNavigator();
 
 const MainTabs = () => {
   const insets = useSafeAreaInsets();
@@ -62,7 +67,7 @@ const MainTabs = () => {
       />
       <Tab.Screen 
         name="Orders" 
-        component={OrdersScreen}
+        component={InventoryScreen}
         options={{ 
           headerShown: false,
           tabBarLabel: 'Inventory'
@@ -101,8 +106,9 @@ const MainTabs = () => {
   );
 };
 
+
 const AppNavigator = () => {
-  const { isAuthenticated, loading } = useAuth();
+    const { isAuthenticated, loading } = useAuth();
 
   if (loading) {
     return (
@@ -115,9 +121,35 @@ const AppNavigator = () => {
   if (!isAuthenticated) {
     return <LoginScreen />;
   }
-
-  return <MainTabs />;
+  return (
+    // <NavigationContainer>
+      <Stack.Navigator screenOptions={{ headerShown: false }}>
+        {/* <Stack.Screen name="Login" component={LoginScreen} /> */}
+        <Stack.Screen name="Main" component={MainTabs} />
+        <Stack.Screen name="orderScreen" component={OrdersScreen} />
+      </Stack.Navigator>
+    // </NavigationContainer>
+  );
 };
+
+
+// const AppNavigator = () => {
+//   const { isAuthenticated, loading } = useAuth();
+
+//   if (loading) {
+//     return (
+//       <View style={styles.loadingContainer}>
+//         <ActivityIndicator size="large" color="#000" />
+//       </View>
+//     );
+//   }
+
+//   if (!isAuthenticated) {
+//     return <LoginScreen />;
+//   }
+
+//   return <MainTabs />;
+// };
 
 const styles = StyleSheet.create({
   loadingContainer: {

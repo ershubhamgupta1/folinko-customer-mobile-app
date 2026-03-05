@@ -193,13 +193,12 @@ const AnalyticsScreen = ({ navigation }) => {
           <View style={styles.topMetricsGrid}>
             <View style={styles.topMetricCard}>
               <View style={styles.topMetricLabelContainer}>
-                {/* <Text style={styles.topMetricIcon}>📊</Text> */}
                 <FontAwesome5 name="share-alt" size={20} style={styles.topMetricIcon}/>
                 <Text style={styles.topMetricLabel}>Total Shares</Text>
               </View>
               <View style={styles.topMetricLabelContainer}>
-                <Text style={styles.topMetricValue}>{overviewData?.engagement?.total_shares?.toLocaleString() || '0'}</Text>
-                <Text style={styles.topMetricChange}>+{overviewData?.metrics?.total_shares_change || 15.2}%</Text>
+                <Text style={styles.topMetricValue}>{summaryData?.metrics?.total_shares?.toLocaleString() || '0'}</Text>
+                <Text style={styles.topMetricChange}>+{summaryData?.metrics?.total_shares_change || 15.2}%</Text>
               </View>
             </View>
             <View style={styles.topMetricCard}>
@@ -208,8 +207,8 @@ const AnalyticsScreen = ({ navigation }) => {
                 <Text style={styles.topMetricLabel}>Total Views</Text>
               </View>
               <View style={styles.topMetricLabelContainer}>
-                <Text style={styles.topMetricValue}>{(overviewData?.kpis?.customers * 25)?.toLocaleString() || '0'}</Text>
-                <Text style={styles.topMetricChange}>+{overviewData?.metrics?.total_views_change || 22.7}%</Text>
+                <Text style={styles.topMetricValue}>{(summaryData?.metrics?.total_views)?.toLocaleString() || '0'}</Text>
+                <Text style={styles.topMetricChange}>+{summaryData?.metrics?.total_views_change || 22.7}%</Text>
               </View>
             </View>
             <View style={styles.topMetricCard}>
@@ -218,8 +217,8 @@ const AnalyticsScreen = ({ navigation }) => {
                 <Text style={styles.topMetricLabel}>Total Posts</Text>
               </View>
               <View style={styles.topMetricLabelContainer}>
-                <Text style={styles.topMetricValue}>{overviewData?.inventory?.total_posts || '0'}</Text>
-                <Text style={styles.topMetricChange}>+{overviewData?.metrics?.total_posts_change || 18.9}%</Text>
+                <Text style={styles.topMetricValue}>{summaryData?.metrics?.total_posts || '0'}</Text>
+                <Text style={styles.topMetricChange}>+{summaryData?.metrics?.total_posts_change || 18.9}%</Text>
               </View>
             </View>
             <View style={styles.topMetricCard}>

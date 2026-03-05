@@ -1,11 +1,11 @@
 import React, { useState, useEffect } from 'react';
 import { View, Text, StyleSheet, ScrollView, TouchableOpacity, Switch, ActivityIndicator, Image } from 'react-native';
-import { orders } from '../services/api';
+import { inventory } from '../services/api';
 import Header from '../components/Header';
 import { FontAwesome } from '@expo/vector-icons';
 import Octicons from '@expo/vector-icons/Octicons';
 
-const OrdersScreen = ({ navigation }) => {
+const InventoryScreen = ({ navigation }) => {
   const [autoDecrement, setAutoDecrement] = useState(true);
   const [lowStockNotification, setLowStockNotification] = useState(false);
   const [selectedTab, setSelectedTab] = useState('new');
@@ -14,21 +14,82 @@ const OrdersScreen = ({ navigation }) => {
   const [refreshing, setRefreshing] = useState(false);
 
   useEffect(() => {
-    fetchOrders();
+    fetchPosts();
   }, []);
 
-  const fetchOrders = async () => {
+  const fetchPosts = async () => {
     try {
       setLoading(true);
-      console.log('ordwer service---------', orders);
-      const response = await orders?.getOrders();
-      let ordersDataRes = response?.orders || [];
-      console.log('ordersDataRes---------', ordersDataRes);
+      const response = await inventory?.getPosts();
+      console.log('response=============', JSON.stringify(response));
+      let inventorysDataRes = response?.posts || [];
+      console.log('inventorysDataRes---------', inventorysDataRes);
       // Add mock data for testing if API returns empty
-      if (ordersDataRes.length === 0) {
-        ordersDataRes = [{"created_at": "2026-02-25T14:52:52.201587Z", "customer": {"email": "smridh@tandev.us", "id": 4}, "first_item": {"image_url": "https://instagram.fixc11-1.fna.fbcdn.net/v/t51.82787-15/619600416_18077553527360525_1576591170252182596_n.jpg?stp=dst-jpg_e35_tt6&_nc_cat=103&ig_cache_key=MjcwODEwMzA5NTM2Nzc1NTMwMQ%3D%3D.3-ccb7-5&ccb=7-5&_nc_sid=58cdad&efg=eyJ2ZW5jb2RlX3RhZyI6InhwaWRzLjE0NDB4MTgwMC5zZHIuQzMifQ%3D%3D&_nc_ohc=z51EFAUBRvAQ7kNvwFM2uEs&_nc_oc=Adkb1-kcGq5rbYiEICyuHGTD99n1SwVT3Bo15f9XxhNU8k7NJWZkd3NXfN_J-4t_Q3I&_nc_ad=z-m&_nc_cid=0&_nc_zt=23&_nc_ht=instagram.fixc11-1.fna&_nc_gid=UD5HQuYsn4MsOiaVXVQOow&oh=00_AfsX2M1M46B8vEDA_uUBpl6YmD8T9xgbxwx-6CffrYBr3A&oe=69A4D136", "post_id": 1, "title": "Silk Saree"}, "fulfillment": {"delivered_at": null, "shipped_at": "2026-02-25T14:57:09.176478Z", "status": "SHIPPED", "tracking_code": "DELHI1234", "tracking_url": "https://google.com", "updated_at": "2026-02-25T14:57:09.176959Z"}, "id": 1, "item_count": 1, "order_status": "CREATED", "shop_subtotal": 1499, "total_qty": 1, "updated_at": "2026-02-25T14:52:52.202778Z"}];
+      if (inventorysDataRes.length === 0) {
+        inventorysDataRes = [
+  {
+    "attributes": {
+      "color": "Blue, Red, Yellow",
+      "delivery_fee_amount": 199,
+      "expiry_date": null,
+      "model_number": null,
+      "pattern": null,
+      "size": "S/M/L",
+      "template": "default",
+      "warranty_months": null
+    },
+    "caption": "Top notch saree!",
+    "created_at": "2026-03-02T16:45:05.130013",
+    "currency": "INR",
+    "id": 3,
+    "images": [
+      {
+        "id": 3,
+        "sort_order": 0,
+        "url": "https://instagram.fixc11-1.fna.fbcdn.net/v/t51.82787-15/619600416_18077553527360525_1576591170252182596_n.jpg?stp=dst-jpg_e35_tt6&_nc_cat=103&ig_cache_key=MjcwODEwMzA5NTM2Nzc1NTMwMQ%3D%3D.3-ccb7-5&ccb=7-5&_nc_sid=58cdad&efg=eyJ2ZW5jb2RlX3RhZyI6InhwaWRzLjE0NDB4MTgwMC5zZHIuQzMifQ%3D%3D&_nc_ohc=1nFizLJHDfkQ7kNvwFlqCY8&_nc_oc=AdmJO7td_2orvXv4_I3V9eyXbXP9kqZ4wBGDvV55x3GzTxWI8SUWo2wALCZ39IrrA4I&_nc_ad=z-m&_nc_cid=0&_nc_zt=23&_nc_ht=instagram.fixc11-1.fna&_nc_gid=-irEKu5GKSHLv_ZctwCmIQ&_nc_ss=8&oh=00_AfyI4XA10C3fvsRVjgfHGdZU9qi5hOOoXqBIweWEeWBsTA&oe=69ABA0F6"
       }
-      setOrdersData(ordersDataRes);
+    ],
+    "inventory_image_count": 1,
+    "material": "Silk",
+    "price": 2099,
+    "share_count": 0,
+    "social_platform": "instagram",
+    "social_url": "https://www.instagram.com/p/CWVHWrGh-Yl/",
+    "title": "Saree 2"
+  },
+  {
+    "attributes": {
+      "color": "Yellow, Green, Grey",
+      "delivery_fee_amount": 100,
+      "expiry_date": null,
+      "model_number": null,
+      "pattern": "Floral",
+      "size": "M/L/XL/XXL",
+      "template": "fashion",
+      "warranty_months": null
+    },
+    "caption": "Let get ready to look different in this wedding season ladies!",
+    "created_at": "2026-02-25T12:52:57.776564",
+    "currency": "INR",
+    "id": 1,
+    "images": [
+      {
+        "id": 1,
+        "sort_order": 0,
+        "url": "https://instagram.fixc11-1.fna.fbcdn.net/v/t51.82787-15/619600416_18077553527360525_1576591170252182596_n.jpg?stp=dst-jpg_e35_tt6&_nc_cat=103&ig_cache_key=MjcwODEwMzA5NTM2Nzc1NTMwMQ%3D%3D.3-ccb7-5&ccb=7-5&_nc_sid=58cdad&efg=eyJ2ZW5jb2RlX3RhZyI6InhwaWRzLjE0NDB4MTgwMC5zZHIuQzMifQ%3D%3D&_nc_ohc=z51EFAUBRvAQ7kNvwFM2uEs&_nc_oc=Adkb1-kcGq5rbYiEICyuHGTD99n1SwVT3Bo15f9XxhNU8k7NJWZkd3NXfN_J-4t_Q3I&_nc_ad=z-m&_nc_cid=0&_nc_zt=23&_nc_ht=instagram.fixc11-1.fna&_nc_gid=UD5HQuYsn4MsOiaVXVQOow&oh=00_AfsX2M1M46B8vEDA_uUBpl6YmD8T9xgbxwx-6CffrYBr3A&oe=69A4D136"
+      }
+    ],
+    "inventory_image_count": 1,
+    "material": "Savitri",
+    "price": 1499,
+    "share_count": 0,
+    "social_platform": "instagram",
+    "social_url": "https://www.instagram.com/p/CWVHWrGh-Yl/",
+    "title": "Silk Saree"
+  }
+];
+      }
+      setOrdersData(inventorysDataRes);
     } catch (error) {
       console.error('Error fetching orders:', error);
       // Set mock data on error as well
@@ -73,12 +134,6 @@ const OrdersScreen = ({ navigation }) => {
       </View>
     );
   }
-
-const getDateFromTimestamp = (timestamp)=> {
-  const date = new Date(timestamp);
-  return date.toISOString().split('T')[0];
-}
-
 
   return (
     <ScrollView style={styles.container}>
@@ -141,8 +196,18 @@ const getDateFromTimestamp = (timestamp)=> {
         </View> */}
 
         <View style={styles.pendingSection}>
-          {/* <Text style={{...styles.sectionTitle, paddingBottom: 10, fontSize: 10}}>PENDING ACTION</Text> */}
-          
+            <TouchableOpacity 
+                style={styles.actionButton}
+                onPress={() => {}}
+            >
+                <Text style={styles.actionButtonText}>New post</Text>
+            </TouchableOpacity>
+            <TouchableOpacity 
+                style={styles.actionButton}
+                onPress={() => {navigation.navigate('orderScreen')}}
+            >
+                <Text style={styles.actionButtonText}>View orders</Text>
+            </TouchableOpacity>
           {ordersData.length === 0 ? (
             <View style={styles.emptyContainer}>
               <Text style={styles.emptyText}>No orders found</Text>
@@ -150,28 +215,13 @@ const getDateFromTimestamp = (timestamp)=> {
           ) : (
             ordersData.map((item) => (
               <View key={item.id} style={styles.orderCard}>
-                <View style={styles.orderHeader}>
-                  <Text style={styles.orderId}>#{item.order_number || `ORD-${item.id}`}</Text>
-                  <View style={[
-                    item.order_status === 'CREATED' ? styles.newBadge : 
-                    item.order_status === 'PACKED' ? styles.progressBadge : 
-                    styles.shippedBadge
-                  ]}>
-                    <Text style={[
-                      item.order_status === 'CREATED' ? styles.newBadgeText : 
-                      item.order_status === 'PACKED' ? styles.progressBadgeText : 
-                      styles.shippedBadgeText
-                    ]}>
-                      {item.order_status || 'NEW'}
-                    </Text>
-                  </View>
-                </View>
-                {/* <Text style={styles.customerName}>{item.customer_name || 'Customer'}</Text> */}
                 <View style={styles.productInfo}>
                   <View style={styles.productImage}>
-                    {item.first_item?.image_url ? (
+                    {item.images[0]?.url ? (
                       <Image
-                        source={{ uri: item.first_item?.image_url}} 
+                        width={'100%'}
+                        height={'100%'}   
+                        source={{ uri: item.images[0]?.url}} 
                         style={styles.productIcon} 
                       />
                     ) : (
@@ -181,20 +231,18 @@ const getDateFromTimestamp = (timestamp)=> {
                   <View style={styles.productDetails}>
                     <Text style={styles.productName}>
                       {/* {item.first_item?.title || 'No product title'} {item.size && `(${item.size})`} */}
-                      {item.first_item?.title || 'No product title'}
+                      {item.title || 'No product title'}
                     </Text>
-                    <Text style={styles.stockInfo}>
-                      {getDateFromTimestamp(item.updated_at)}
-                    </Text>
-                    <Text style={styles.stockInfo}>
-                      Qty {item.total_qty}
-                    </Text>
+                    {/* <Text style={styles.stockInfo}>
+                      Stock: {14 || 'N/A'} left
+
+                    </Text> */}
                     <Text style={styles.price}>
-                      ₹{item.shop_subtotal || '0'} +GST
+                      {item.material || '0'}
                     </Text>
                   </View>
                 </View>
-                {/* <View style={styles.orderActions}>
+                <View style={styles.orderActions}>
                   {item.order_status === 'CREATED' && (
                     <TouchableOpacity 
                       style={styles.actionButton}
@@ -211,18 +259,18 @@ const getDateFromTimestamp = (timestamp)=> {
                       <Text style={[styles.actionButtonText, styles.completeButtonText]}>Complete Order</Text>
                     </TouchableOpacity>
                   )}
-                  <TouchableOpacity style={styles.chatButton}>
+                  {/* <TouchableOpacity style={styles.chatButton}>
                     <Text style={item.order_status === 'PACKED' ? styles.phoneIcon : styles.chatIcon}>
                       {item.order_status === 'PACKED' ? 
                         <FontAwesome name="phone" size={16} color="666" /> : 
                         <FontAwesome name="whatsapp" size={16} color="666" />
                       }
                     </Text>
-                  </TouchableOpacity>
-                </View> */}
-                {/* {item.order_status === 'PACKED' && (
+                  </TouchableOpacity> */}
+                </View>
+                {item.order_status === 'PACKED' && (
                   <Text style={styles.stockNote}>Stock will decrement by 1 upon completion.</Text>
-                )} */}
+                )}
               </View>
             ))
           )}
@@ -428,12 +476,12 @@ const styles = StyleSheet.create({
     marginBottom: 10,
   },
   productInfo: {
-    flexDirection: 'row',
+    // flexDirection: 'row',
     marginBottom: 15,
-    alignItems: 'stretch'
   },
   productImage: {
-    width: 100,
+    width: '100%',
+    height: '300',
     backgroundColor: '#f5f5f5',
     borderRadius: 8,
     justifyContent: 'center',
@@ -441,10 +489,7 @@ const styles = StyleSheet.create({
     marginRight: 12,
   },
   productIcon: {
-    fontSize: 24,
-    width: '100%',
-    aspectRatio: 1,
-    resizeMode: 'cover'
+    // fontSize: 24,
   },
   noImageText: {
     fontSize: 10,
@@ -454,7 +499,7 @@ const styles = StyleSheet.create({
     flex: 1,
   },
   productName: {
-    fontSize: 14,
+    fontSize: 16,
     fontWeight: '500',
     color: '#000',
     marginBottom: 4,
@@ -480,6 +525,7 @@ const styles = StyleSheet.create({
     paddingVertical: 10,
     borderRadius: 6,
     marginRight: 10,
+    marginVertical: 20
   },
   completeButton: {
     backgroundColor: '#f0f0f0',
@@ -573,4 +619,4 @@ const styles = StyleSheet.create({
   },
 });
 
-export default OrdersScreen;
+export default InventoryScreen;
