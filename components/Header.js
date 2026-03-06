@@ -77,7 +77,7 @@ const Header = ({
   };
   
   return (
-    <View style={[styles.header, { paddingTop: insets.top + 10 }]}>
+    <View style={[styles.header, { paddingTop: 10 }]}>
       {renderHeaderContent()}
     </View>
   );
@@ -102,6 +102,7 @@ const styles = StyleSheet.create({
     shadowRadius: 3.84,
     elevation: 5,
     zIndex: 100,
+    // backgroundColor: 'red'
   },
   // Default header styles
   defaultHeaderContent: {

@@ -85,7 +85,7 @@ const getDateFromTimestamp = (timestamp)=> {
       <Header 
         title="Orders"
         onNotificationPress={() => console.log('Notification pressed')}
-        onProfilePress={() => navigation.navigate('Settings')}
+        onProfilePress={() => navigation.navigate('dashboard')}
       />
       <View style={styles.content}>
         {/* <View style={styles.ordersHeader}>

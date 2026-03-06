@@ -102,8 +102,14 @@ const HomeScreen = ({ navigation }) => {
       <Header 
         title={shopData?.name || 'E-KOM'}
         onNotificationPress={() => console.log('Notification pressed')}
-        onProfilePress={() => navigation.navigate('Settings')}
+        onProfilePress={() => navigation.navigate('dashboard')}
       />
+      <TouchableOpacity style={styles.qrButton} onPress={() => navigation.navigate('dashboard')}>
+      <Text style={styles.sectionTitle}>Dashboard</Text>
+
+      </TouchableOpacity>
+
+
       <View style={styles.content}>
         <View style={styles.qrSection}>
           <Text style={styles.sectionTitle}>Your Shop QR</Text>

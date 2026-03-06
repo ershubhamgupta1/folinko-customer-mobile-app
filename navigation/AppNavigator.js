@@ -6,9 +6,13 @@ import { useAuth } from '../contexts/AuthContext';
 import { FontAwesome5 } from '@expo/vector-icons';
 import Octicons from '@expo/vector-icons/Octicons';
 
-import HomeScreen from '../screens/HomeScreen';
+import UserProfileScreen from '../screens/UserProfileScreen';
 import OrdersScreen from '../screens/OrdersScreen';
+import ShopProfileScreen from '../screens/ShopProfileScreen';
+
 import InventoryScreen from '../screens/InventoryScreen';
+import DashboardScreen from '../screens/DashboardScreen';
+import PayoutHistoryScreen from '../screens/PayoutHistoryScreen';
 
 import AddProductScreen from '../screens/AddProductScreen';
 import SettingsScreen from '../screens/SettingsScreen';
@@ -16,6 +20,7 @@ import AnalyticsScreen from '../screens/AnalyticsScreen';
 import LoginScreen from '../screens/LoginScreen';
 import { NavigationContainer } from '@react-navigation/native';
 import { createStackNavigator } from '@react-navigation/stack';
+import TrustMeterScreen from '../screens/TrustMeterScreen';
 
 const Tab = createBottomTabNavigator();
 const Stack = createStackNavigator();
@@ -58,11 +63,16 @@ const MainTabs = () => {
       })}
     >
       <Tab.Screen 
-        name="Home" 
-        component={HomeScreen}
+        name="Dashboard" 
+        component={DashboardScreen}
         options={{ 
           headerShown: false,
-          tabBarLabel: 'Home'
+          tabBarLabel: 'Home',
+          tabBarIcon: ({ focused, color, size }) => (
+            <View style={[styles.addButton, focused && styles.addButtonFocused, { marginBottom: 24 }]}>
+              <FontAwesome5 name="home" size={20} color={focused ? '#fff' : color} />
+            </View>
+          )
         }}
       />
       <Tab.Screen 
@@ -95,11 +105,11 @@ const MainTabs = () => {
         }}
       />
       <Tab.Screen 
-        name="Settings" 
-        component={SettingsScreen}
+        name="shopIdentity" 
+        component={ShopProfileScreen}
         options={{ 
           headerShown: false,
-          tabBarLabel: 'Settings'
+          tabBarLabel: 'Shop Profile'
         }}
       />
     </Tab.Navigator>
@@ -127,6 +137,12 @@ const AppNavigator = () => {
         {/* <Stack.Screen name="Login" component={LoginScreen} /> */}
         <Stack.Screen name="Main" component={MainTabs} />
         <Stack.Screen name="orderScreen" component={OrdersScreen} />
+        <Stack.Screen name="shopProfile" component={ShopProfileScreen} />
+        <Stack.Screen name="trustMeter" component={TrustMeterScreen} />
+        <Stack.Screen name="dashboard" component={DashboardScreen} />
+        <Stack.Screen name="payoutHistory" component={PayoutHistoryScreen} />
+        <Stack.Screen name="userProfile" component={UserProfileScreen} />
+
       </Stack.Navigator>
     // </NavigationContainer>
   );
