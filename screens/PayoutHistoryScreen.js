@@ -214,7 +214,7 @@ const PayoutHistoryScreen = ({ navigation }) => {
       <Header 
         title="Payout History"
         onNotificationPress={() => console.log('Notification pressed')}
-        onProfilePress={() => navigation.navigate('dashboard')}
+        onProfilePress={() => navigation.navigate('userProfile')}
       />
       <View style={styles.content}>
         {/* Summary Cards */}

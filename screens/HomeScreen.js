@@ -102,7 +102,7 @@ const HomeScreen = ({ navigation }) => {
       <Header 
         title={shopData?.name || 'E-KOM'}
         onNotificationPress={() => console.log('Notification pressed')}
-        onProfilePress={() => navigation.navigate('dashboard')}
+        onProfilePress={() => navigation.navigate('userProfile')}
       />
       <TouchableOpacity style={styles.qrButton} onPress={() => navigation.navigate('dashboard')}>
       <Text style={styles.sectionTitle}>Dashboard</Text>

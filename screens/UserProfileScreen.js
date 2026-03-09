@@ -9,8 +9,10 @@ import {
 } from "react-native";
 import { Feather } from "@expo/vector-icons";
 import { SafeAreaView } from "react-native-safe-area-context";
+import { useNavigation } from "@react-navigation/native";
 
 export default function ProfileScreen() {
+  const navigation = useNavigation();
 
   const [email, setEmail] = useState("smridh@tandev.us");
   const [name, setName] = useState("Arvind Sharma");
@@ -23,8 +25,17 @@ export default function ProfileScreen() {
   };
 
   return (
-
     <SafeAreaView style={styles.safeArea}>
+      <View style={styles.customHeader}>
+        <TouchableOpacity 
+          style={styles.backButton} 
+          onPress={() => navigation.goBack()}
+        >
+          <Feather name="arrow-left" size={24} color="#333" />
+        </TouchableOpacity>
+        <Text style={styles.headerTitle}>User Profile</Text>
+        <View style={styles.headerSpacer} />
+      </View>
       <ScrollView style={styles.container}>
         {/* Profile Card */}
 
@@ -276,5 +287,30 @@ const styles = StyleSheet.create({
     fontSize: 16,
     color: "#374151",
     lineHeight: 22
+  },
+
+  customHeader: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
+    paddingHorizontal: 20,
+    paddingVertical: 15,
+    backgroundColor: "#fff",
+    borderBottomWidth: 1,
+    borderBottomColor: "#f0f0f0"
+  },
+
+  backButton: {
+    padding: 5
+  },
+
+  headerTitle: {
+    fontSize: 18,
+    fontWeight: "600",
+    color: "#333"
+  },
+
+  headerSpacer: {
+    width: 34
   }
 });

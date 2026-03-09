@@ -12,16 +12,18 @@ import { analytics } from "../services/api";
 import { Feather, MaterialIcons } from "@expo/vector-icons";
 import { SafeAreaView } from "react-native-safe-area-context";
 
-const StatCard = ({ title, desc }) => (
+const StatCard = ({ title, desc, value }) => (
   <View style={styles.statBox}>
     <Text style={styles.statTitle}>{title}</Text>
-    <Text style={styles.statValue}>—</Text>
+    <Text style={styles.statValue}>{value || "—"}</Text>
     <Text style={styles.statDesc}>{desc}</Text>
   </View>
 );
 
 const DashboardScreen = ({ navigation }) => {
   const [refreshing, setRefreshing] = useState(false);
+  const [metrics, setMetrics] = useState({});
+  const [shop, setShop] = useState({});
 
   useEffect(() => {
     fetchSummaryData();
@@ -29,7 +31,20 @@ const DashboardScreen = ({ navigation }) => {
 
   const fetchSummaryData = async () => {
     try {
-      await analytics.getSummary();
+      const summaryResponse = await analytics.getSummary();
+      console.log('summaryResponse========', JSON.stringify(summaryResponse))
+      
+      // Extract data from API response
+      const metricsData = summaryResponse?.metrics || {};
+      const shopData = summaryResponse?.shop || {};
+      
+      // Set state variables
+      setMetrics(metricsData);
+      setShop(shopData);
+      
+      console.log('Metrics:', metricsData);
+      console.log('Shop:', shopData);
+      
     } catch (error) {
       console.error("Error fetching summary data:", error);
     }
@@ -72,14 +87,17 @@ const DashboardScreen = ({ navigation }) => {
               <StatCard
                 title="Total Posts"
                 desc="Every post is a structured product card"
+                value={metrics.total_posts}
               />
               <StatCard
                 title="Inventory Images"
                 desc="Boost conversions with multi-image support"
+                value={metrics.total_images}
               />
               <StatCard
                 title="Total Shares"
                 desc="Signal: demand and social proof"
+                value={metrics.total_shares}
               />
             </View>
           </View>

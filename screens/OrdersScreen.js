@@ -2,8 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { View, Text, StyleSheet, ScrollView, TouchableOpacity, Switch, ActivityIndicator, Image } from 'react-native';
 import { orders } from '../services/api';
 import Header from '../components/Header';
-import { FontAwesome } from '@expo/vector-icons';
-import Octicons from '@expo/vector-icons/Octicons';
+import { SafeAreaView } from "react-native-safe-area-context";
 
 const OrdersScreen = ({ navigation }) => {
   const [autoDecrement, setAutoDecrement] = useState(true);
@@ -81,181 +80,188 @@ const getDateFromTimestamp = (timestamp)=> {
 
 
   return (
-    <ScrollView style={styles.container}>
-      <Header 
-        title="Orders"
-        onNotificationPress={() => console.log('Notification pressed')}
-        onProfilePress={() => navigation.navigate('dashboard')}
-      />
-      <View style={styles.content}>
-        {/* <View style={styles.ordersHeader}>
-          <Text style={styles.ordersTitle}>Orders</Text>
-          <TouchableOpacity style={styles.filterButton}>
-            <FontAwesome name="filter" size={14} style={{paddingTop: 4, marginRight: 4}} color="black" />
-            <Text style={styles.filterText}>Filter</Text>
-          </TouchableOpacity>
-        </View> */}
-
-        {/* <View style={styles.tabsContainer}>
-          <TouchableOpacity
-            style={[styles.tab, selectedTab === 'new' && styles.activeTab]}
-            onPress={() => setSelectedTab('new')}
-          >
-            <Text style={[styles.tabText, selectedTab === 'new' && styles.activeTabText]}>
-              New (3)
-            </Text>
-          </TouchableOpacity>
-          <TouchableOpacity
-            style={[styles.tab, selectedTab === 'active' && styles.activeTab]}
-            onPress={() => setSelectedTab('active')}
-          >
-            <Text style={[styles.tabText, selectedTab === 'active' && styles.activeTabText]}>
-              Active
-            </Text>
-          </TouchableOpacity>
-          <TouchableOpacity
-            style={[styles.tab, selectedTab === 'history' && styles.activeTab]}
-            onPress={() => setSelectedTab('history')}
-          >
-            <Text style={[styles.tabText, selectedTab === 'history' && styles.activeTabText]}>
-              History
-            </Text>
-          </TouchableOpacity>
-        </View> */}
-
-        {/* <View style={styles.summaryCards}>
-          <View style={styles.summaryCard}>
-            <Text style={styles.summaryTitle}>STOCK ALERTS</Text>
-            <View style={styles.summaryStockAlertContainer}>
-              <FontAwesome name="warning" size={14} style={{paddingTop: 4, marginRight: 4}} color="black" />
-              <Text style={styles.summaryValue}>2 items low</Text>
-            </View>
-          </View>
-          <View style={styles.summaryCard}>
-            <Text style={styles.summaryTitle}>TODAY'S SALES</Text>
-            <View style={styles.summaryStockAlertContainer}>
-              <Octicons name="graph" size={14} style={{paddingTop: 4, marginRight: 4}} color="black" />
-              <Text style={styles.summaryValue}>{ordersData.length} orders</Text>
-            </View>
-          </View>
-        </View> */}
-
-        <View style={styles.pendingSection}>
-          {/* <Text style={{...styles.sectionTitle, paddingBottom: 10, fontSize: 10}}>PENDING ACTION</Text> */}
-          
-          {ordersData.length === 0 ? (
-            <View style={styles.emptyContainer}>
-              <Text style={styles.emptyText}>No orders found</Text>
-            </View>
-          ) : (
-            ordersData.map((item) => (
-              <View key={item.id} style={styles.orderCard}>
-                <View style={styles.orderHeader}>
-                  <Text style={styles.orderId}>#{item.order_number || `ORD-${item.id}`}</Text>
-                  <View style={[
-                    item.order_status === 'CREATED' ? styles.newBadge : 
-                    item.order_status === 'PACKED' ? styles.progressBadge : 
-                    styles.shippedBadge
-                  ]}>
-                    <Text style={[
-                      item.order_status === 'CREATED' ? styles.newBadgeText : 
-                      item.order_status === 'PACKED' ? styles.progressBadgeText : 
-                      styles.shippedBadgeText
-                    ]}>
-                      {item.order_status || 'NEW'}
-                    </Text>
-                  </View>
-                </View>
-                {/* <Text style={styles.customerName}>{item.customer_name || 'Customer'}</Text> */}
-                <View style={styles.productInfo}>
-                  <View style={styles.productImage}>
-                    {item.first_item?.image_url ? (
-                      <Image
-                        source={{ uri: item.first_item?.image_url}} 
-                        style={styles.productIcon} 
-                      />
-                    ) : (
-                      <Text style={styles.noImageText}>No Image</Text>
-                    )}
-                  </View>
-                  <View style={styles.productDetails}>
-                    <Text style={styles.productName}>
-                      {/* {item.first_item?.title || 'No product title'} {item.size && `(${item.size})`} */}
-                      {item.first_item?.title || 'No product title'}
-                    </Text>
-                    <Text style={styles.stockInfo}>
-                      {getDateFromTimestamp(item.updated_at)}
-                    </Text>
-                    <Text style={styles.stockInfo}>
-                      Qty {item.total_qty}
-                    </Text>
-                    <Text style={styles.price}>
-                      ₹{item.shop_subtotal || '0'} +GST
-                    </Text>
-                  </View>
-                </View>
-                {/* <View style={styles.orderActions}>
-                  {item.order_status === 'CREATED' && (
-                    <TouchableOpacity 
-                      style={styles.actionButton}
-                      onPress={() => updateOrderStatus(item.id, 'PACKED')}
-                    >
-                      <Text style={styles.actionButtonText}>Mark 'In-Progress'</Text>
-                    </TouchableOpacity>
-                  )}
-                  {item.order_status === 'PACKED' && (
-                    <TouchableOpacity 
-                      style={[styles.actionButton, styles.completeButton]}
-                      onPress={() => updateOrderStatus(item.id, 'SHIPPED')}
-                    >
-                      <Text style={[styles.actionButtonText, styles.completeButtonText]}>Complete Order</Text>
-                    </TouchableOpacity>
-                  )}
-                  <TouchableOpacity style={styles.chatButton}>
-                    <Text style={item.order_status === 'PACKED' ? styles.phoneIcon : styles.chatIcon}>
-                      {item.order_status === 'PACKED' ? 
-                        <FontAwesome name="phone" size={16} color="666" /> : 
-                        <FontAwesome name="whatsapp" size={16} color="666" />
-                      }
-                    </Text>
-                  </TouchableOpacity>
-                </View> */}
-                {/* {item.order_status === 'PACKED' && (
-                  <Text style={styles.stockNote}>Stock will decrement by 1 upon completion.</Text>
-                )} */}
-              </View>
-            ))
-          )}
-        </View>
-
-        {/* <View style={styles.inventorySection}>
-          <View style={styles.sectionHeader}>
-            <Text style={styles.sectionTitle}>Inventory Logic</Text>
-            <TouchableOpacity style={styles.refreshIcon}>
-              <FontAwesome name="refresh" size={16} color="#666" />
+    <SafeAreaView style={styles.safeArea}>
+      <ScrollView style={styles.container}>
+        <Header 
+          title="Orders"
+          onNotificationPress={() => console.log('Notification pressed')}
+          onProfilePress={() => navigation.navigate('userProfile')}
+        />
+        <View style={styles.content}>
+          {/* <View style={styles.ordersHeader}>
+            <Text style={styles.ordersTitle}>Orders</Text>
+            <TouchableOpacity style={styles.filterButton}>
+              <FontAwesome name="filter" size={14} style={{paddingTop: 4, marginRight: 4}} color="black" />
+              <Text style={styles.filterText}>Filter</Text>
             </TouchableOpacity>
+          </View> */}
+
+          {/* <View style={styles.tabsContainer}>
+            <TouchableOpacity
+              style={[styles.tab, selectedTab === 'new' && styles.activeTab]}
+              onPress={() => setSelectedTab('new')}
+            >
+              <Text style={[styles.tabText, selectedTab === 'new' && styles.activeTabText]}>
+                New (3)
+              </Text>
+            </TouchableOpacity>
+            <TouchableOpacity
+              style={[styles.tab, selectedTab === 'active' && styles.activeTab]}
+              onPress={() => setSelectedTab('active')}
+            >
+              <Text style={[styles.tabText, selectedTab === 'active' && styles.activeTabText]}>
+                Active
+              </Text>
+            </TouchableOpacity>
+            <TouchableOpacity
+              style={[styles.tab, selectedTab === 'history' && styles.activeTab]}
+              onPress={() => setSelectedTab('history')}
+            >
+              <Text style={[styles.tabText, selectedTab === 'history' && styles.activeTabText]}>
+                History
+              </Text>
+            </TouchableOpacity>
+          </View> */}
+
+          {/* <View style={styles.summaryCards}>
+            <View style={styles.summaryCard}>
+              <Text style={styles.summaryTitle}>STOCK ALERTS</Text>
+              <View style={styles.summaryStockAlertContainer}>
+                <FontAwesome name="warning" size={14} style={{paddingTop: 4, marginRight: 4}} color="black" />
+                <Text style={styles.summaryValue}>2 items low</Text>
+              </View>
+            </View>
+            <View style={styles.summaryCard}>
+              <Text style={styles.summaryTitle}>TODAY'S SALES</Text>
+              <View style={styles.summaryStockAlertContainer}>
+                <Octicons name="graph" size={14} style={{paddingTop: 4, marginRight: 4}} color="black" />
+                <Text style={styles.summaryValue}>{ordersData.length} orders</Text>
+              </View>
+            </View>
+          </View> */}
+
+          <View style={styles.pendingSection}>
+            {/* <Text style={{...styles.sectionTitle, paddingBottom: 10, fontSize: 10}}>PENDING ACTION</Text> */}
+            
+            {ordersData.length === 0 ? (
+              <View style={styles.emptyContainer}>
+                <Text style={styles.emptyText}>No orders found</Text>
+              </View>
+            ) : (
+              ordersData.map((item) => (
+                <View key={item.id} style={styles.orderCard}>
+                  <View style={styles.orderHeader}>
+                    <Text style={styles.orderId}>#{item.order_number || `ORD-${item.id}`}</Text>
+                    <View style={[
+                      item.order_status === 'CREATED' ? styles.newBadge : 
+                      item.order_status === 'PACKED' ? styles.progressBadge : 
+                      styles.shippedBadge
+                    ]}>
+                      <Text style={[
+                        item.order_status === 'CREATED' ? styles.newBadgeText : 
+                        item.order_status === 'PACKED' ? styles.progressBadgeText : 
+                        styles.shippedBadgeText
+                      ]}>
+                        {item.order_status || 'NEW'}
+                      </Text>
+                    </View>
+                  </View>
+                  {/* <Text style={styles.customerName}>{item.customer_name || 'Customer'}</Text> */}
+                  <View style={styles.productInfo}>
+                    <View style={styles.productImage}>
+                      {item.first_item?.image_url ? (
+                        <Image
+                          source={{ uri: item.first_item?.image_url}} 
+                          style={styles.productIcon} 
+                        />
+                      ) : (
+                        <Text style={styles.noImageText}>No Image</Text>
+                      )}
+                    </View>
+                    <View style={styles.productDetails}>
+                      <Text style={styles.productName}>
+                        {/* {item.first_item?.title || 'No product title'} {item.size && `(${item.size})`} */}
+                        {item.first_item?.title || 'No product title'}
+                      </Text>
+                      <Text style={styles.stockInfo}>
+                        {getDateFromTimestamp(item.updated_at)}
+                      </Text>
+                      <Text style={styles.stockInfo}>
+                        Qty {item.total_qty}
+                      </Text>
+                      <Text style={styles.price}>
+                        ₹{item.shop_subtotal || '0'} +GST
+                      </Text>
+                    </View>
+                  </View>
+                  {/* <View style={styles.orderActions}>
+                    {item.order_status === 'CREATED' && (
+                      <TouchableOpacity 
+                        style={styles.actionButton}
+                        onPress={() => updateOrderStatus(item.id, 'PACKED')}
+                      >
+                        <Text style={styles.actionButtonText}>Mark 'In-Progress'</Text>
+                      </TouchableOpacity>
+                    )}
+                    {item.order_status === 'PACKED' && (
+                      <TouchableOpacity 
+                        style={[styles.actionButton, styles.completeButton]}
+                        onPress={() => updateOrderStatus(item.id, 'SHIPPED')}
+                      >
+                        <Text style={[styles.actionButtonText, styles.completeButtonText]}>Complete Order</Text>
+                      </TouchableOpacity>
+                    )}
+                    <TouchableOpacity style={styles.chatButton}>
+                      <Text style={item.order_status === 'PACKED' ? styles.phoneIcon : styles.chatIcon}>
+                        {item.order_status === 'PACKED' ? 
+                          <FontAwesome name="phone" size={16} color="666" /> : 
+                          <FontAwesome name="whatsapp" size={16} color="666" />
+                        }
+                      </Text>
+                    </TouchableOpacity>
+                  </View> */}
+                  {/* {item.order_status === 'PACKED' && (
+                    <Text style={styles.stockNote}>Stock will decrement by 1 upon completion.</Text>
+                  )} */}
+                </View>
+              ))
+            )}
           </View>
-          <View style={styles.toggleItem}>
-            <Text style={styles.toggleLabel}>Auto-Decrement</Text>
-            <Switch
-              value={autoDecrement}
-              onValueChange={setAutoDecrement}
-            />
-          </View>
-          <View style={{...styles.toggleItem, borderBottomWidth:0}}>
-            <Text style={styles.toggleLabel}>Low Stock Notification</Text>
-            <Switch
-              value={lowStockNotification}
-              onValueChange={setLowStockNotification}
-            />
-          </View>
-        </View> */}
-      </View>
-    </ScrollView>
+
+          {/* <View style={styles.inventorySection}>
+            <View style={styles.sectionHeader}>
+              <Text style={styles.sectionTitle}>Inventory Logic</Text>
+              <TouchableOpacity style={styles.refreshIcon}>
+                <FontAwesome name="refresh" size={16} color="#666" />
+              </TouchableOpacity>
+            </View>
+            <View style={styles.toggleItem}>
+              <Text style={styles.toggleLabel}>Auto-Decrement</Text>
+              <Switch
+                value={autoDecrement}
+                onValueChange={setAutoDecrement}
+              />
+            </View>
+            <View style={{...styles.toggleItem, borderBottomWidth:0}}>
+              <Text style={styles.toggleLabel}>Low Stock Notification</Text>
+              <Switch
+                value={lowStockNotification}
+                onValueChange={setLowStockNotification}
+              />
+            </View>
+          </View> */}
+        </View>
+      </ScrollView>
+    </SafeAreaView>
+    
   );
 };
 
 const styles = StyleSheet.create({
+  safeArea: {
+      flex: 1,
+      backgroundColor: "#fff"
+  },
   container: {
     flex: 1,
     backgroundColor: '#fff',

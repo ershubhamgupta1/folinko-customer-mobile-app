@@ -60,44 +60,44 @@ const ShopProfileScreen = ({ navigation }) => {
       // Mock data for testing if API returns empty
       let payoutList = response?.payouts || [];
       if (payoutList.length === 0) {
-        payoutList = [
-          {
-            id: 1,
-            amount: 2500.00,
-            status: 'COMPLETED',
-            payout_date: '2026-02-25T10:30:00Z',
-            transaction_id: 'TXN123456789',
-            bank_account: '****1234',
-            payment_method: 'Bank Transfer',
-            processing_fee: 25.00,
-            net_amount: 2475.00,
-            remarks: 'Monthly payout February 2026'
-          },
-          {
-            id: 2,
-            amount: 1800.00,
-            status: 'PROCESSING',
-            payout_date: '2026-02-28T14:15:00Z',
-            transaction_id: 'TXN123456790',
-            bank_account: '****1234',
-            payment_method: 'Bank Transfer',
-            processing_fee: 18.00,
-            net_amount: 1782.00,
-            remarks: 'Monthly payout February 2026 - Processing'
-          },
-          {
-            id: 3,
-            amount: 3200.00,
-            status: 'FAILED',
-            payout_date: '2026-02-20T09:45:00Z',
-            transaction_id: 'TXN123456791',
-            bank_account: '****1234',
-            payment_method: 'Bank Transfer',
-            processing_fee: 32.00,
-            net_amount: 3168.00,
-            remarks: 'Bank account verification failed'
-          }
-        ];
+        // payoutList = [
+        //   {
+        //     id: 1,
+        //     amount: 2500.00,
+        //     status: 'COMPLETED',
+        //     payout_date: '2026-02-25T10:30:00Z',
+        //     transaction_id: 'TXN123456789',
+        //     bank_account: '****1234',
+        //     payment_method: 'Bank Transfer',
+        //     processing_fee: 25.00,
+        //     net_amount: 2475.00,
+        //     remarks: 'Monthly payout February 2026'
+        //   },
+        //   {
+        //     id: 2,
+        //     amount: 1800.00,
+        //     status: 'PROCESSING',
+        //     payout_date: '2026-02-28T14:15:00Z',
+        //     transaction_id: 'TXN123456790',
+        //     bank_account: '****1234',
+        //     payment_method: 'Bank Transfer',
+        //     processing_fee: 18.00,
+        //     net_amount: 1782.00,
+        //     remarks: 'Monthly payout February 2026 - Processing'
+        //   },
+        //   {
+        //     id: 3,
+        //     amount: 3200.00,
+        //     status: 'FAILED',
+        //     payout_date: '2026-02-20T09:45:00Z',
+        //     transaction_id: 'TXN123456791',
+        //     bank_account: '****1234',
+        //     payment_method: 'Bank Transfer',
+        //     processing_fee: 32.00,
+        //     net_amount: 3168.00,
+        //     remarks: 'Bank account verification failed'
+        //   }
+        // ];
       }
       setPayoutData(payoutList);
     } catch (error) {
@@ -116,38 +116,32 @@ const ShopProfileScreen = ({ navigation }) => {
     try {
       setLoading(true);
       const response = await shop.getMyShop();
-      setShopData(response);
+      console.log('shop response============', JSON.stringify(response))
+      
+      // Extract shop data from nested response
+      const shopResponse = response?.shop || {};
+      
+      setShopData(shopResponse);
       setFormData({
-        name: response?.name || '',
-        email: response?.email || '',
-        phone: response?.phone || '',
-        whatsapp: response?.whatsapp || '',
-        address: response?.address || '',
-        city: response?.city || '',
-        category: response?.category || '',
-        description: response?.description || '',
-        logo: response?.logo || null,
-        instagram: response?.instagram || '',
-        pinterest: response?.pinterest || '',
-        youtube: response?.youtube || '',
-        website: response?.website || '',
-        foundedYear: response?.founded_year || '',
-        lifetimeSales: response?.lifetime_sales || '',
-        tagLine: response?.tag_line || '',
-        knownFor: response?.known_for || '',
-        yourStory: response?.your_story || ''
+        name: shopResponse?.name || '',
+        email: shopResponse?.email || '',
+        phone: shopResponse?.phone || '',
+        whatsapp: shopResponse?.whatsapp || '',
+        address: shopResponse?.address || '',
+        city: shopResponse?.city || '',
+        category: shopResponse?.category || '',
+        description: shopResponse?.description || '',
+        website: shopResponse?.website_url || '',
+        foundedYear: shopResponse?.founded_year ? shopResponse.founded_year.toString() : '',
+        lifetimeSales: shopResponse?.claimed_lifetime_sales ? shopResponse.claimed_lifetime_sales.toString() : '',
+        tagLine: shopResponse?.tagline || '',
+        knownFor: shopResponse?.known_for || '',
+        yourStory: shopResponse?.story || '',
+        bankAccountName: shopResponse?.payout_ifsc_code || '',
+        accountNumber: shopResponse?.payout_account_number || '',
+        upiId: shopResponse?.payout_upi_id || ''
       });
-
-      // Fetch QR code
-      try {
-        let qrCode = await shop.getQRCode();
-        qrCode = qrCode.replace(/svg:/g, "").replace(/xmlns:svg="[^"]*"/g, "");
-        setQrImageUrl(qrCode);
-      } catch (qrError) {
-        console.error('Error fetching QR code:', qrError);
-        // Set a default QR code or keep it null
-        setQrImageUrl(null);
-      }
+      
     } catch (error) {
       console.error('Error fetching shop data:', error);
       Alert.alert('Error', 'Failed to load shop data');
@@ -276,13 +270,13 @@ const ShopProfileScreen = ({ navigation }) => {
             <Text style={styles.statusText}>{item.status || 'PENDING'}</Text>
           </View>
         </View>
-        <Text style={styles.dateText}>{formatDate(item.payout_date)}</Text>
+        <Text style={styles.dateText}>{formatDate(item.created_at)}</Text>
       </View>
 
       <View style={styles.payoutDetails}>
         <View style={styles.detailRow}>
           <Text style={styles.detailLabel}>Transaction ID:</Text>
-          <Text style={styles.detailValue}>{item.transaction_id || 'N/A'}</Text>
+          <Text style={styles.detailValue}>{item.transaction_ref || 'N/A'}</Text>
         </View>
         <View style={styles.detailRow}>
           <Text style={styles.detailLabel}>Payment Method:</Text>
@@ -385,7 +379,7 @@ const ShopProfileScreen = ({ navigation }) => {
         <Header 
           title="Shop Profile"
           onNotificationPress={() => console.log('Notification pressed')}
-          onProfilePress={() => navigation.navigate('Settings')}
+          onProfilePress={() => navigation.navigate('userProfile')}
         />
         <View style={styles.content}>
           {/* Shop Logo Section */}

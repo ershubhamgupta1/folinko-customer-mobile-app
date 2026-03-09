@@ -86,7 +86,7 @@ const InventoryScreen = ({ navigation }) => {
                 <Header
                     title="Inventory"
                     onNotificationPress={() => { }}
-                    onProfilePress={() => navigation.navigate("dashboard")}
+                    onProfilePress={() => navigation.navigate("userProfile")}
                 />
 
                 <View style={styles.content}>

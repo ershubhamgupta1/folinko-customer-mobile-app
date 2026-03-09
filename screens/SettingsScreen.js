@@ -55,7 +55,7 @@ const SettingsScreen = ({ navigation }) => {
       <Header
         title="Settings"
         onNotificationPress={() => console.log('Notification pressed')}
-        onProfilePress={() => navigation.navigate('Settings')}
+        onProfilePress={() => navigation.navigate('userProfile')}
       />
       <View style={styles.content}>
         <View style={styles.trustMeterSection}>

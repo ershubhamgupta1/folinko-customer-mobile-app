@@ -9,9 +9,10 @@ import {
 } from "react-native";
 import { Feather } from "@expo/vector-icons";
 import { SafeAreaView } from "react-native-safe-area-context";
-import Header from "../components/Header";
+import { useNavigation } from "@react-navigation/native";
 
 export default function AddPostScreen() {
+  const navigation = useNavigation();
 
   const [url, setUrl] = useState("");
   const [title, setTitle] = useState("");
@@ -25,11 +26,16 @@ export default function AddPostScreen() {
 
   return (
     <SafeAreaView style={styles.safeArea}>
-      <Header
-        title="Create post"
-        onNotificationPress={() => console.log("Notification pressed")}
-        onProfilePress={() => navigation.navigate("userProfile")}
-      />
+      <View style={styles.customHeader}>
+        <TouchableOpacity 
+          style={styles.backButton} 
+          onPress={() => navigation.goBack()}
+        >
+          <Feather name="arrow-left" size={24} color="#333" />
+        </TouchableOpacity>
+        <Text style={styles.headerTitle}>Create post</Text>
+        <View style={styles.headerSpacer} />
+      </View>
       <ScrollView style={styles.container}>
         <View style={{ padding: 20 }}>
           {/* Create Post */}
@@ -410,6 +416,31 @@ const styles = StyleSheet.create({
     borderRadius: 20,
     paddingHorizontal: 12,
     paddingVertical: 6
+  },
+
+  customHeader: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
+    paddingHorizontal: 20,
+    paddingVertical: 15,
+    backgroundColor: "#fff",
+    borderBottomWidth: 1,
+    borderBottomColor: "#f0f0f0"
+  },
+
+  backButton: {
+    padding: 5
+  },
+
+  headerTitle: {
+    fontSize: 18,
+    fontWeight: "600",
+    color: "#333"
+  },
+
+  headerSpacer: {
+    width: 34
   },
 
   qrText: {

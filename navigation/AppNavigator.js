@@ -84,14 +84,14 @@ const MainTabs = () => {
         }}
       />
       <Tab.Screen 
-        name="Add" 
-        component={AddProductScreen}
+        name="orders" 
+        component={OrdersScreen}
         options={{ 
           headerShown: false,
-          tabBarLabel: 'Add',
+          tabBarLabel: 'Orders',
           tabBarIcon: ({ focused, color, size }) => (
             <View style={[styles.addButton, focused && styles.addButtonFocused, { marginBottom: 24 }]}>
-              <FontAwesome5 name="plus" size={20} color={focused ? '#fff' : color} />
+              <FontAwesome5 name="shopping-bag" size={20} color={focused ? '#fff' : color} />
             </View>
           )
         }}
@@ -101,7 +101,7 @@ const MainTabs = () => {
         component={AnalyticsScreen}
         options={{ 
           headerShown: false,
-          tabBarLabel: 'Sales'
+          tabBarLabel: 'Analytics'
         }}
       />
       <Tab.Screen 
@@ -145,6 +145,7 @@ const AppNavigator = () => {
         <Stack.Screen name="dashboard" component={DashboardScreen} />
         <Stack.Screen name="payoutHistory" component={PayoutHistoryScreen} />
         <Stack.Screen name="userProfile" component={UserProfileScreen} />
+        <Stack.Screen name="addPost" component={AddProductScreen} />
 
       </Stack.Navigator>
     // </NavigationContainer>
