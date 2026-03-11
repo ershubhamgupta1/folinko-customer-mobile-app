@@ -14,7 +14,8 @@ import { SafeAreaView } from "react-native-safe-area-context";
 const ShopProfileScreen = ({ navigation }) => {
   const [loading, setLoading] = useState(true);
   const [shopData, setShopData] = useState(null);
-  const [isEditing, setIsEditing] = useState(false);
+  const [isEditingProfile, setIsEditingProfile] = useState(false);
+  // const [isEditingProfile, setisEditingProfile] = useState(false);
   const [payoutData, setPayoutData] = useState([]);
   const [refreshing, setRefreshing] = useState(false);
   const [qrImageUrl, setQrImageUrl] = useState(null);
@@ -38,9 +39,8 @@ const ShopProfileScreen = ({ navigation }) => {
     knownFor: '',
     yourStory: '',
     storefrontStory: '',
-    bankAccountName: '',
-    accountNumber: '',
     ifscCode: '',
+    accountNumber: '',
     upiId: '',
     accountHolderName: '',
     payoutFrequency: 'Weekly',
@@ -137,7 +137,7 @@ const ShopProfileScreen = ({ navigation }) => {
         tagLine: shopResponse?.tagline || '',
         knownFor: shopResponse?.known_for || '',
         yourStory: shopResponse?.story || '',
-        bankAccountName: shopResponse?.payout_ifsc_code || '',
+        ifscCode: shopResponse?.payout_ifsc_code || '',
         accountNumber: shopResponse?.payout_account_number || '',
         upiId: shopResponse?.payout_upi_id || ''
       });
@@ -165,6 +165,63 @@ const ShopProfileScreen = ({ navigation }) => {
     } catch (error) {
       console.error('Error picking image:', error);
       Alert.alert('Error', 'Failed to pick image');
+    }
+  };
+
+  const handleSaveProfile = async () => {
+    try {
+      setLoading(true);
+      // API call to update shop profile data only
+      const profileData = {
+        name: formData.name,
+        // email: formData.email,
+        phone: formData.phone,
+        whatsapp: formData.whatsapp,
+        address: formData.address,
+        city: formData.city,
+        category: formData.category,
+        payout_ifsc_code: formData.ifscCode,
+        payout_account_number: formData.accountNumber,
+        payout_upi_id: formData.upiId
+
+        // description: formData.description,
+        // website: formData.website,
+        // foundedYear: formData.foundedYear,
+        // lifetimeSales: formData.lifetimeSales,
+        // tagLine: formData.tagLine,
+        // knownFor: formData.knownFor,
+        // yourStory: formData.yourStory
+      };
+      await shop.createOrUpdateShop(profileData);
+      setShopData({ ...shopData, ...profileData });
+      setIsEditingProfile(false);
+      Alert.alert('Success', 'Shop profile updated successfully');
+    } catch (error) {
+      console.error('Error updating shop profile:', error);
+      Alert.alert('Error', 'Failed to update shop profile');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleSavePayout = async () => {
+    try {
+      setLoading(true);
+      // API call to update payout data only
+      const payoutData = {
+        payout_ifsc_code: formData.ifscCode,
+        payout_account_number: formData.accountNumber,
+        payout_upi_id: formData.upiId
+      };
+      await shop.createOrUpdateShop(payoutData);
+      setShopData({ ...shopData, ...payoutData });
+      setisEditingProfile(false);
+      Alert.alert('Success', 'Payout settings updated successfully');
+    } catch (error) {
+      console.error('Error updating payout settings:', error);
+      Alert.alert('Error', 'Failed to update payout settings');
+    } finally {
+      setLoading(false);
     }
   };
 
@@ -198,17 +255,17 @@ const ShopProfileScreen = ({ navigation }) => {
       instagram: shopData?.instagram || '',
       pinterest: shopData?.pinterest || '',
       youtube: shopData?.youtube || '',
-      website: shopData?.website || '',
-      foundedYear: shopData?.founded_year || '',
-      lifetimeSales: shopData?.lifetime_sales || '',
-      tagLine: shopData?.tag_line || '',
+      website: shopData?.website_url || '',
+      foundedYear: shopData?.founded_year ? shopData.founded_year.toString() : '',
+      lifetimeSales: shopData?.claimed_lifetime_sales ? shopData.claimed_lifetime_sales.toString() : '',
+      tagLine: shopData?.tagline || '',
       knownFor: shopData?.known_for || '',
-      yourStory: shopData?.your_story || '',
+      yourStory: shopData?.story || '',
       storefrontStory: shopData?.storefront_story || '',
-      bankAccountName: shopData?.bank_account_name || '',
-      accountNumber: shopData?.account_number || '',
+      ifscCode: shopData?.payout_ifsc_code || '',
+      accountNumber: shopData?.payout_account_number || '',
       ifscCode: shopData?.ifsc_code || '',
-      upiId: shopData?.upi_id || '',
+      upiId: shopData?.payout_upi_id || '',
       accountHolderName: shopData?.account_holder_name || '',
       payoutFrequency: shopData?.payout_frequency || 'Weekly',
       minPayoutAmount: shopData?.min_payout_amount || ''
@@ -392,7 +449,7 @@ const ShopProfileScreen = ({ navigation }) => {
                   <FontAwesome5 name="store" size={40} color="#ccc" />
                 </View>
               )}
-              {isEditing && (
+              {isEditingProfile && (
                 <TouchableOpacity style={styles.cameraButton} onPress={handleImagePick}>
                   <FontAwesome name="camera" size={16} color="#fff" />
                 </TouchableOpacity>
@@ -409,17 +466,17 @@ const ShopProfileScreen = ({ navigation }) => {
                 <Text style={styles.sectionTitle}>Shop Profile</Text>
                 <Text style={styles.sectionDescription}>This powers your single QR code and your bio-link storefront</Text>
               </View>
-              {!isEditing ? (
-                <TouchableOpacity style={styles.editButton} onPress={() => setIsEditing(true)}>
+              {!isEditingProfile ? (
+                <TouchableOpacity style={styles.editButton} onPress={() => setIsEditingProfile(true)}>
                   <FontAwesome5 name="edit" size={14} color="#000" />
                   {/* <Text style={styles.editButtonText}>Edit</Text> */}
                 </TouchableOpacity>
               ) : (
                 <View style={styles.actionButtons}>
-                  <TouchableOpacity style={styles.cancelButton} onPress={handleCancel}>
+                  <TouchableOpacity style={styles.cancelButton} onPress={() => setIsEditingProfile(false)}>
                     <Text style={styles.cancelButtonText}>Cancel</Text>
                   </TouchableOpacity>
-                  <TouchableOpacity style={styles.saveButton} onPress={handleSave}>
+                  <TouchableOpacity style={styles.saveButton} onPress={handleSaveProfile}>
                     <Text style={styles.saveButtonText}>Save</Text>
                   </TouchableOpacity>
                 </View>
@@ -433,7 +490,7 @@ const ShopProfileScreen = ({ navigation }) => {
                 </View>
                 <View style={styles.infoContent}>
                   <Text style={styles.infoLabel}>Shop Name</Text>
-                  {isEditing ? (
+                  {isEditingProfile ? (
                     <TextInput
                       style={styles.input}
                       value={formData.name}
@@ -452,7 +509,7 @@ const ShopProfileScreen = ({ navigation }) => {
                 </View>
                 <View style={styles.infoContent}>
                   <Text style={styles.infoLabel}>Email</Text>
-                  {isEditing ? (
+                  {isEditingProfile ? (
                     <TextInput
                       style={styles.input}
                       value={formData.email}
@@ -472,7 +529,7 @@ const ShopProfileScreen = ({ navigation }) => {
                 </View>
                 <View style={styles.infoContent}>
                   <Text style={styles.infoLabel}>Phone</Text>
-                  {isEditing ? (
+                  {isEditingProfile ? (
                     <TextInput
                       style={styles.input}
                       value={formData.phone}
@@ -492,7 +549,7 @@ const ShopProfileScreen = ({ navigation }) => {
                 </View>
                 <View style={styles.infoContent}>
                   <Text style={styles.infoLabel}>WhatsApp</Text>
-                  {isEditing ? (
+                  {isEditingProfile ? (
                     <TextInput
                       style={styles.input}
                       value={formData.whatsapp}
@@ -512,7 +569,7 @@ const ShopProfileScreen = ({ navigation }) => {
                 </View>
                 <View style={styles.infoContent}>
                   <Text style={styles.infoLabel}>Address</Text>
-                  {isEditing ? (
+                  {isEditingProfile ? (
                     <TextInput
                       style={[styles.input, styles.textArea]}
                       value={formData.address}
@@ -533,7 +590,7 @@ const ShopProfileScreen = ({ navigation }) => {
                 </View>
                 <View style={styles.infoContent}>
                   <Text style={styles.infoLabel}>City</Text>
-                  {isEditing ? (
+                  {isEditingProfile ? (
                     <TextInput
                       style={styles.input}
                       value={formData.city}
@@ -552,7 +609,7 @@ const ShopProfileScreen = ({ navigation }) => {
                 </View>
                 <View style={styles.infoContent}>
                   <Text style={styles.infoLabel}>Category</Text>
-                  {isEditing ? (
+                  {isEditingProfile ? (
                     <TextInput
                       style={styles.input}
                       value={formData.category}
@@ -571,7 +628,7 @@ const ShopProfileScreen = ({ navigation }) => {
                 </View>
                 <View style={styles.infoContent}>
                   <Text style={styles.infoLabel}>Description</Text>
-                  {isEditing ? (
+                  {isEditingProfile ? (
                     <TextInput
                       style={[styles.input, styles.textArea]}
                       value={formData.description}
@@ -588,7 +645,7 @@ const ShopProfileScreen = ({ navigation }) => {
                 </View>
                 <View style={styles.infoContent}>
                   <Text style={styles.infoLabel}>Website</Text>
-                  {isEditing ? (
+                  {isEditingProfile ? (
                     <TextInput
                       style={styles.input}
                       value={formData.website}
@@ -611,7 +668,7 @@ const ShopProfileScreen = ({ navigation }) => {
                 </View>
                 <View style={styles.infoContent}>
                   <Text style={styles.infoLabel}>Founded Year</Text>
-                  {isEditing ? (
+                  {isEditingProfile ? (
                     <TextInput
                       style={styles.input}
                       value={formData.foundedYear}
@@ -632,7 +689,7 @@ const ShopProfileScreen = ({ navigation }) => {
                 </View>
                 <View style={styles.infoContent}>
                   <Text style={styles.infoLabel}>Lifetime Sales</Text>
-                  {isEditing ? (
+                  {isEditingProfile ? (
                     <TextInput
                       style={styles.input}
                       value={formData.lifetimeSales}
@@ -651,7 +708,7 @@ const ShopProfileScreen = ({ navigation }) => {
                 </View>
                 <View style={styles.infoContent}>
                   <Text style={styles.infoLabel}>Tag Line</Text>
-                  {isEditing ? (
+                  {isEditingProfile ? (
                     <TextInput
                       style={styles.input}
                       value={formData.tagLine}
@@ -670,7 +727,7 @@ const ShopProfileScreen = ({ navigation }) => {
                 </View>
                 <View style={styles.infoContent}>
                   <Text style={styles.infoLabel}>Known For</Text>
-                  {isEditing ? (
+                  {isEditingProfile ? (
                     <TextInput
                       style={styles.input}
                       value={formData.knownFor}
@@ -689,7 +746,7 @@ const ShopProfileScreen = ({ navigation }) => {
                 </View>
                 <View style={styles.infoContent}>
                   <Text style={styles.infoLabel}>Your Story</Text>
-                  {isEditing ? (
+                  {isEditingProfile ? (
                     <TextInput
                       style={[styles.input, styles.textArea]}
                       value={formData.yourStory}
@@ -713,10 +770,21 @@ const ShopProfileScreen = ({ navigation }) => {
                 <Text style={styles.sectionTitle}>Payout settings</Text>
                 <Text style={styles.sectionDescription}>Manage your bank details and payout preferences</Text>
               </View>
-              <TouchableOpacity style={styles.editButton} onPress={() => setIsEditing(true)}>
-                <FontAwesome5 name="edit" size={14} color="#000" />
-                <Text style={styles.editButtonText}>Edit</Text>
-              </TouchableOpacity>
+              {!isEditingProfile ? (
+                <TouchableOpacity style={styles.editButton} onPress={() => setisEditingProfile(true)}>
+                  <FontAwesome5 name="edit" size={14} color="#000" />
+                  <Text style={styles.editButtonText}>Edit</Text>
+                </TouchableOpacity>
+              ) : (
+                <View style={styles.actionButtons}>
+                  <TouchableOpacity style={styles.cancelButton} onPress={() => setisEditingProfile(false)}>
+                    <Text style={styles.cancelButtonText}>Cancel</Text>
+                  </TouchableOpacity>
+                  <TouchableOpacity style={styles.saveButton} onPress={handleSavePayout}>
+                    <Text style={styles.saveButtonText}>Save</Text>
+                  </TouchableOpacity>
+                </View>
+              )}
             </View>
             <View style={styles.infoContainer}>
               <View style={styles.infoRow}>
@@ -725,15 +793,15 @@ const ShopProfileScreen = ({ navigation }) => {
                 </View>
                 <View style={styles.infoContent}>
                   <Text style={styles.infoLabel}>IFSC Code</Text>
-                  {isEditing ? (
+                  {isEditingProfile ? (
                     <TextInput
                       style={styles.input}
-                      value={formData.bankAccountName || ''}
-                      onChangeText={(text) => setFormData({ ...formData, bankAccountName: text })}
+                      value={formData.ifscCode || ''}
+                      onChangeText={(text) => setFormData({ ...formData, ifscCode: text })}
                       placeholder="Enter IFSC Code"
                     />
                   ) : (
-                    <Text style={styles.infoValue}>{formData.bankAccountName || 'Not specified'}</Text>
+                    <Text style={styles.infoValue}>{formData.ifscCode || 'Not specified'}</Text>
                   )}
                 </View>
               </View>
@@ -744,7 +812,7 @@ const ShopProfileScreen = ({ navigation }) => {
                 </View>
                 <View style={styles.infoContent}>
                   <Text style={styles.infoLabel}>Account Number</Text>
-                  {isEditing ? (
+                  {isEditingProfile ? (
                     <TextInput
                       style={styles.input}
                       value={formData.accountNumber || ''}
@@ -765,7 +833,7 @@ const ShopProfileScreen = ({ navigation }) => {
                 </View>
                 <View style={styles.infoContent}>
                   <Text style={styles.infoLabel}>UPI ID</Text>
-                  {isEditing ? (
+                  {isEditingProfile ? (
                     <TextInput
                       style={styles.input}
                       value={formData.upiId || ''}
@@ -785,7 +853,7 @@ const ShopProfileScreen = ({ navigation }) => {
                 </View>
                 <View style={styles.infoContent}>
                   <Text style={styles.infoLabel}>Account Holder Name</Text>
-                  {isEditing ? (
+                  {isEditingProfile ? (
                     <TextInput
                       style={styles.input}
                       value={formData.accountHolderName || ''}
@@ -804,7 +872,7 @@ const ShopProfileScreen = ({ navigation }) => {
                 </View>
                 <View style={styles.infoContent}>
                   <Text style={styles.infoLabel}>Payout Frequency</Text>
-                  {isEditing ? (
+                  {isEditingProfile ? (
                     <View style={styles.pickerContainer}>
                       <Text style={styles.pickerLabel}>Select frequency:</Text>
                       <TouchableOpacity style={styles.pickerButton}>
@@ -824,7 +892,7 @@ const ShopProfileScreen = ({ navigation }) => {
                 </View>
                 <View style={styles.infoContent}>
                   <Text style={styles.infoLabel}>Minimum Payout Amount</Text>
-                  {isEditing ? (
+                  {isEditingProfile ? (
                     <TextInput
                       style={styles.input}
                       value={formData.minPayoutAmount || ''}
@@ -1009,7 +1077,7 @@ const styles = StyleSheet.create({
     position: 'absolute',
     bottom: 0,
     right: 0,
-    backgroundColor: '#000',
+    backgroundColor: '#f59e0b',
     width: 30,
     height: 30,
     borderRadius: 15,
@@ -1077,7 +1145,7 @@ const styles = StyleSheet.create({
     paddingHorizontal: 16,
     paddingVertical: 8,
     borderRadius: 20,
-    backgroundColor: '#000',
+    backgroundColor: '#f59e0b',
   },
   saveButtonText: {
     fontSize: 12,
@@ -1366,7 +1434,7 @@ const styles = StyleSheet.create({
     color: '#000',
   },
   copyBioButton: {
-    backgroundColor: '#000',
+    backgroundColor: '#f59e0b',
     width: 32,
     height: 32,
     borderRadius: 16,
@@ -1465,7 +1533,7 @@ const styles = StyleSheet.create({
   qrActionButton: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: '#000',
+    backgroundColor: '#f59e0b',
     paddingHorizontal: 16,
     paddingVertical: 8,
     borderRadius: 20,

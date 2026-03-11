@@ -406,7 +406,7 @@ const styles = StyleSheet.create({
     color: '#666',
   },
   newBadge: {
-    backgroundColor: '#000',
+    backgroundColor: '#f59e0b',
     paddingHorizontal: 8,
     paddingVertical: 4,
     borderRadius: 4,
@@ -482,7 +482,7 @@ const styles = StyleSheet.create({
   },
   actionButton: {
     flex: 1,
-    backgroundColor: '#000',
+    backgroundColor: '#f59e0b',
     paddingVertical: 10,
     borderRadius: 6,
     marginRight: 10,

@@ -252,7 +252,7 @@ const styles = StyleSheet.create({
     gap: 5,
   },
   qrButton: {
-    backgroundColor: '#000',
+    backgroundColor: '#f59e0b',
     paddingHorizontal: 24,
     paddingVertical: 12,
     borderRadius: 8,
@@ -288,7 +288,7 @@ const styles = StyleSheet.create({
     color: '#000',
   },
   copyButton: {
-    backgroundColor: '#000',
+    backgroundColor: '#f59e0b',
     paddingHorizontal: 12,
     paddingVertical: 6,
     borderRadius: 4,
@@ -316,7 +316,7 @@ const styles = StyleSheet.create({
     width: 24,
     height: 24,
     borderRadius: 12,
-    backgroundColor: '#000',
+    backgroundColor: '#f59e0b',
     justifyContent: 'center',
     alignItems: 'center',
     marginRight: 15,
@@ -346,7 +346,7 @@ const styles = StyleSheet.create({
     marginHorizontal: 15
   },
   stickerCard: {
-    backgroundColor: '#000',
+    backgroundColor: '#f59e0b',
     padding: 20,
     borderRadius: 12,
   },

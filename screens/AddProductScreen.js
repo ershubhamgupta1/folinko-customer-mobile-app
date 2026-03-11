@@ -5,24 +5,200 @@ import {
   StyleSheet,
   ScrollView,
   TextInput,
-  TouchableOpacity
+  TouchableOpacity,
+  Alert,
+  ActivityIndicator
 } from "react-native";
 import { Feather } from "@expo/vector-icons";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { useNavigation } from "@react-navigation/native";
+import { inventory } from "../services/api";
 
-export default function AddPostScreen() {
+export default function AddPostScreen({ route }) {
   const navigation = useNavigation();
-
-  const [url, setUrl] = useState("");
-  const [title, setTitle] = useState("");
-  const [material, setMaterial] = useState("");
-  const [price, setPrice] = useState("");
-  const [delivery, setDelivery] = useState("");
-  const [color, setColor] = useState("");
-  const [size, setSize] = useState("");
-  const [caption, setCaption] = useState("");
+  const { post } = route.params || {};
+  const isEditMode = !!post;
+  console.log('post=========', post, isEditMode);
+  const [url, setUrl] = useState(post?.social_url || "");
+  const [title, setTitle] = useState(post?.title || "");
+  const [material, setMaterial] = useState(post?.material || "");
+  const [price, setPrice] = useState(post?.price?.toString() || "");
+  const [delivery, setDelivery] = useState(post?.attributes?.delivery_fee_amount?.toString() || "");
+  const [color, setColor] = useState(post?.attributes?.color || "");
+  const [size, setSize] = useState(post?.attributes?.size || "");
+  const [caption, setCaption] = useState(post?.caption || "");
   const [imageUrl, setImageUrl] = useState("");
+  const [imageUrls, setImageUrls] = useState(post?.images?.length > 0 ? post.images.map(img => img.url) : [""]);
+  const [selectedPlatform, setSelectedPlatform] = useState(post?.social_platform || "instagram");
+  const [showPlatformDropdown, setShowPlatformDropdown] = useState(false);
+  const [selectedTemplate, setSelectedTemplate] = useState("fashion");
+  const [showTemplateDropdown, setShowTemplateDropdown] = useState(false);
+  const [loading, setLoading] = useState(false);
+
+  const handleCreatePost = async () => {
+    // Validation
+    if (!url.trim()) {
+      Alert.alert('Error', 'Please enter a social post URL');
+      return;
+    }
+    if (!title.trim()) {
+      Alert.alert('Error', 'Please enter a title');
+      return;
+    }
+    if (!price.trim()) {
+      Alert.alert('Error', 'Please enter a price');
+      return;
+    }
+
+    try {
+      setLoading(true);
+      
+      // Filter out empty image URLs and create images array
+      const validImageUrls = imageUrls.filter(url => url.trim() !== "");
+      const images = validImageUrls.map((url, index) => ({
+        url: url.trim(),
+        sort_order: index + 1
+      }));
+      
+      const postData = {
+        social_platform: selectedPlatform,
+        social_url: url,
+        title: title,
+        caption: caption || "",
+        price: parseFloat(price),
+        currency: "INR",
+        material: material || "",
+        attributes: {
+          color: color || "",
+          size: size || "",
+          delivery_fee_amount: delivery ? parseFloat(delivery) : 0
+        },
+        images: images
+      };
+
+      console.log('postData===========', postData);
+      
+      let response;
+      if (isEditMode) {
+        console.log('post.id=========', post.id);
+        // const payload = {
+        //   "attributes": {"color": "Black", "delivery_fee_amount": 10, "size": "Medium"}, 
+        //   "caption": "No caption", 
+        //   // "currency": "INR", 
+        //   "images": [{"sort_order": 1, "url": "https://imagery.com"}], 
+        //   "material": "Cotton", 
+        //   "price": 1700, 
+        //   // "social_platform": "instagram", 
+        //   // "social_url": "https://Instagram.com", 
+        //   "title": "Jeans1"
+        // }
+        delete postData.social_platform;
+        delete postData.social_url;
+        delete postData.currency;
+        console.log('postData=========', postData);
+
+        response = await inventory.updatePost(post.id, postData);
+      } else {
+        response = await inventory.createPost(postData);
+      }
+      
+      Alert.alert(
+        'Success',
+        isEditMode ? 'Post updated successfully!' : 'Post created successfully!',
+        [
+          {
+            text: 'OK',
+            onPress: () => navigation.goBack()
+          }
+        ]
+      );
+      
+      // Reset form only if not in edit mode
+      if (!isEditMode) {
+        setUrl("");
+        setTitle("");
+        setMaterial("");
+        setPrice("");
+        setDelivery("");
+        setColor("");
+        setSize("");
+        setCaption("");
+        setImageUrls([""]);
+      }
+      
+    } catch (error) {
+      console.error('Error creating post:', error);
+      Alert.alert('Error', `Failed to ${isEditMode ? 'update' : 'create'} post. Please try again.`);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleDeletePost = async () => {
+    Alert.alert(
+      'Delete Post',
+      'Are you sure you want to delete this post? This action cannot be undone.',
+      [
+        {
+          text: 'Cancel',
+          style: 'cancel'
+        },
+        {
+          text: 'Delete',
+          style: 'destructive',
+          onPress: async () => {
+            try {
+              setLoading(true);
+              await inventory.deletePost(post.id);
+              Alert.alert(
+                'Success',
+                'Post deleted successfully!',
+                [
+                  {
+                    text: 'OK',
+                    onPress: () => navigation.goBack()
+                  }
+                ]
+              );
+            } catch (error) {
+              console.error('Error deleting post:', error);
+              Alert.alert('Error', 'Failed to delete post. Please try again.');
+            } finally {
+              setLoading(false);
+            }
+          }
+        }
+      ]
+    );
+  };
+
+  const addImageUrl = () => {
+    setImageUrls([...imageUrls, ""]);
+  };
+
+  const removeImageUrl = (index) => {
+    const newImageUrls = imageUrls.filter((_, i) => i !== index);
+    setImageUrls(newImageUrls.length > 0 ? newImageUrls : [""]);
+  };
+
+  const updateImageUrl = (index, value) => {
+    const newImageUrls = [...imageUrls];
+    newImageUrls[index] = value;
+    setImageUrls(newImageUrls);
+  };
+
+  const platforms = [
+    { value: "instagram", label: "Instagram" },
+    { value: "pinterest", label: "Pinterest" },
+    { value: "facebook", label: "Facebook" },
+
+  ];
+
+  const templates = [
+    { value: "fashion", label: "Fashion" },
+    { value: "grocery", label: "Grocery" },
+    { value: "electronics", label: "Electronics" }
+  ];
 
   return (
     <SafeAreaView style={styles.safeArea}>
@@ -33,7 +209,7 @@ export default function AddPostScreen() {
         >
           <Feather name="arrow-left" size={24} color="#333" />
         </TouchableOpacity>
-        <Text style={styles.headerTitle}>Create post</Text>
+        <Text style={styles.headerTitle}>{isEditMode ? 'Edit post' : 'Create post'}</Text>
         <View style={styles.headerSpacer} />
       </View>
       <ScrollView style={styles.container}>
@@ -45,10 +221,20 @@ export default function AddPostScreen() {
             <View style={styles.rowBetween}>
               <View>
                 <Text style={styles.smallTitle}>Visual Inventory</Text>
-                <Text style={styles.title}>Create post</Text>
+                <Text style={styles.title}>{isEditMode ? 'Edit post' : 'Create post'}</Text>
               </View>
-
-              <Feather name="plus" size={22} />
+              <View style={styles.rowActions}>
+                <Feather name="plus" size={22} />
+                {isEditMode && (
+                  <TouchableOpacity 
+                    style={styles.deleteButton}
+                    onPress={handleDeletePost}
+                    disabled={loading}
+                  >
+                    <Feather name="trash-2" size={16} color="#dc2626" />
+                  </TouchableOpacity>
+                )}
+              </View>
             </View>
 
             <Text style={styles.description}>
@@ -60,9 +246,33 @@ export default function AddPostScreen() {
 
             <Text style={styles.label}>Platform</Text>
 
-            <View style={styles.dropdown}>
-              <Text>Instagram</Text>
-              <Feather name="chevron-down" size={18} />
+            <View style={styles.dropdownContainer}>
+              <TouchableOpacity 
+                style={styles.dropdown}
+                onPress={() => setShowPlatformDropdown(!showPlatformDropdown)}
+              >
+                <Text>
+                  {platforms.find(p => p.value === selectedPlatform)?.label || "Instagram"}
+                </Text>
+                <Feather name="chevron-down" size={18} />
+              </TouchableOpacity>
+
+              {showPlatformDropdown && (
+                <View style={styles.dropdownList}>
+                  {platforms.map((platform) => (
+                    <TouchableOpacity
+                      key={platform.value}
+                      style={styles.dropdownItem}
+                      onPress={() => {
+                        setSelectedPlatform(platform.value);
+                        setShowPlatformDropdown(false);
+                      }}
+                    >
+                      <Text style={styles.dropdownItemText}>{platform.label}</Text>
+                    </TouchableOpacity>
+                  ))}
+                </View>
+              )}
             </View>
 
 
@@ -70,9 +280,33 @@ export default function AddPostScreen() {
 
             <Text style={styles.label}>Template</Text>
 
-            <View style={styles.dropdown}>
-              <Text>Default</Text>
-              <Feather name="chevron-down" size={18} />
+            <View style={styles.dropdownContainer}>
+              <TouchableOpacity 
+                style={styles.dropdown}
+                onPress={() => setShowTemplateDropdown(!showTemplateDropdown)}
+              >
+                <Text>
+                  {templates.find(t => t.value === selectedTemplate)?.label || "Fashion"}
+                </Text>
+                <Feather name="chevron-down" size={18} />
+              </TouchableOpacity>
+
+              {showTemplateDropdown && (
+                <View style={styles.dropdownList}>
+                  {templates.map((template) => (
+                    <TouchableOpacity
+                      key={template.value}
+                      style={styles.dropdownItem}
+                      onPress={() => {
+                        setSelectedTemplate(template.value);
+                        setShowTemplateDropdown(false);
+                      }}
+                    >
+                      <Text style={styles.dropdownItemText}>{template.label}</Text>
+                    </TouchableOpacity>
+                  ))}
+                </View>
+              )}
             </View>
 
 
@@ -186,7 +420,7 @@ export default function AddPostScreen() {
               <View style={styles.rowBetween}>
                 <Text style={styles.imageTitle}>Images</Text>
 
-                <TouchableOpacity style={styles.addButton}>
+                <TouchableOpacity style={styles.addButton} onPress={addImageUrl}>
                   <Text>Add</Text>
                 </TouchableOpacity>
               </View>
@@ -195,12 +429,24 @@ export default function AddPostScreen() {
                 Paste image URLs for now. Later we'll add uploads to Google Cloud Storage.
               </Text>
 
-              <TextInput
-                style={styles.input}
-                placeholder="https://... image url"
-                value={imageUrl}
-                onChangeText={setImageUrl}
-              />
+              {imageUrls.map((imageUrl, index) => (
+                <View key={index} style={styles.imageInputContainer}>
+                  <TextInput
+                    style={styles.input}
+                    placeholder={`https://... image url ${index + 1}`}
+                    value={imageUrl}
+                    onChangeText={(value) => updateImageUrl(index, value)}
+                  />
+                  {imageUrls.length > 1 && (
+                    <TouchableOpacity 
+                      style={styles.removeButton}
+                      onPress={() => removeImageUrl(index)}
+                    >
+                      <Feather name="x" size={16} color="#666" />
+                    </TouchableOpacity>
+                  )}
+                </View>
+              ))}
 
             </View>
 
@@ -209,11 +455,23 @@ export default function AddPostScreen() {
 
             <View style={styles.buttonRow}>
 
-              <TouchableOpacity style={styles.createButton}>
-                <Text style={styles.createText}>Create</Text>
+              <TouchableOpacity 
+                style={styles.createButton}
+                onPress={handleCreatePost}
+                disabled={loading}
+              >
+                {loading ? (
+                  <ActivityIndicator color="#fff" size="small" />
+                ) : (
+                  <Text style={styles.createText}>{isEditMode ? 'Update' : 'Create'}</Text>
+                )}
               </TouchableOpacity>
 
-              <TouchableOpacity style={styles.cancelButton}>
+              <TouchableOpacity 
+                style={styles.cancelButton}
+                onPress={() => navigation.goBack()}
+                disabled={loading}
+              >
                 <Text>Cancel</Text>
               </TouchableOpacity>
 
@@ -280,7 +538,22 @@ const styles = StyleSheet.create({
   rowBetween: {
     flexDirection: "row",
     justifyContent: "space-between",
-    alignItems: "center"
+    alignItems: "center",
+    marginBottom: 16
+  },
+
+  rowActions: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 12
+  },
+
+  deleteButton: {
+    padding: 8,
+    borderRadius: 20,
+    backgroundColor: "#f5f5f5",
+    borderWidth: 1,
+    borderColor: "#ddd"
   },
 
   smallTitle: {
@@ -327,6 +600,39 @@ const styles = StyleSheet.create({
     borderColor: "#e5e7eb"
   },
 
+  dropdownContainer: {
+    position: "relative"
+  },
+
+  dropdownList: {
+    position: "absolute",
+    top: "100%",
+    left: 0,
+    right: 0,
+    backgroundColor: "#fff",
+    borderWidth: 1,
+    borderColor: "#e5e7eb",
+    borderRadius: 12,
+    marginTop: 4,
+    zIndex: 1000,
+    elevation: 3,
+    shadowColor: "#000",
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.1,
+    shadowRadius: 4
+  },
+
+  dropdownItem: {
+    padding: 14,
+    borderBottomWidth: 1,
+    borderBottomColor: "#f3f4f6"
+  },
+
+  dropdownItemText: {
+    fontSize: 16,
+    color: "#374151"
+  },
+
   textarea: {
     backgroundColor: "#fff",
     borderRadius: 18,
@@ -363,6 +669,21 @@ const styles = StyleSheet.create({
     paddingHorizontal: 14,
     paddingVertical: 6,
     borderRadius: 20
+  },
+
+  imageInputContainer: {
+    flexDirection: "row",
+    alignItems: "center",
+    marginTop: 8
+  },
+
+  removeButton: {
+    marginLeft: 10,
+    padding: 8,
+    backgroundColor: "#f5f5f5",
+    borderRadius: 20,
+    borderWidth: 1,
+    borderColor: "#ddd"
   },
 
   buttonRow: {

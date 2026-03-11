@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from "react";
+import { useState, useEffect } from "react";
 import {
     View,
     Text,
@@ -30,36 +30,6 @@ const InventoryScreen = ({ navigation }) => {
             const response = await inventory?.getPosts();
             console.log('posts========', JSON.stringify(response))
             let postsData = response?.posts || [];
-
-            if (postsData.length === 0) {
-                // postsData = [
-                //     {
-                //         id: 3,
-                //         title: "Saree 2",
-                //         material: "Silk",
-                //         price: 2099,
-                //         inventory_image_count: 1,
-                //         share_count: 0,
-                //         social_platform: "instagram",
-                //         images: [
-                //             { url: "https://instagram.fixc11-1.fna.fbcdn.net/v/t51.82787-15/619600416_18077553527360525_1576591170252182596_n.jpg?stp=dst-jpg_e35_tt6&_nc_cat=103&ig_cache_key=MjcwODEwMzA5NTM2Nzc1NTMwMQ%3D%3D.3-ccb7-5&ccb=7-5&_nc_sid=58cdad&efg=eyJ2ZW5jb2RlX3RhZyI6InhwaWRzLjE0NDB4MTgwMC5zZHIuQzMifQ%3D%3D&_nc_ohc=1nFizLJHDfkQ7kNvwFlqCY8&_nc_oc=AdmJO7td_2orvXv4_I3V9eyXbXP9kqZ4wBGDvV55x3GzTxWI8SUWo2wALCZ39IrrA4I&_nc_ad=z-m&_nc_cid=0&_nc_zt=23&_nc_ht=instagram.fixc11-1.fna&_nc_gid=-irEKu5GKSHLv_ZctwCmIQ&_nc_ss=8&oh=00_AfyI4XA10C3fvsRVjgfHGdZU9qi5hOOoXqBIweWEeWBsTA&oe=69ABA0F6" }
-                //         ]
-                //     },
-                //     {
-                //         id: 1,
-                //         title: "Silk Saree",
-                //         material: "Savitri",
-                //         price: 1499,
-                //         inventory_image_count: 1,
-                //         share_count: 0,
-                //         social_platform: "instagram",
-                //         images: [
-                //             { url: "https://instagram.fixc11-1.fna.fbcdn.net/v/t51.82787-15/619600416_18077553527360525_1576591170252182596_n.jpg?stp=dst-jpg_e35_tt6&_nc_cat=103&ig_cache_key=MjcwODEwMzA5NTM2Nzc1NTMwMQ%3D%3D.3-ccb7-5&ccb=7-5&_nc_sid=58cdad&efg=eyJ2ZW5jb2RlX3RhZyI6InhwaWRzLjE0NDB4MTgwMC5zZHIuQzMifQ%3D%3D&_nc_ohc=z51EFAUBRvAQ7kNvwFM2uEs&_nc_oc=Adkb1-kcGq5rbYiEICyuHGTD99n1SwVT3Bo15f9XxhNU8k7NJWZkd3NXfN_J-4t_Q3I&_nc_ad=z-m&_nc_cid=0&_nc_zt=23&_nc_ht=instagram.fixc11-1.fna&_nc_gid=UD5HQuYsn4MsOiaVXVQOow&oh=00_AfsX2M1M46B8vEDA_uUBpl6YmD8T9xgbxwx-6CffrYBr3A&oe=69A4D136" }
-                //         ]
-                //     }
-                // ];
-            }
-
             setPosts(postsData);
 
         } catch (error) {
@@ -111,65 +81,42 @@ const InventoryScreen = ({ navigation }) => {
 
                     </View>
 
-                    <TouchableOpacity
-                        style={styles.viewOrdersButton}
-                        onPress={() => navigation.navigate("orderScreen")}
-                    >
-                        <Text style={styles.viewOrdersText}>View Orders</Text>
-                    </TouchableOpacity>
-
-
                     {posts.map((item) => (
-
-                        <View key={item.id} style={styles.postCard}>
-
+                        <TouchableOpacity 
+                            key={item.id} 
+                            style={styles.postCard}
+                            onPress={() => navigation.navigate("addPost", { post: item })}
+                        >
                             <View style={styles.postImageWrapper}>
-
                                 <Image
                                     source={{ uri: item.images[0]?.url }}
                                     style={styles.postImage}
                                 />
-
                                 <View style={styles.instagramBadge}>
                                     <Text style={styles.instagramText}>{item.social_platform}</Text>
                                 </View>
-
                                 <View style={styles.priceBadge}>
                                     <Text style={styles.priceBadgeText}>₹ {item.price}</Text>
                                 </View>
-
                             </View>
-
                             <View style={styles.postInfo}>
-
                                 <Text style={styles.postTitle}>{item.title}</Text>
-
                                 <Text style={styles.postMaterial}>{item.material}</Text>
-
                                 <View style={styles.postFooter}>
-
                                     <View style={styles.postStats}>
-
                                         <Feather name="image" size={16} />
                                         <Text style={styles.statText}>
                                             {item.inventory_image_count}
                                         </Text>
-
                                         <Feather name="share-2" size={16} />
                                         <Text style={styles.statText}>
                                             {item.share_count}
                                         </Text>
-
                                     </View>
-
                                     <Feather name="chevron-right" size={20} />
-
                                 </View>
-
                             </View>
-
-                        </View>
-
+                        </TouchableOpacity>
                     ))}
 
                 </View>
