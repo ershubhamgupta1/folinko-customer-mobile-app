@@ -257,7 +257,7 @@ const DashboardScreen = ({ navigation }) => {
               Use a single QR to bridge offline traffic to your video-first storefront.
             </Text>
 
-            <TouchableOpacity style={styles.secondaryButton} onPress={() => navigation.navigate('shopProfile')}>
+            <TouchableOpacity style={styles.secondaryButton} onPress={() => navigation.navigate('shopIdentity')}>
               <Text style={styles.secondaryButtonText}>Manage</Text>
               <Feather name="arrow-right" size={16} />
             </TouchableOpacity>
