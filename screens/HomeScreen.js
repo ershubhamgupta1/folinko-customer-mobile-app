@@ -29,7 +29,7 @@ const HomeScreen = ({ navigation }) => {
       }
       const shopResponse = await shop.getMyShop();
       let qrCode = await shop.getQRCode();
-      qrCode = qrCode.replace(/svg:/g, "")
+      qrCode = qrCode?.replace(/svg:/g, "")
       .replace(/xmlns:svg="[^"]*"/g, "");
 
       setShopData(shopResponse);

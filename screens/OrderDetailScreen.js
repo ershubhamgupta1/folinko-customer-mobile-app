@@ -81,15 +81,18 @@ const OrderHeaderCard = ({ orderData, navigation }) => (
       </View>
 
       <View style={styles.actions}>
-        <TouchableOpacity style={styles.pill}>
-          <Ionicons name="document-text-outline" size={18} />
-          <Text style={styles.pillText}>Bill</Text>
-        </TouchableOpacity>
-
-        <TouchableOpacity style={styles.pill} onPress={() => navigation.goBack()}>
-          <Ionicons name="arrow-back" size={18} />
-          <Text style={styles.pillText}>Back</Text>
-        </TouchableOpacity>
+        <View>
+          <TouchableOpacity style={styles.pill}>
+            <Ionicons name="document-text-outline" size={18} />
+            <Text style={styles.pillText}>Bill</Text>
+          </TouchableOpacity>
+        </View>
+        <View>
+          <TouchableOpacity style={styles.pill} onPress={() => navigation.goBack()}>
+            <Ionicons name="arrow-back" size={18} />
+            <Text style={styles.pillText}>Back</Text>
+          </TouchableOpacity>
+        </View>
       </View>
     </View>
   </View>

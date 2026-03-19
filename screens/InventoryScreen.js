@@ -62,6 +62,7 @@ const InventoryScreen = ({ navigation }) => {
             </View>
         );
     }
+    console.log('posts============', posts);
     return (
 
         <SafeAreaView style={styles.safeArea}>

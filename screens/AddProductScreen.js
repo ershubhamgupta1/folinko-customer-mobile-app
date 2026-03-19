@@ -7,12 +7,88 @@ import {
   TextInput,
   TouchableOpacity,
   Alert,
-  ActivityIndicator
+  ActivityIndicator,
+  Image,
+  Linking
 } from "react-native";
 import { Feather } from "@expo/vector-icons";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { useNavigation } from "@react-navigation/native";
 import { inventory } from "../services/api";
+import { Ionicons } from "@expo/vector-icons";
+
+const COLORS = {
+  bg: "#f9fafb",
+  card: "#ffffff",
+  border: "#e5e7eb",
+  textPrimary: "#111827",
+  textSecondary: "#4b5563",
+  textMuted: "#6b7280",
+};
+
+const BestPractices = ()=>{
+  return (
+     <View style={styles.card}>
+        <Text style={styles.smallTitle}>Best practices</Text>
+        <Text style={styles.bestTitle}>
+          For maximum conversion:
+        </Text>
+        <Text style={styles.bestItem}>
+          1. Add price (kills friction)
+        </Text>
+        <Text style={styles.bestItem}>
+          2. Add key details (builds trust)
+        </Text>
+        <Text style={styles.bestItem}>
+          3. Add 3 images (boosts intent)
+        </Text>
+      </View>    
+  )
+}
+const PreviewCard = ({ imageUrl }) => {
+  return (
+    <View style={styles.card}>
+      <Text style={styles.smallTitle}>Preview</Text>
+
+      <View style={styles.previewWrapper}>
+        <Image
+          source={{ uri: imageUrl }}
+          style={styles.previewImage}
+        />
+      </View>
+    </View>
+  );
+};
+
+const PostMetricsCard = ({ shares = 0, images = 0, onOpenLink }) => {
+  return (
+    <View style={styles.card}>
+      <Text style={styles.smallTitle}>Post metrics</Text>
+
+      {/* METRICS ROW */}
+      <View style={styles.metricsRow}>
+        <View style={styles.metricBox}>
+          <Text style={styles.metricLabel}>Shares</Text>
+          <Text style={styles.metricValue}>{shares}</Text>
+        </View>
+
+        <View style={styles.metricBox}>
+          <Text style={styles.metricLabel}>Images</Text>
+          <Text style={styles.metricValue}>{images}</Text>
+        </View>
+      </View>
+
+      {/* ACTION */}
+      <TouchableOpacity style={styles.secondaryButton} onPress={onOpenLink}>
+        <Text style={styles.secondaryButtonText}>
+          Open social link
+        </Text>
+        <Feather name="arrow-right" size={16} />
+      </TouchableOpacity>
+
+    </View>
+  );
+};
 
 export default function AddPostScreen({ route }) {
   const navigation = useNavigation();
@@ -203,7 +279,7 @@ export default function AddPostScreen({ route }) {
                 <Text style={styles.title}>{isEditMode ? 'Edit post' : 'Create post'}</Text>
               </View>
               <View style={styles.rowActions}>
-                <Feather name="plus" size={22} />
+                {/* <Feather name="plus" size={22} /> */}
                 {isEditMode && (
                   <TouchableOpacity 
                     style={styles.deleteButton}
@@ -217,89 +293,90 @@ export default function AddPostScreen({ route }) {
             </View>
 
             <Text style={styles.description}>
-              Paste your social link, then add structured details like price and material.
+              {isEditMode ? post.social_url : 'Paste your social link, then add structured details like price and material.'}
             </Text>
-
-
-            {/* Platform */}
-
-            <Text style={styles.label}>Platform</Text>
-
-            <View style={styles.dropdownContainer}>
-              <TouchableOpacity 
-                style={styles.dropdown}
-                onPress={() => setShowPlatformDropdown(!showPlatformDropdown)}
-              >
-                <Text>
-                  {platforms.find(p => p.value === selectedPlatform)?.label || "Instagram"}
-                </Text>
-                <Feather name="chevron-down" size={18} />
-              </TouchableOpacity>
-
-              {/* {showPlatformDropdown && (
-                <View style={styles.dropdownList}>
-                  {platforms.map((platform) => (
-                    <TouchableOpacity
-                      key={platform.value}
-                      style={styles.dropdownItem}
-                      onPress={() => {
-                        setSelectedPlatform(platform.value);
-                        setShowPlatformDropdown(false);
-                      }}
-                    >
-                      <Text style={styles.dropdownItemText}>{platform.label}</Text>
-                    </TouchableOpacity>
-                  ))}
+            {
+              !isEditMode &&
+              <>
+                <Text style={styles.label}>Platform</Text>
+                <View style={styles.dropdownContainer}>
+                  <TouchableOpacity 
+                    style={styles.dropdown}
+                    onPress={() => setShowPlatformDropdown(!showPlatformDropdown)}
+                  >
+                    <Text>
+                      {platforms.find(p => p.value === selectedPlatform)?.label || "Instagram"}
+                    </Text>
+                    <Feather name="chevron-down" size={18} />
+                  </TouchableOpacity>
+                  {showPlatformDropdown && (
+                    <View style={styles.dropdownList}>
+                      {platforms.map((platform) => (
+                        <TouchableOpacity
+                          key={platform.value}
+                          style={styles.dropdownItem}
+                          onPress={() => {
+                            setSelectedPlatform(platform.value);
+                            setShowPlatformDropdown(false);
+                          }}
+                        >
+                          <Text style={styles.dropdownItemText}>{platform.label}</Text>
+                        </TouchableOpacity>
+                      ))}
+                    </View>
+                  )}
                 </View>
-              )} */}
-            </View>
+              </>
+            }
+            {
+              !isEditMode &&
+              <>
+                <Text style={styles.label}>Template</Text>
 
+                <View style={styles.dropdownContainer}>
+                  <TouchableOpacity 
+                    style={styles.dropdown}
+                    onPress={() => setShowTemplateDropdown(!showTemplateDropdown)}
+                  >
+                    <Text>
+                      {templates.find(t => t.value === selectedTemplate)?.label || "Fashion"}
+                    </Text>
+                    <Feather name="chevron-down" size={18} />
+                  </TouchableOpacity>
 
-            {/* Template */}
-
-            <Text style={styles.label}>Template</Text>
-
-            <View style={styles.dropdownContainer}>
-              <TouchableOpacity 
-                style={styles.dropdown}
-                onPress={() => setShowTemplateDropdown(!showTemplateDropdown)}
-              >
-                <Text>
-                  {templates.find(t => t.value === selectedTemplate)?.label || "Fashion"}
-                </Text>
-                <Feather name="chevron-down" size={18} />
-              </TouchableOpacity>
-
-              {showTemplateDropdown && (
-                <View style={styles.dropdownList}>
-                  {templates.map((template) => (
-                    <TouchableOpacity
-                      key={template.value}
-                      style={styles.dropdownItem}
-                      onPress={() => {
-                        setSelectedTemplate(template.value);
-                        setShowTemplateDropdown(false);
-                      }}
-                    >
-                      <Text style={styles.dropdownItemText}>{template.label}</Text>
-                    </TouchableOpacity>
-                  ))}
+                  {showTemplateDropdown && (
+                    <View style={styles.dropdownList}>
+                      {templates.map((template) => (
+                        <TouchableOpacity
+                          key={template.value}
+                          style={styles.dropdownItem}
+                          onPress={() => {
+                            setSelectedTemplate(template.value);
+                            setShowTemplateDropdown(false);
+                          }}
+                        >
+                          <Text style={styles.dropdownItemText}>{template.label}</Text>
+                        </TouchableOpacity>
+                      ))}
+                    </View>
+                  )}
                 </View>
-              )}
-            </View>
+              </>  
+            }
+            {
+              !isEditMode &&
+              <>  
+                <Text style={styles.label}>Social post / reel URL</Text>
 
+                <TextInput
+                  style={styles.input}
+                  placeholder="https://www.instagram.com/reel/..."
+                  value={url}
+                  onChangeText={setUrl}
+                />
+              </>
+            }
 
-            {/* URL */}
-
-            <Text style={styles.label}>Social post / reel URL</Text>
-
-            <TextInput
-              style={styles.input}
-              placeholder="https://www.instagram.com/reel/..."
-              value={url}
-              readOnly
-              onChangeText={setUrl}
-            />
 
             <Text style={styles.helperText}>
               We store the link and build structured inventory around it.
@@ -412,7 +489,7 @@ export default function AddPostScreen({ route }) {
               {imageUrls.map((imageUrl, index) => (
                 <View key={index} style={styles.imageInputContainer}>
                   <TextInput
-                    style={styles.input}
+                    style={[styles.input, {width: '80%'}]}
                     placeholder={`https://... image url ${index + 1}`}
                     value={imageUrl}
                     onChangeText={(value) => updateImageUrl(index, value)}
@@ -459,30 +536,18 @@ export default function AddPostScreen({ route }) {
 
           </View>
 
-
-          {/* Best Practices */}
-
-          <View style={styles.card}>
-
-            <Text style={styles.smallTitle}>Best practices</Text>
-
-            <Text style={styles.bestTitle}>
-              For maximum conversion:
-            </Text>
-
-            <Text style={styles.bestItem}>
-              1. Add price (kills friction)
-            </Text>
-
-            <Text style={styles.bestItem}>
-              2. Add key details (builds trust)
-            </Text>
-
-            <Text style={styles.bestItem}>
-              3. Add 3 images (boosts intent)
-            </Text>
-
-          </View>
+          {
+            isEditMode && 
+            <PostMetricsCard 
+              shares={post.share_count} 
+              images={post.inventory_image_count} 
+              onOpenLink={()=>{
+                Linking.openURL(post.social_url).catch(err => {});
+              }} 
+            />
+          }
+          {isEditMode && <PreviewCard imageUrl={imageUrls?.[0]} />}
+          {!isEditMode && <BestPractices />}      
 
 
           <Text style={styles.footer}>
@@ -519,7 +584,7 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     justifyContent: "space-between",
     alignItems: "center",
-    marginBottom: 16
+    marginBottom: 8
   },
 
   rowActions: {
@@ -550,7 +615,7 @@ const styles = StyleSheet.create({
   description: {
     fontSize: 15,
     color: "#4b5563",
-    marginVertical: 12,
+    // marginVertical: 12,
   },
 
   label: {
@@ -566,7 +631,7 @@ const styles = StyleSheet.create({
     padding: 14,
     borderWidth: 1,
     borderColor: "#e5e7eb",
-    fontSize: 16
+    fontSize: 16,
   },
 
   dropdown: {
@@ -746,6 +811,61 @@ const styles = StyleSheet.create({
 
   qrText: {
     marginLeft: 6
-  }
+  },
+  metricsRow: {
+  flexDirection: "row",
+  justifyContent: "space-between",
+  marginTop: 12,
+},
 
+  metricBox: {
+    flex: 1,
+    backgroundColor: "white",
+    borderRadius: 20,
+    padding: 16,
+    borderWidth: 1,
+    borderColor: COLORS.border,
+    marginRight: 10,
+  },
+
+  metricLabel: {
+    fontSize: 14,
+    color: COLORS.textSecondary,
+  },
+
+  metricValue: {
+    fontSize: 32,
+    fontWeight: "700",
+    marginTop: 6,
+    color: COLORS.textPrimary,
+  },
+    secondaryButton: {
+    flexDirection: "row",
+    alignItems: "center",
+    alignSelf: "flex-start",
+    paddingHorizontal: 14,
+    paddingVertical: 8,
+    borderRadius: 30,
+    borderWidth: 1,
+    borderColor: COLORS.border,
+    backgroundColor: COLORS.card,
+    marginVertical: 10,
+    gap: 6,
+  },
+
+  secondaryButtonText: {
+    fontSize: 14,
+    color: COLORS.textPrimary,
+  },
+  previewWrapper: {
+    marginTop: 12,
+    borderRadius: 20,
+    overflow: "hidden",
+  },
+
+  previewImage: {
+    width: "100%",
+    height: 350, // adjust based on your UI
+    resizeMode: "cover",
+  },
 });

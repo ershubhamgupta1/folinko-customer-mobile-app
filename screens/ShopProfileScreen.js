@@ -31,19 +31,19 @@ const ShopProfileScreen = ({ navigation }) => {
     category: '',
     description: '',
     logo: null,
-    instagram: '',
-    pinterest: '',
-    youtube: '',
-    website: '',
-    foundedYear: '',
-    lifetimeSales: '',
-    tagLine: '',
-    knownFor: '',
-    yourStory: '',
+    instagram_handle: '',
+    pinterest_handle: '',
+    youtube_handle: '',
+    facebook_handle: '',
+    founded_year: '',
+    claimed_lifetime_sales: '',
+    tagline: '',
+    known_for: '',
+    story: '',
     storefrontStory: '',
-    ifscCode: '',
-    accountNumber: '',
-    upiId: '',
+    payout_ifsc_code: '',
+    payout_account_number: '',
+    payout_upi_id: '',
     accountHolderName: '',
     payoutFrequency: 'Weekly',
     minPayoutAmount: ''
@@ -118,13 +118,13 @@ const ShopProfileScreen = ({ navigation }) => {
       setLoading(true);
       const response = await shop.getMyShop();
       let qrCode = await shop.getQRCode();
-      qrCode = qrCode.replace(/svg:/g, "")
+      qrCode = qrCode?.replace(/svg:/g, "")
       .replace(/xmlns:svg="[^"]*"/g, "");
 
       setQrImageUrl(qrCode)
       // Extract shop data from nested response
       const shopResponse = response?.shop || {};
-      
+      console.log('shopResponse============', shopResponse)
       setShopData(shopResponse);
       setFormData({
         name: shopResponse?.name || '',
@@ -135,15 +135,19 @@ const ShopProfileScreen = ({ navigation }) => {
         city: shopResponse?.city || '',
         category: shopResponse?.category || '',
         description: shopResponse?.description || '',
-        website: shopResponse?.website_url || '',
-        foundedYear: shopResponse?.founded_year ? shopResponse.founded_year.toString() : '',
-        lifetimeSales: shopResponse?.claimed_lifetime_sales ? shopResponse.claimed_lifetime_sales.toString() : '',
-        tagLine: shopResponse?.tagline || '',
-        knownFor: shopResponse?.known_for || '',
-        yourStory: shopResponse?.story || '',
-        ifscCode: shopResponse?.payout_ifsc_code || '',
-        accountNumber: shopResponse?.payout_account_number || '',
-        upiId: shopResponse?.payout_upi_id || ''
+        facebook_handle: shopResponse?.facebook_handle || '',
+        instagram_handle: shopResponse?.instagram_handle || '',
+        pinterest_handle: shopResponse?.pinterest_handle || '',
+        youtube_handle: shopResponse?.youtube_handle || '',
+
+        founded_year: shopResponse?.founded_year ? shopResponse.founded_year.toString() : '',
+        claimed_lifetime_sales: shopResponse?.claimed_lifetime_sales ? shopResponse.claimed_lifetime_sales.toString() : '',
+        tagline: shopResponse?.tagline || '',
+        known_for: shopResponse?.known_for || '',
+        story: shopResponse?.story || '',
+        payout_ifsc_code: shopResponse?.payout_ifsc_code || '',
+        payout_account_number: shopResponse?.payout_account_number || '',
+        payout_upi_id: shopResponse?.payout_upi_id || ''
       });
       
     } catch (error) {
@@ -178,25 +182,26 @@ const ShopProfileScreen = ({ navigation }) => {
       // API call to update shop profile data only
       const profileData = {
         name: formData.name,
-        // email: formData.email,
+        category: formData.category,
         phone: formData.phone,
         whatsapp: formData.whatsapp,
         address: formData.address,
         city: formData.city,
-        category: formData.category,
-        payout_ifsc_code: formData.ifscCode,
-        payout_account_number: formData.accountNumber,
-        payout_upi_id: formData.upiId
-
-        // description: formData.description,
-        // website: formData.website,
-        // foundedYear: formData.foundedYear,
-        // lifetimeSales: formData.lifetimeSales,
-        // tagLine: formData.tagLine,
-        // knownFor: formData.knownFor,
-        // yourStory: formData.yourStory
+        payout_ifsc_code: formData.payout_ifsc_code,
+        payout_account_number: formData.payout_account_number,
+        payout_upi_id: formData.payout_upi_id,
+        instagram_handle:  "https://google.com",
+        facebook_handle: "https://google.com",
+        youtube_handle: "https://google.com",
+        founded_year: formData.founded_year,
+        claimed_lifetime_sales: Number(formData.claimed_lifetime_sales),
+        tagline: formData.tagline,
+        known_for: formData.known_for,
+        story: formData.story
       };
+      console.log('profileData=========', profileData);
       await shop.createOrUpdateShop(profileData);
+      
       setShopData({ ...shopData, ...profileData });
       setIsEditingProfile(false);
       Alert.alert('Success', 'Shop profile updated successfully');
@@ -213,9 +218,9 @@ const ShopProfileScreen = ({ navigation }) => {
       setLoading(true);
       // API call to update payout data only
       const payoutData = {
-        payout_ifsc_code: formData.ifscCode,
-        payout_account_number: formData.accountNumber,
-        payout_upi_id: formData.upiId
+        payout_ifsc_code: formData.payout_ifsc_code,
+        payout_account_number: formData.payout_account_number,
+        payout_upi_id: formData.payout_upi_id
       };
       await shop.createOrUpdateShop(payoutData);
       setShopData({ ...shopData, ...payoutData });
@@ -256,20 +261,19 @@ const ShopProfileScreen = ({ navigation }) => {
       category: shopData?.category || '',
       description: shopData?.description || '',
       logo: shopData?.logo || null,
-      instagram: shopData?.instagram || '',
-      pinterest: shopData?.pinterest || '',
-      youtube: shopData?.youtube || '',
-      website: shopData?.website_url || '',
-      foundedYear: shopData?.founded_year ? shopData.founded_year.toString() : '',
-      lifetimeSales: shopData?.claimed_lifetime_sales ? shopData.claimed_lifetime_sales.toString() : '',
-      tagLine: shopData?.tagline || '',
-      knownFor: shopData?.known_for || '',
-      yourStory: shopData?.story || '',
+      instagram_handle: shopData?.instagram_handle || '',
+      pinterest_handle: shopData?.pinterest_handle || '',
+      youtube_handle: shopData?.youtube_handle || '',
+      founded_year: shopData?.founded_year ? shopData.founded_year.toString() : '',
+      claimed_lifetime_sales: shopData?.claimed_lifetime_sales ? shopData.claimed_lifetime_sales.toString() : '',
+      tagline: shopData?.tagline || '',
+      known_for: shopData?.known_for || '',
+      story: shopData?.story || '',
       storefrontStory: shopData?.storefront_story || '',
-      ifscCode: shopData?.payout_ifsc_code || '',
-      accountNumber: shopData?.payout_account_number || '',
-      ifscCode: shopData?.ifsc_code || '',
-      upiId: shopData?.payout_upi_id || '',
+      payout_ifsc_code: shopData?.payout_ifsc_code || '',
+      payout_account_number: shopData?.payout_account_number || '',
+      payout_ifsc_code: shopData?.ifsc_code || '',
+      payout_upi_id: shopData?.payout_upi_id || '',
       accountHolderName: shopData?.account_holder_name || '',
       payoutFrequency: shopData?.payout_frequency || 'Weekly',
       minPayoutAmount: shopData?.min_payout_amount || ''
@@ -493,8 +497,82 @@ const ShopProfileScreen = ({ navigation }) => {
                   )}
                 </View>
               </View>
-
               <View style={styles.infoRow}>
+                <View style={styles.infoIcon}>
+                  <FontAwesome5 name="tag" size={16} color="#666" />
+                </View>
+                <View style={styles.infoContent}>
+                  <Text style={styles.infoLabel}>Category</Text>
+                  {isEditingProfile ? (
+                    <TextInput
+                      style={styles.input}
+                      value={formData.category}
+                      onChangeText={(text) => setFormData({ ...formData, category: text })}
+                      placeholder="Enter category"
+                    />
+                  ) : (
+                    <Text style={styles.infoValue}>{formData.category || 'Not specified'}</Text>
+                  )}
+                </View>
+              </View>
+              <View style={styles.infoRow}>
+                <View style={styles.infoIcon}>
+                  <FontAwesome5 name="globe" size={16} color="#666" />
+                </View>
+                <View style={styles.infoContent}>
+                  <Text style={styles.infoLabel}>Instagram</Text>
+                  {isEditingProfile ? (
+                    <TextInput
+                      style={styles.input}
+                      value={formData.instagram_handle}
+                      onChangeText={(text) => setFormData({ ...formData, instagram_handle: text })}
+                      placeholder="https://instagram.com"
+                      keyboardType="url"
+                    />
+                  ) : (
+                    <Text style={styles.infoValue}>{formData.instagram_handle || 'Not specified'}</Text>
+                  )}
+                </View>
+              </View>
+              <View style={styles.infoRow}>
+                <View style={styles.infoIcon}>
+                  <FontAwesome5 name="globe" size={16} color="#666" />
+                </View>
+                <View style={styles.infoContent}>
+                  <Text style={styles.infoLabel}>Facebook</Text>
+                  {isEditingProfile ? (
+                    <TextInput
+                      style={styles.input}
+                      value={formData.facebook_handle}
+                      onChangeText={(text) => setFormData({ ...formData, facebook_handle: text })}
+                      placeholder="https://yourwebsite.com"
+                      keyboardType="url"
+                    />
+                  ) : (
+                    <Text style={styles.infoValue}>{formData.facebook_handle || 'Not specified'}</Text>
+                  )}
+                </View>
+              </View>
+              <View style={styles.infoRow}>
+                <View style={styles.infoIcon}>
+                  <FontAwesome5 name="globe" size={16} color="#666" />
+                </View>
+                <View style={styles.infoContent}>
+                  <Text style={styles.infoLabel}>Pinterest</Text>
+                  {isEditingProfile ? (
+                    <TextInput
+                      style={styles.input}
+                      value={formData.pinterest_handle}
+                      onChangeText={(text) => setFormData({ ...formData, pinterest_handle: text })}
+                      placeholder="https://pinterest.com"
+                      keyboardType="url"
+                    />
+                  ) : (
+                    <Text style={styles.infoValue}>{formData.pinterest_handle || 'Not specified'}</Text>
+                  )}
+                </View>
+              </View>
+              {/* <View style={styles.infoRow}>
                 <View style={styles.infoIcon}>
                   <FontAwesome5 name="envelope" size={16} color="#666" />
                 </View>
@@ -512,7 +590,7 @@ const ShopProfileScreen = ({ navigation }) => {
                     <Text style={styles.infoValue}>{formData.email || 'Not specified'}</Text>
                   )}
                 </View>
-              </View>
+              </View> */}
 
               <View style={styles.infoRow}>
                 <View style={styles.infoIcon}>
@@ -594,26 +672,8 @@ const ShopProfileScreen = ({ navigation }) => {
                 </View>
               </View>
 
-              <View style={styles.infoRow}>
-                <View style={styles.infoIcon}>
-                  <FontAwesome5 name="tag" size={16} color="#666" />
-                </View>
-                <View style={styles.infoContent}>
-                  <Text style={styles.infoLabel}>Category</Text>
-                  {isEditingProfile ? (
-                    <TextInput
-                      style={styles.input}
-                      value={formData.category}
-                      onChangeText={(text) => setFormData({ ...formData, category: text })}
-                      placeholder="Enter category"
-                    />
-                  ) : (
-                    <Text style={styles.infoValue}>{formData.category || 'Not specified'}</Text>
-                  )}
-                </View>
-              </View>
 
-              <View style={styles.infoRow}>
+              {/* <View style={styles.infoRow}>
                 <View style={styles.infoIcon}>
                   <FontAwesome5 name="info-circle" size={16} color="#666" />
                 </View>
@@ -631,6 +691,10 @@ const ShopProfileScreen = ({ navigation }) => {
                   ) : (
                     <Text style={styles.infoValue}>{formData.description || 'No description provided'}</Text>
                   )}
+                </View>
+              </View> */}
+
+              {/* <View style={styles.infoRow}>
                 <View style={styles.infoIcon}>
                   <FontAwesome5 name="globe" size={16} color="#666" />
                 </View>
@@ -648,8 +712,7 @@ const ShopProfileScreen = ({ navigation }) => {
                     <Text style={styles.infoValue}>{formData.website || 'Not specified'}</Text>
                   )}
                 </View>
-              </View>
-              </View>
+              </View> */}
               <View style={styles.infoRow}>
                 <Text>Storefront story</Text>
               </View>
@@ -662,14 +725,14 @@ const ShopProfileScreen = ({ navigation }) => {
                   {isEditingProfile ? (
                     <TextInput
                       style={styles.input}
-                      value={formData.foundedYear}
-                      onChangeText={(text) => setFormData({ ...formData, foundedYear: text })}
+                      value={formData.founded_year}
+                      onChangeText={(text) => setFormData({ ...formData, founded_year: text })}
                       placeholder="e.g., 2020"
                       keyboardType="numeric"
                       maxLength={4}
                     />
                   ) : (
-                    <Text style={styles.infoValue}>{formData.foundedYear || 'Not specified'}</Text>
+                    <Text style={styles.infoValue}>{formData.founded_year || 'Not specified'}</Text>
                   )}
                 </View>
               </View>
@@ -683,12 +746,12 @@ const ShopProfileScreen = ({ navigation }) => {
                   {isEditingProfile ? (
                     <TextInput
                       style={styles.input}
-                      value={formData.lifetimeSales}
-                      onChangeText={(text) => setFormData({ ...formData, lifetimeSales: text })}
+                      value={formData.claimed_lifetime_sales}
+                      onChangeText={(text) => setFormData({ ...formData, claimed_lifetime_sales: text })}
                       placeholder="e.g., ₹50,000"
                     />
                   ) : (
-                    <Text style={styles.infoValue}>{formData.lifetimeSales || 'Not specified'}</Text>
+                    <Text style={styles.infoValue}>{formData.claimed_lifetime_sales || 'Not specified'}</Text>
                   )}
                 </View>
               </View>
@@ -702,12 +765,12 @@ const ShopProfileScreen = ({ navigation }) => {
                   {isEditingProfile ? (
                     <TextInput
                       style={styles.input}
-                      value={formData.tagLine}
-                      onChangeText={(text) => setFormData({ ...formData, tagLine: text })}
+                      value={formData.tagline}
+                      onChangeText={(text) => setFormData({ ...formData, tagline: text })}
                       placeholder="Your shop's tag line"
                     />
                   ) : (
-                    <Text style={styles.infoValue}>{formData.tagLine || 'Not specified'}</Text>
+                    <Text style={styles.infoValue}>{formData.tagline || 'Not specified'}</Text>
                   )}
                 </View>
               </View>
@@ -721,12 +784,12 @@ const ShopProfileScreen = ({ navigation }) => {
                   {isEditingProfile ? (
                     <TextInput
                       style={styles.input}
-                      value={formData.knownFor}
-                      onChangeText={(text) => setFormData({ ...formData, knownFor: text })}
+                      value={formData.known_for}
+                      onChangeText={(text) => setFormData({ ...formData, known_for: text })}
                       placeholder="What your shop is known for"
                     />
                   ) : (
-                    <Text style={styles.infoValue}>{formData.knownFor || 'Not specified'}</Text>
+                    <Text style={styles.infoValue}>{formData.known_for || 'Not specified'}</Text>
                   )}
                 </View>
               </View>
@@ -740,14 +803,14 @@ const ShopProfileScreen = ({ navigation }) => {
                   {isEditingProfile ? (
                     <TextInput
                       style={[styles.input, styles.textArea]}
-                      value={formData.yourStory}
-                      onChangeText={(text) => setFormData({ ...formData, yourStory: text })}
+                      value={formData.story}
+                      onChangeText={(text) => setFormData({ ...formData, story: text })}
                       placeholder="Tell your shop's story"
                       multiline
                       numberOfLines={4}
                     />
                   ) : (
-                    <Text style={styles.infoValue}>{formData.yourStory || 'No story provided'}</Text>
+                    <Text style={styles.infoValue}>{formData.story || 'No story provided'}</Text>
                   )}
                 </View>
               </View>
@@ -787,12 +850,12 @@ const ShopProfileScreen = ({ navigation }) => {
                   {isEditingProfile ? (
                     <TextInput
                       style={styles.input}
-                      value={formData.ifscCode || ''}
-                      onChangeText={(text) => setFormData({ ...formData, ifscCode: text })}
+                      value={formData.payout_ifsc_code || ''}
+                      onChangeText={(text) => setFormData({ ...formData, payout_ifsc_code: text })}
                       placeholder="Enter IFSC Code"
                     />
                   ) : (
-                    <Text style={styles.infoValue}>{formData.ifscCode || 'Not specified'}</Text>
+                    <Text style={styles.infoValue}>{formData.payout_ifsc_code || 'Not specified'}</Text>
                   )}
                 </View>
               </View>
@@ -806,14 +869,14 @@ const ShopProfileScreen = ({ navigation }) => {
                   {isEditingProfile ? (
                     <TextInput
                       style={styles.input}
-                      value={formData.accountNumber || ''}
-                      onChangeText={(text) => setFormData({ ...formData, accountNumber: text })}
+                      value={formData.payout_account_number || ''}
+                      onChangeText={(text) => setFormData({ ...formData, payout_account_number: text })}
                       placeholder="Enter account number"
                       keyboardType="numeric"
                       secureTextEntry
                     />
                   ) : (
-                    <Text style={styles.infoValue}>{formData.accountNumber ? `****${formData.accountNumber.slice(-4)}` : 'Not specified'}</Text>
+                    <Text style={styles.infoValue}>{formData.payout_account_number ? `****${formData.payout_account_number.slice(-4)}` : 'Not specified'}</Text>
                   )}
                 </View>
               </View>
@@ -827,13 +890,13 @@ const ShopProfileScreen = ({ navigation }) => {
                   {isEditingProfile ? (
                     <TextInput
                       style={styles.input}
-                      value={formData.upiId || ''}
-                      onChangeText={(text) => setFormData({ ...formData, upiId: text })}
+                      value={formData.payout_upi_id || ''}
+                      onChangeText={(text) => setFormData({ ...formData, payout_upi_id: text })}
                       placeholder="Enter upi id"
                       autoCapitalize="characters"
                     />
                   ) : (
-                    <Text style={styles.infoValue}>{formData.upiId || 'Not specified'}</Text>
+                    <Text style={styles.infoValue}>{formData.payout_upi_id || 'Not specified'}</Text>
                   )}
                 </View>
               </View>

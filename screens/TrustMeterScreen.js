@@ -40,7 +40,8 @@ export default function VerificationScreen() {
       // Extract data from API response
       const trustMeterData = response?.trust_meter || {};
       const submissionData = response?.submission || {};
-      const apiShopStatus = submissionData?.shop_status || null;
+      console.log('response==============', response);
+      const apiShopStatus = response?.shop_status || null;
       
       // Update verification items with real data
       const updatedVerificationItems = trustMeterData.checks?.map(check => ({
@@ -89,6 +90,7 @@ export default function VerificationScreen() {
       </Text>
     </View>
   );
+  console.log('shopStatus=========', shopStatus);
   return (
     <SafeAreaView style={styles.safeArea}>
       <View style={styles.customHeader}>

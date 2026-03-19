@@ -8,45 +8,199 @@ import {
   TouchableOpacity,
 } from "react-native";
 import Header from "../components/Header";
-import { analytics } from "../services/api";
-import { Feather, MaterialIcons } from "@expo/vector-icons";
+import { analytics, shop } from "../services/api";
+import { Feather, MaterialIcons, Ionicons } from "@expo/vector-icons";
 import { SafeAreaView } from "react-native-safe-area-context";
+
+/* ===================== TOKENS ===================== */
+const COLORS = {
+  bg: "#f9fafb",
+  card: "#ffffff",
+  border: "#e5e7eb",
+  textPrimary: "#111827",
+  textSecondary: "#4b5563",
+  textMuted: "#6b7280",
+
+  successBg: "#dcfce7",
+  successText: "#22c55e",
+
+  warningBg: "#ffedd5",
+  warningText: "#f97316",
+};
+
+const SPACING = {
+  sm: 8,
+  md: 12,
+  lg: 16,
+};
+
+/* ===================== BASE ===================== */
+const base = StyleSheet.create({
+  card: {
+    backgroundColor: COLORS.card,
+    borderRadius: 20,
+    padding: SPACING.lg,
+    borderWidth: 1,
+    borderColor: COLORS.border,
+    marginBottom: SPACING.md,
+  },
+
+  rowBetween: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "center",
+  },
+
+  label: {
+    fontSize: 14,
+    color: COLORS.textMuted,
+  },
+
+  title: {
+    fontSize: 16,
+    fontWeight: "700",
+    color: COLORS.textPrimary,
+  },
+
+  description: {
+    fontSize: 13,
+    color: COLORS.textSecondary,
+    marginVertical: 8,
+    lineHeight: 20,
+  },
+});
+
+/* ===================== SMALL COMPONENTS ===================== */
+const ProTipCard = () => (
+  <View style={base.card}>
+    <Text style={styles.smallTitle}>Pro tip</Text>
+
+    <Text style={styles.proTipText}>
+      Add 3 high-quality images per product. Use “Material” + “Price” for instant trust.
+    </Text>
+  </View>
+);
 
 const StatCard = ({ title, desc, value }) => (
   <View style={styles.statBox}>
     <Text style={styles.statTitle}>{title}</Text>
-    <Text style={styles.statValue}>{value || "—"}</Text>
+    <Text style={styles.statValue}>{value}</Text>
     <Text style={styles.statDesc}>{desc}</Text>
   </View>
 );
 
+const Badge = ({ type = "success", icon, text }) => {
+  const isSuccess = type === "success";
+
+  return (
+    <View
+      style={[
+        styles.badge,
+        { backgroundColor: isSuccess ? COLORS.successBg : COLORS.warningBg },
+      ]}
+    >
+      <Ionicons
+        name={icon}
+        size={16}
+        color={isSuccess ? COLORS.successText : COLORS.warningText}
+      />
+      <Text
+        style={[
+          styles.badgeText,
+          { color: isSuccess ? COLORS.successText : COLORS.warningText },
+        ]}
+      >
+        {text}
+      </Text>
+    </View>
+  );
+};
+
+const AccountCard = ({ shopData }) => {
+  const shopStatus = shopData?.verification_status || 'PENDING';
+
+  return (
+  <View style={base.card}>
+    <Text style={base.label}>Account</Text>
+    {/* <Text style={styles.email}>{shopData?.email || 'Loading...'}</Text> */}
+
+    <View style={styles.innerCard}>
+      <Text style={styles.sectionTitle}>Shop status</Text>
+
+      {shopStatus === 'VERIFIED' ? (
+        <View style={styles.verifiedBadge}>
+          <Feather name="check-circle" size={16} color="#1c7c54" />
+          <Text style={styles.verifiedText}>Verified</Text>
+        </View>
+      ) : (
+        <View style={styles.pendingBadge}>
+          <Feather name="clock" size={16} color="#dc2626" />
+          <Text style={styles.pendingText}>Pending</Text>
+        </View>
+      )}
+
+      <Text style={styles.url}>
+        {shopData?.bio_link || 'Loading...'}
+      </Text>
+
+      <View style={styles.promotedRow}>
+        <Badge type="warning" icon="rocket-outline" text="Promoted" />
+
+        <Text style={styles.promotedDesc}>
+          Shown first in customer trending feed
+        </Text>
+      </View>
+
+      <TouchableOpacity style={styles.primaryButton}>
+        <Text style={styles.primaryButtonText}>Remove promotion</Text>
+        <Ionicons name="chevron-down" size={18} />
+      </TouchableOpacity>
+    </View>
+  </View>
+);
+};
+
+/* ===================== MAIN SCREEN ===================== */
+
 const DashboardScreen = ({ navigation }) => {
   const [refreshing, setRefreshing] = useState(false);
   const [metrics, setMetrics] = useState({});
-  const [shop, setShop] = useState({});
+  const [shopData, setShopData] = useState({});
 
   useEffect(() => {
     fetchSummaryData();
+    fetchShopData();
   }, []);
+
+  const fetchShopData = async () => {
+    try {
+      const response = await shop.getMyShop();
+      let qrCode = await shop.getQRCode();
+      qrCode = qrCode?.replace(/svg:/g, "")
+      .replace(/xmlns:svg="[^"]*"/g, "");
+
+      // Extract shop data from nested response
+      const shopResponse = response?.shop || {};
+      setShopData(shopResponse);
+    } catch (error) {
+      console.error('Error fetching shop data:', error);
+    }
+  };
 
   const fetchSummaryData = async () => {
     try {
-      const summaryResponse = await analytics.getSummary();
-      // Extract data from API response
-      const metricsData = summaryResponse?.metrics || {};
-      const shopData = summaryResponse?.shop || {};
-      
-      // Set state variables
-      setMetrics(metricsData);
-      setShop(shopData);
-    } catch (error) {
-      console.error("Error fetching summary data:", error);
+      const res = await analytics.getSummary();
+      console.log('res==========', res);
+      setMetrics(res?.metrics || {});
+    } catch (e) {
+      console.error(e);
     }
   };
 
   const onRefresh = async () => {
     setRefreshing(true);
     await fetchSummaryData();
+    await fetchShopData();
     setRefreshing(false);
   };
 
@@ -54,244 +208,273 @@ const DashboardScreen = ({ navigation }) => {
     <SafeAreaView style={styles.safeArea}>
       <ScrollView
         style={styles.container}
-        refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} />}
+        refreshControl={
+          <RefreshControl refreshing={refreshing} onRefresh={onRefresh} />
+        }
       >
         <Header
           title="Dashboard"
-          onNotificationPress={() => console.log("Notification pressed")}
+          onNotificationPress={() => {}}
           onProfilePress={() => navigation.navigate("userProfile")}
         />
 
         <View style={styles.content}>
-        <TouchableOpacity style={styles.button} onPress={() => navigation.navigate('feedScreen')}>
-          <Text style={styles.buttonText}>Open Feed</Text>
-          <Feather name="arrow-right" size={16} color="#1f2937" />
-        </TouchableOpacity>
+          {/* NAV */}
+          <TouchableOpacity
+            style={styles.secondaryButton}
+            onPress={() => navigation.navigate("feedScreen")}
+          >
+            <Text style={styles.secondaryButtonText}>Open Feed</Text>
+            <Feather name="arrow-right" size={16} />
+          </TouchableOpacity>
 
-          {/* Quick Actions */}
-          <View style={styles.card}>
+          {/* QUICK ACTION */}
+          <View style={base.card}>
             <Text style={styles.smallTitle}>Quick Actions</Text>
-
-            <Text style={styles.title}>
-              Run your storefront like a product
-            </Text>
-
-            <Text style={styles.description}>
-              Upload social links, add structured product details, and build trust
-              with verification. This is how we kill "DM for price".
+            <Text style={base.title}>Run your storefront like a product</Text>
+            <Text style={base.description}>
+              Upload social links, add structured product details, and build trust with verification. This is how we kill “DM for price”.
             </Text>
 
             <View style={styles.statsContainer}>
-              <StatCard
-                title="Total Posts"
-                desc="Every post is a structured product card"
-                value={metrics.total_posts}
-              />
-              <StatCard
-                title="Inventory Images"
-                desc="Boost conversions with multi-image support"
-                value={metrics.total_images}
-              />
-              <StatCard
-                title="Total Shares"
-                desc="Signal: demand and social proof"
-                value={metrics.total_shares}
-              />
+              <StatCard title="Total Posts" value={metrics.total_posts} desc={'Every post is a structured product card'} />
+              <StatCard title="Images" value={metrics.total_images} desc={'Boost conversions with multi-image support'} />
+              <StatCard title="Shares" value={metrics.total_shares} desc={'Signal: demand and social proof'} />
             </View>
           </View>
 
-          {/* QR Identity */}
-          <View style={styles.card}>
-            <View style={styles.header}>
+          {/* QR */}
+          <View style={base.card}>
+            <View style={base.rowBetween}>
               <View>
                 <Text style={styles.smallTitle}>Unified Shop Identity</Text>
-                <Text style={styles.title}>One QR. One link.</Text>
+                <Text style={base.title}>One QR. One link.</Text>
               </View>
-
-              <MaterialIcons name="qr-code" size={24} color="#667085" />
+              <MaterialIcons name="qr-code" size={24} />
             </View>
 
-            <Text style={styles.description}>
+            <Text style={base.description}>
               Use a single QR to bridge offline traffic to your video-first storefront.
             </Text>
 
-            <TouchableOpacity style={styles.button} onPress={() => navigation.navigate('shopProfile')}>
-              <Text style={styles.buttonText}>Manage</Text>
-              <Feather name="arrow-right" size={16} color="#1f2937" />
+            <TouchableOpacity style={styles.secondaryButton} onPress={() => navigation.navigate('shopProfile')}>
+              <Text style={styles.secondaryButtonText}>Manage</Text>
+              <Feather name="arrow-right" size={16} />
             </TouchableOpacity>
           </View>
 
-          {/* Trust Verification */}
-          <View style={styles.card}>
-            <View style={styles.header}>
+          {/* TRUST */}
+          <View style={base.card}>
+            <View style={base.rowBetween}>
               <View>
                 <Text style={styles.smallTitle}>Trust & Verification</Text>
-                <Text style={styles.title}>Earn the Blue Tick</Text>
+                <Text style={base.title}>Earn the Blue Tick</Text>
               </View>
-
-              <Feather name="check-circle" size={22} color="#5f6b7a" />
+              <Feather name="check-circle" size={22} />
             </View>
 
-            <Text style={styles.description}>
+            <Text style={base.description}>
               Submit GST, shop photos, and social proof. Verification unlocks marketplace trust.
             </Text>
 
-            <TouchableOpacity style={styles.button} onPress={() => navigation.navigate('trustMeter')}>
-              <Text style={styles.buttonText}>Open Trust Meter</Text>
-              <Feather name="arrow-right" size={16} color="#1f2937" />
+            <TouchableOpacity style={styles.secondaryButton} onPress={() => navigation.navigate('trustMeter')}>
+              <Text style={styles.secondaryButtonText}>
+                Open Trust Meter
+              </Text>
+              <Feather name="arrow-right" size={16} />
             </TouchableOpacity>
           </View>
 
-          {/* Account */}
-          <View style={styles.card}>
-            <Text style={styles.sectionTitle}>Account</Text>
-            <Text style={styles.value}>—</Text>
-
-            <View style={styles.innerCard}>
-              <Text style={styles.innerTitle}>Shop status</Text>
-
-              <Text style={styles.description}>
-                Create your shop to unlock metrics.
-              </Text>
-
-              <TouchableOpacity style={styles.button}>
-                <Text style={styles.buttonText}>Create shop</Text>
-                <Feather name="arrow-right" size={16} color="#1f2937" />
-              </TouchableOpacity>
-            </View>
-          </View>
-            {/* <TouchableOpacity style={styles.button} onPress={() => navigation.navigate('shopProfile')}>
-              <Text style={styles.buttonText}>View shop identity</Text>
-            </TouchableOpacity> */}
+          {/* ACCOUNT */}
+          <AccountCard shopData={shopData} />
+          <ProTipCard />
         </View>
       </ScrollView>
     </SafeAreaView>
   );
 };
 
+export default DashboardScreen;
+
+/* ===================== STYLES ===================== */
+
 const styles = StyleSheet.create({
-safeArea: {
-  flex: 1,
-  backgroundColor: "#fff",
-},
+  safeArea: {
+    flex: 1,
+    backgroundColor: COLORS.bg,
+  },
+
   container: {
     flex: 1,
-    backgroundColor: "#fff",
   },
 
   content: {
     padding: 20,
   },
 
-  card: {
-    backgroundColor: "#f4f4f4",
-    borderRadius: 24,
-    padding: 20,
-    marginBottom: 16,
-    borderWidth: 1,
-    borderColor: "#e3e3e3",
-  },
-
-  header: {
-    flexDirection: "row",
-    justifyContent: "space-between",
-    alignItems: "center",
-  },
-
   smallTitle: {
-    fontSize: 14,
-    color: "#6b7280",
+    fontSize: 13,
+    color: COLORS.textMuted,
     marginBottom: 4,
   },
 
-  title: {
-    fontSize: 16,
-    fontWeight: "700",
-    color: "#1f2937",
-  },
-
-  description: {
-    fontSize: 13,
-    color: "#4b5563",
-    marginVertical: 8,
-    lineHeight: 20,
-  },
-
-  button: {
+  /* BUTTONS */
+  secondaryButton: {
     flexDirection: "row",
     alignItems: "center",
     alignSelf: "flex-start",
-    paddingHorizontal: 16,
+    paddingHorizontal: 14,
     paddingVertical: 8,
     borderRadius: 30,
     borderWidth: 1,
-    borderColor: "#d1d5db",
-    backgroundColor: "#f8f8f8",
-    marginBottom: 10
+    borderColor: COLORS.border,
+    backgroundColor: COLORS.card,
+    marginBottom: 10,
+    gap: 6,
   },
 
-  buttonText: {
-    fontSize: 13,
-    marginRight: 6,
-    color: "#1f2937",
+  secondaryButtonText: {
+    fontSize: 14,
+    color: COLORS.textPrimary,
+  },
+
+  primaryButton: {
+    marginTop: 16,
+    borderRadius: 30,
+    paddingVertical: 14,
+    flexDirection: "row",
+    justifyContent: "center",
+    alignItems: "center",
+    gap: 8,
+    borderWidth: 1,
+    borderColor: COLORS.border,
+  },
+
+  primaryButtonText: {
+    fontSize: 15,
     fontWeight: "500",
   },
 
+  /* STATS */
   statsContainer: {
-    gap: 12,
+    gap: 10,
     marginTop: 10,
   },
 
   statBox: {
     backgroundColor: "#f8f8f8",
-    borderRadius: 20,
+    borderRadius: 16,
+    padding: 14,
     borderWidth: 1,
-    borderColor: "#e5e5e5",
-    padding: 16,
+    borderColor: COLORS.border,
   },
 
   statTitle: {
-    fontSize: 13,
-    color: "#475569",
+    fontSize: 12,
+    color: COLORS.textMuted,
   },
 
   statValue: {
     fontSize: 16,
     fontWeight: "600",
     marginVertical: 4,
-    color: "#111827",
   },
 
   statDesc: {
     fontSize: 12,
-    color: "#64748b",
+    color: COLORS.textMuted,
+  },
+
+  /* ACCOUNT */
+  email: {
+    fontSize: 20,
+    fontWeight: "700",
+    marginTop: 4,
+  },
+
+  innerCard: {
+    marginTop: 16,
+    borderWidth: 1,
+    borderColor: COLORS.border,
+    borderRadius: 20,
+    padding: 16,
   },
 
   sectionTitle: {
     fontSize: 15,
-    color: "#475569",
-  },
-
-  value: {
-    fontSize: 16,
-    fontWeight: "600",
     marginBottom: 12,
-    color: "#111827",
+    color: COLORS.textSecondary,
   },
 
-  innerCard: {
-    backgroundColor: "#f7f7f7",
-    borderRadius: 20,
-    borderWidth: 1,
-    borderColor: "#e5e5e5",
-    padding: 18,
-  },
-
-  innerTitle: {
+  url: {
+    marginTop: 12,
     fontSize: 14,
-    color: "#475569",
-    marginBottom: 6,
+    color: COLORS.textSecondary,
+  },
+
+  promotedRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    marginTop: 12,
+    gap: 10,
+  },
+
+  promotedDesc: {
+    flex: 1,
+    fontSize: 13,
+    color: COLORS.textSecondary,
+  },
+
+  badge: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 6,
+    paddingHorizontal: 10,
+    paddingVertical: 5,
+    borderRadius: 20,
+  },
+
+  badgeText: {
+    fontWeight: "600",
+    fontSize: 13,
+  },
+  proTipText: {
+    fontSize: 16,
+    color: COLORS.textSecondary,
+    marginTop: 6,
+    lineHeight: 24,
+  },
+
+  /* VERIFICATION BADGES */
+  verifiedBadge: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 6,
+    backgroundColor: "#dcfce7",
+    paddingHorizontal: 12,
+    paddingVertical: 6,
+    borderRadius: 20,
+    alignSelf: "flex-start",
+  },
+
+  verifiedText: {
+    color: "#1c7c54",
+    fontWeight: "600",
+  },
+
+  pendingBadge: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 6,
+    backgroundColor: "#fef3c7",
+    paddingHorizontal: 12,
+    paddingVertical: 6,
+    borderRadius: 20,
+    alignSelf: "flex-start",
+  },
+
+  pendingText: {
+    color: "#dc2626",
+    fontWeight: "600",
   },
 });
-
-export default DashboardScreen;

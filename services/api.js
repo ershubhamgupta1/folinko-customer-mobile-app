@@ -55,6 +55,9 @@ const apiRequest = async (endpoint, options = {}) => {
 
   try {
     const response = await fetch(url, config);
+    console.log('url=========', url);
+    console.log('response=========', response);
+
     if (!response.ok) {
       const errorData = await response.json().catch(() => ({}));
       
