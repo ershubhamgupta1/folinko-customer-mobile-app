@@ -5,9 +5,57 @@ const TOKEN_KEY = '@business_token';
 
 // Global navigation reference for redirects
 let navigationRef = null;
+let pendingAuthRedirect = false;
 
 export const setNavigationRef = (ref) => {
   navigationRef = ref;
+
+  if (pendingAuthRedirect) {
+    // Try to complete any pending redirect once navigator mounts.
+    try {
+      if (navigationRef?.isReady?.()) {
+        navigationRef.reset({
+          index: 0,
+          routes: [{ name: 'Login' }],
+        });
+        pendingAuthRedirect = false;
+      }
+    } catch (e) {
+      // ignore and keep pending
+    }
+  }
+};
+
+const safeRedirectToLogin = () => {
+  try {
+    if (navigationRef?.isReady?.()) {
+      navigationRef.reset({
+        index: 0,
+        routes: [{ name: 'Login' }],
+      });
+      pendingAuthRedirect = false;
+      return;
+    }
+  } catch (e) {
+    // fall through to pending
+  }
+
+  pendingAuthRedirect = true;
+
+  // Retry shortly in case navigator is still mounting.
+  setTimeout(() => {
+    try {
+      if (pendingAuthRedirect && navigationRef?.isReady?.()) {
+        navigationRef.reset({
+          index: 0,
+          routes: [{ name: 'Login' }],
+        });
+        pendingAuthRedirect = false;
+      }
+    } catch (e) {
+      // ignore and keep pending
+    }
+  }, 250);
 };
 
 export const setAuthToken = async (token) => {
@@ -63,12 +111,7 @@ const apiRequest = async (endpoint, options = {}) => {
       if (response.status === 401) {
         await removeAuthToken();
         // Navigate to LoginScreen
-        if (navigationRef) {
-          navigationRef.reset({
-            index: 0,
-            routes: [{ name: 'Login' }],
-          });
-        }
+        safeRedirectToLogin();
         console.warn('Authentication expired - redirecting to login');
         return;
       }
@@ -92,12 +135,7 @@ const apiRequest = async (endpoint, options = {}) => {
     if (error.message.includes('401') || error.message.includes('Unauthorized')) {
       await removeAuthToken();
       // Navigate to LoginScreen
-      if (navigationRef) {
-        navigationRef.reset({
-          index: 0,
-          routes: [{ name: 'Login' }],
-        });
-      }
+      safeRedirectToLogin();
       console.warn('Authentication error - redirecting to login');
       return;
     }

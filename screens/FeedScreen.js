@@ -96,51 +96,86 @@ const UpdateHeaderCard = () => (
   </View>
 );
 
-const FeedPostCard = ({ post }) => (
-  <View style={base.card}>
-    <Text style={styles.postTitle}>{post?.title || 'Untitled'}</Text>
+const FeedPostCard = ({ post }) => {
+  const [isPlaying, setIsPlaying] = useState(false);
+  const hasThumbnail = !!post?.thumbnail_url;
+  const hasVideo = !!post?.video_url;
 
-    <Text style={styles.meta}>
-      {new Date(post?.created_at).toLocaleDateString()} • Folinko
-    </Text>
+  return (
+    <View style={base.card}>
+      <Text style={styles.postTitle}>{post?.title || 'Untitled'}</Text>
 
-    <Text style={styles.desc}>
-      {post?.body || 'No content available'}
-    </Text>
-
-    {/* IMAGE/VIDEO PREVIEW */}
-    {post?.thumbnail_url && (
-      <View style={styles.mediaWrapper}>
-        <Image 
-          source={{ uri: post.thumbnail_url }} 
-          style={styles.thumbnailImage}
-          resizeMode="cover"
-        />
-      </View>
-    )}
-
-    {post?.video_url && (
-      <View style={styles.videoWrapper}>
-        <VideoPlayer url={`${API_BASE}${post.video_url}`} />
-      </View>
-    )}
-
-    {/* CTA BUTTON */}
-    {post?.cta_text && (
-      <TouchableOpacity style={styles.ctaButton}>
-        <Text style={styles.ctaButtonText}>{post.cta_text}</Text>
-      </TouchableOpacity>
-    )}
-
-    {/* FOOTER */}
-    <View style={[base.rowBetween, { marginTop: 10 }]}>
-      <Text style={styles.meta}>Post #{post?.id}</Text>
       <Text style={styles.meta}>
-        Updated {new Date(post?.updated_at).toLocaleDateString()}
+        {new Date(post?.created_at).toLocaleDateString()} • Folinko
       </Text>
+
+      <Text style={styles.desc}>
+        {post?.body || 'No content available'}
+      </Text>
+
+      {/* IMAGE/VIDEO PREVIEW */}
+      {hasVideo ? (
+        isPlaying || !hasThumbnail ? (
+          <View style={styles.videoWrapper}>
+            <View style={styles.videoContainer}>
+              <VideoPlayer url={`${API_BASE}${post.video_url}`}  autoPlay={true}/>
+              {/* {hasThumbnail && (
+                <TouchableOpacity
+                  style={styles.videoCloseButton}
+                  onPress={() => setIsPlaying(false)}
+                >
+                  <Ionicons name="close" size={18} color="#111827" />
+                </TouchableOpacity>
+              )} */}
+            </View>
+          </View>
+        ) : (
+          <TouchableOpacity
+            style={styles.mediaWrapper}
+            activeOpacity={0.9}
+            onPress={() => setIsPlaying(true)}
+          >
+            <Image
+              source={{ uri: `${API_BASE}${post.thumbnail_url}` }}
+              style={styles.thumbnailImage}
+              resizeMode="cover"
+            />
+            <View style={styles.playOverlay}>
+              <View style={styles.playIconContainer}>
+                <Ionicons name="play" size={20} color="#111827" />
+              </View>
+            </View>
+          </TouchableOpacity>
+        )
+      ) : (
+        hasThumbnail && (
+          <View style={styles.mediaWrapper}>
+            <Image
+              source={{ uri: `${API_BASE}${post.thumbnail_url}` }}
+              style={styles.thumbnailImage}
+              resizeMode="cover"
+            />
+          </View>
+        )
+      )}
+
+      {/* CTA BUTTON */}
+      {post?.cta_text && (
+        <TouchableOpacity style={styles.ctaButton}>
+          <Text style={styles.ctaButtonText}>{post.cta_text}</Text>
+        </TouchableOpacity>
+      )}
+
+      {/* FOOTER */}
+      <View style={[base.rowBetween, { marginTop: 10 }]}>
+        <Text style={styles.meta}>Post #{post?.id}</Text>
+        <Text style={styles.meta}>
+          Updated {new Date(post?.updated_at).toLocaleDateString()}
+        </Text>
+      </View>
     </View>
-  </View>
-);
+  );
+};
 
 const HowToCard = () => (
   <View style={base.card}>
@@ -212,7 +247,7 @@ export default function FeedScreen() {
   }
 
   return (
-    <SafeAreaView style={styles.safeArea} edges={['top']} >
+    <SafeAreaView style={styles.safeArea}>
       <ScrollView 
         style={styles.container}
         refreshControl={
@@ -324,6 +359,24 @@ const styles = StyleSheet.create({
     // overflow: "hidden",
   },
 
+  videoContainer: {
+    borderRadius: 20,
+    overflow: "hidden",
+    position: "relative",
+  },
+
+  videoCloseButton: {
+    position: "absolute",
+    top: 10,
+    right: 10,
+    width: 30,
+    height: 30,
+    borderRadius: 15,
+    backgroundColor: "rgba(255,255,255,0.9)",
+    alignItems: "center",
+    justifyContent: "center",
+  },
+
   video: {
     width: "100%",
     height: 300,
@@ -376,6 +429,25 @@ const styles = StyleSheet.create({
     marginVertical: 12,
     borderRadius: 12,
     overflow: "hidden",
+  },
+
+  playOverlay: {
+    position: "absolute",
+    top: 0,
+    left: 0,
+    right: 0,
+    bottom: 0,
+    alignItems: "center",
+    justifyContent: "center",
+  },
+
+  playIconContainer: {
+    width: 44,
+    height: 44,
+    borderRadius: 22,
+    backgroundColor: "rgba(255,255,255,0.9)",
+    alignItems: "center",
+    justifyContent: "center",
   },
 
   thumbnailImage: {

@@ -3,7 +3,7 @@ import { View, StyleSheet, TouchableOpacity, Text } from "react-native";
 import { Video, ResizeMode } from "expo-av";
 import { Ionicons } from "@expo/vector-icons";
 
-export default function VideoPlayer({ url }) {
+export default function VideoPlayer({ url, autoPlay = false }) {
   const videoRef = useRef(null);
   const [status, setStatus] = useState();
 
@@ -20,10 +20,12 @@ export default function VideoPlayer({ url }) {
       <Video
         ref={videoRef}
         style={styles.video}
+        
         source={{
           uri: url
           // uri: "https://business.folinko.com/uploads/feed/ba074101703543099db1d5fb627dfe10.mp4", // sample video
         }}
+        shouldPlay={autoPlay}
         useNativeControls={false}
         resizeMode={ResizeMode.COVER}
         isLooping
