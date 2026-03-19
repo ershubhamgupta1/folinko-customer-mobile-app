@@ -1,4 +1,4 @@
-import React from "react";
+import React, { useState, useEffect } from "react";
 import {
   View,
   Text,
@@ -6,10 +6,13 @@ import {
   ScrollView,
   Image,
   TouchableOpacity,
+  ActivityIndicator,
+  RefreshControl,
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { Ionicons } from "@expo/vector-icons";
 import VideoPlayer from "../components/VideoPlayer";
+import { API_BASE, feed } from "../services/api";
 
 /* ===================== TOKENS ===================== */
 const COLORS = {
@@ -93,30 +96,48 @@ const UpdateHeaderCard = () => (
   </View>
 );
 
-const FeedPostCard = () => (
+const FeedPostCard = ({ post }) => (
   <View style={base.card}>
-    <Text style={styles.postTitle}>TEST</Text>
+    <Text style={styles.postTitle}>{post?.title || 'Untitled'}</Text>
 
-    <Text style={styles.meta}>2026-03-10 • Folinko</Text>
-
-    <Text style={styles.desc}>
-      We believe this internship will provide you with valuable practical
-      exposure and the opportunity to work on meaningful cybersecurity-related
-      tasks in a real-world environment.
-      {"\n\n"}
-      Please find the offer letter below. If you are interested in accepting this
-      opportunity, kindly reply to this email confirming your acceptance.
+    <Text style={styles.meta}>
+      {new Date(post?.created_at).toLocaleDateString()} • Folinko
     </Text>
 
-    {/* VIDEO PREVIEW */}
-    <View style={styles.videoWrapper}>
-      <VideoPlayer />
-    </View>
+    <Text style={styles.desc}>
+      {post?.body || 'No content available'}
+    </Text>
+
+    {/* IMAGE/VIDEO PREVIEW */}
+    {post?.thumbnail_url && (
+      <View style={styles.mediaWrapper}>
+        <Image 
+          source={{ uri: post.thumbnail_url }} 
+          style={styles.thumbnailImage}
+          resizeMode="cover"
+        />
+      </View>
+    )}
+
+    {post?.video_url && (
+      <View style={styles.videoWrapper}>
+        <VideoPlayer url={`${API_BASE}${post.video_url}`} />
+      </View>
+    )}
+
+    {/* CTA BUTTON */}
+    {post?.cta_text && (
+      <TouchableOpacity style={styles.ctaButton}>
+        <Text style={styles.ctaButtonText}>{post.cta_text}</Text>
+      </TouchableOpacity>
+    )}
 
     {/* FOOTER */}
     <View style={[base.rowBetween, { marginTop: 10 }]}>
-      <Text style={styles.meta}>Post #1</Text>
-      <Text style={styles.meta}>Updated 2026-03-10</Text>
+      <Text style={styles.meta}>Post #{post?.id}</Text>
+      <Text style={styles.meta}>
+        Updated {new Date(post?.updated_at).toLocaleDateString()}
+      </Text>
     </View>
   </View>
 );
@@ -151,12 +172,62 @@ const HowToCard = () => (
 /* ===================== MAIN SCREEN ===================== */
 
 export default function FeedScreen() {
+  const [feedData, setFeedData] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [refreshing, setRefreshing] = useState(false);
+
+  useEffect(() => {
+    fetchFeedData();
+  }, []);
+
+  const fetchFeedData = async () => {
+    try {
+      if (!refreshing) {
+        setLoading(true);
+      }
+      const response = await feed.getFeed();
+      console.log('Feed response:', response);
+      setFeedData(response?.posts || []);
+    } catch (error) {
+      console.error('Error fetching feed data:', error);
+    } finally {
+      setLoading(false);
+      setRefreshing(false);
+    }
+  };
+
+  const onRefresh = () => {
+    setRefreshing(true);
+    fetchFeedData();
+  };
+
+  if (loading) {
+    return (
+      <SafeAreaView style={styles.safeArea}>
+        <View style={styles.loadingContainer}>
+          <ActivityIndicator size="large" color={COLORS.accent || "#f59e0b"} />
+          <Text style={styles.loadingText}>Loading feed...</Text>
+        </View>
+      </SafeAreaView>
+    );
+  }
+
   return (
     <SafeAreaView style={styles.safeArea}>
-      <ScrollView style={styles.container}>
+      <ScrollView 
+        style={styles.container}
+        refreshControl={
+          <RefreshControl refreshing={refreshing} onRefresh={onRefresh} />
+        }
+      >
         {/* <BannerCard /> */}
         <UpdateHeaderCard />
-        <FeedPostCard />
+        
+        {/* Render feed posts */}
+        {feedData.map((post) => (
+          <FeedPostCard key={post.id} post={post} />
+        ))}
+        
         <HowToCard />
 
         <Text style={styles.footer}>
@@ -285,7 +356,47 @@ const styles = StyleSheet.create({
 
   footer: {
     textAlign: "center",
-    color: "#aaa",
-    marginVertical: 20,
+    color: COLORS.textMuted,
+    fontSize: 12,
+    padding: 20,
+  },
+
+  loadingContainer: {
+    flex: 1,
+    justifyContent: "center",
+    alignItems: "center",
+  },
+
+  loadingText: {
+    marginTop: 10,
+    fontSize: 16,
+    color: COLORS.textSecondary,
+  },
+
+  mediaWrapper: {
+    marginVertical: 12,
+    borderRadius: 12,
+    overflow: "hidden",
+  },
+
+  thumbnailImage: {
+    width: "100%",
+    height: 200,
+    borderRadius: 12,
+  },
+
+  ctaButton: {
+    backgroundColor: COLORS.accent || "#f59e0b",
+    paddingHorizontal: 20,
+    paddingVertical: 12,
+    borderRadius: 8,
+    alignItems: "center",
+    marginVertical: 12,
+  },
+
+  ctaButtonText: {
+    color: COLORS.white,
+    fontWeight: "600",
+    fontSize: 16,
   },
 });

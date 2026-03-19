@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import { View, Text, StyleSheet, ScrollView, TouchableOpacity, Switch, ActivityIndicator, Image, RefreshControl } from 'react-native';
-import { orders } from '../services/api';
+import { feed, orders } from '../services/api';
 import Header from '../components/Header';
 import { SafeAreaView } from "react-native-safe-area-context";
 
@@ -24,11 +24,24 @@ const OrdersScreen = ({ navigation }) => {
       }
       console.log('ordwer service---------', orders);
       const response = await orders?.getOrders();
+      const feeds = await feed?.getFeed();
+      console.log('feeds---------', JSON.stringify(feeds));
+
       let ordersDataRes = response?.orders || [];
       console.log('ordersDataRes---------', ordersDataRes);
       // Add mock data for testing if API returns empty
       if (ordersDataRes.length === 0) {
-        ordersDataRes = [{"created_at": "2026-02-25T14:52:52.201587Z", "customer": {"email": "smridh@tandev.us", "id": 4}, "first_item": {"image_url": "https://instagram.fixc11-1.fna.fbcdn.net/v/t51.82787-15/619600416_18077553527360525_1576591170252182596_n.jpg?stp=dst-jpg_e35_tt6&_nc_cat=103&ig_cache_key=MjcwODEwMzA5NTM2Nzc1NTMwMQ%3D%3D.3-ccb7-5&ccb=7-5&_nc_sid=58cdad&efg=eyJ2ZW5jb2RlX3RhZyI6InhwaWRzLjE0NDB4MTgwMC5zZHIuQzMifQ%3D%3D&_nc_ohc=z51EFAUBRvAQ7kNvwFM2uEs&_nc_oc=Adkb1-kcGq5rbYiEICyuHGTD99n1SwVT3Bo15f9XxhNU8k7NJWZkd3NXfN_J-4t_Q3I&_nc_ad=z-m&_nc_cid=0&_nc_zt=23&_nc_ht=instagram.fixc11-1.fna&_nc_gid=UD5HQuYsn4MsOiaVXVQOow&oh=00_AfsX2M1M46B8vEDA_uUBpl6YmD8T9xgbxwx-6CffrYBr3A&oe=69A4D136", "post_id": 1, "title": "Silk Saree"}, "fulfillment": {"delivered_at": null, "shipped_at": "2026-02-25T14:57:09.176478Z", "status": "SHIPPED", "tracking_code": "DELHI1234", "tracking_url": "https://google.com", "updated_at": "2026-02-25T14:57:09.176959Z"}, "id": 1, "item_count": 1, "order_status": "CREATED", "shop_subtotal": 1499, "total_qty": 1, "updated_at": "2026-02-25T14:52:52.202778Z"}];
+        ordersDataRes = [{
+          "created_at": "2026-02-25T14:52:52.201587Z", 
+          "customer": {
+            "email": "smridh@tandev.us", "id": 4}, 
+            "first_item": {
+              "image_url": 
+              "https://instagram.fixc11-1.fna.fbcdn.net/v/t51.82787-15/619600416_18077553527360525_1576591170252182596_n.jpg?stp=dst-jpg_e35_tt6&_nc_cat=103&ig_cache_key=MjcwODEwMzA5NTM2Nzc1NTMwMQ%3D%3D.3-ccb7-5&ccb=7-5&_nc_sid=58cdad&efg=eyJ2ZW5jb2RlX3RhZyI6InhwaWRzLjE0NDB4MTgwMC5zZHIuQzMifQ%3D%3D&_nc_ohc=z51EFAUBRvAQ7kNvwFM2uEs&_nc_oc=Adkb1-kcGq5rbYiEICyuHGTD99n1SwVT3Bo15f9XxhNU8k7NJWZkd3NXfN_J-4t_Q3I&_nc_ad=z-m&_nc_cid=0&_nc_zt=23&_nc_ht=instagram.fixc11-1.fna&_nc_gid=UD5HQuYsn4MsOiaVXVQOow&oh=00_AfsX2M1M46B8vEDA_uUBpl6YmD8T9xgbxwx-6CffrYBr3A&oe=69A4D136",
+              "post_id": 1, "title": "Silk Saree"}, 
+              "fulfillment": {"delivered_at": null, "shipped_at": "2026-02-25T14:57:09.176478Z", "status": "SHIPPED", "tracking_code": "DELHI1234", "tracking_url": "https://google.com", "updated_at": "2026-02-25T14:57:09.176959Z"}, 
+              "id": 1, "item_count": 1, "order_status": "CREATED", "shop_subtotal": 1499, 
+              "total_qty": 1, "updated_at": "2026-02-25T14:52:52.202778Z"}];
       }
       setOrdersData(ordersDataRes);
     } catch (error) {

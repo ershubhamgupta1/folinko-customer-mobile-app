@@ -1,6 +1,6 @@
 import AsyncStorage from '@react-native-async-storage/async-storage';
 
-const API_BASE = 'https://business.folinko.com';
+export const API_BASE = 'https://business.folinko.com';
 const TOKEN_KEY = '@business_token';
 
 // Global navigation reference for redirects
@@ -217,6 +217,12 @@ export const orders = {
     }),
 };
 
+// Feed
+export const feed = {
+  getFeed: (limit = 50) => 
+    apiRequest(`/api/business/feed?limit=${limit}`),
+};
+
 // Payouts
 export const payouts = {
   getPayouts: () => apiRequest('/api/business/payouts/me'),
@@ -231,6 +237,7 @@ export default {
   verification,
   analytics,
   orders,
+  feed,
   payouts,
   setAuthToken,
   getAuthToken,

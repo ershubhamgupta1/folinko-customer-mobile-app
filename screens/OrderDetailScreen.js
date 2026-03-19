@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import {
   View,
   Text,
@@ -7,9 +7,12 @@ import {
   Image,
   TextInput,
   TouchableOpacity,
+  ActivityIndicator,
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { Ionicons } from "@expo/vector-icons";
+import { useNavigation, useRoute } from "@react-navigation/native";
+import { orders } from "../services/api";
 
 /* ===================== DESIGN TOKENS ===================== */
 const COLORS = {
@@ -47,6 +50,7 @@ const base = StyleSheet.create({
   label: {
     fontSize: 13,
     color: COLORS.textMuted,
+    paddingVertical: SPACING.sm,
   },
 
   value: {
@@ -65,14 +69,14 @@ const base = StyleSheet.create({
 
 /* ===================== COMPONENTS ===================== */
 
-const OrderHeaderCard = () => (
+const OrderHeaderCard = ({ orderData, navigation }) => (
   <View style={base.card}>
     <View style={styles.topRow}>
       <View style={{ flex: 1 }}>
         <Text style={base.label}>Order</Text>
-        <Text style={styles.orderId}>#4</Text>
-        <Text style={styles.subText}>Placed 2026-03-02</Text>
-        <Text style={styles.email}>Customer: smridh@tandev.us</Text>
+        <Text style={styles.orderId}>#{orderData?.id || 'N/A'}</Text>
+        <Text style={styles.subText}>Placed {new Date(orderData?.created_at).toLocaleDateString()}</Text>
+        <Text style={styles.email}>Customer: {orderData?.customer?.email || 'N/A'}</Text>
       </View>
 
       <View style={styles.actions}>
@@ -81,7 +85,7 @@ const OrderHeaderCard = () => (
           <Text style={styles.pillText}>Bill</Text>
         </TouchableOpacity>
 
-        <TouchableOpacity style={styles.pill}>
+        <TouchableOpacity style={styles.pill} onPress={() => navigation.goBack()}>
           <Ionicons name="arrow-back" size={18} />
           <Text style={styles.pillText}>Back</Text>
         </TouchableOpacity>
@@ -90,56 +94,86 @@ const OrderHeaderCard = () => (
   </View>
 );
 
-const OrderItemCard = () => (
+const OrderItemCard = ({ orderData }) => (
   <View style={base.card}>
     <Text style={base.title}>Items (your shop)</Text>
 
-    <View style={styles.itemCard}>
-      <Image
-        source={{
-          uri: "https://instagram.fixc11-1.fna.fbcdn.net/v/t51.82787-15/619600416_18077553527360525_1576591170252182596_n.jpg?stp=dst-jpg_e35_tt6&_nc_cat=103&ig_cache_key=MjcwODEwMzA5NTM2Nzc1NTMwMQ%3D%3D.3-ccb7-5&ccb=7-5&_nc_sid=58cdad&efg=eyJ2ZW5jb2RlX3RhZyI6InhwaWRzLjE0NDB4MTgwMC5zZHIuQzMifQ%3D%3D&_nc_ohc=z51EFAUBRvAQ7kNvwFM2uEs&_nc_oc=Adkb1-kcGq5rbYiEICyuHGTD99n1SwVT3Bo15f9XxhNU8k7NJWZkd3NXfN_J-4t_Q3I&_nc_ad=z-m&_nc_cid=0&_nc_zt=23&_nc_ht=instagram.fixc11-1.fna&_nc_gid=UD5HQuYsn4MsOiaVXVQOow&oh=00_AfsX2M1M46B8vEDA_uUBpl6YmD8T9xgbxwx-6CffrYBr3A&oe=69A4D136",
-        }}
-        style={styles.image}
-      />
+    {orderData?.items?.map((item, index) => (
+      <View key={item.id || index} style={styles.itemCard}>
+        <Image
+          source={{
+            uri: item?.post?.image_url || "https://via.placeholder.com/72x90",
+          }}
+          style={styles.image}
+        />
 
-      <View style={styles.content}>
-        <Text style={styles.itemTitle}>Saree 2</Text>
+        <View style={styles.content}>
+          <Text style={styles.itemTitle}>{item?.post?.title || 'Product'}</Text>
 
-        <View style={base.rowBetween}>
-          <View>
-            <Text style={base.label}>Unit price</Text>
-            <Text style={base.value}>INR 2099</Text>
+          <View style={base.rowBetween}>
+            <View>
+              <Text style={base.label}>Unit price</Text>
+              <Text style={base.value}>INR {item?.unit_price || '0'}</Text>
+            </View>
+
+            <View>
+              <Text style={base.label}>Qty</Text>
+              <Text style={base.value}>{item?.quantity || '1'}</Text>
+            </View>
           </View>
 
-          <View>
-            <Text style={base.label}>Qty</Text>
-            <Text style={base.value}>1</Text>
+          <View style={{ marginTop: 10 }}>
+            <Text style={base.label}>Line total</Text>
+            <Text style={base.value}>INR {item?.line_total || '0'}</Text>
           </View>
-        </View>
-
-        <View style={{ marginTop: 10 }}>
-          <Text style={base.label}>Line total</Text>
-          <Text style={base.value}>INR 2099</Text>
         </View>
       </View>
-    </View>
+    ))}
   </View>
 );
 
-const FulfillmentCard = () => {
-  const [status, setStatus] = useState("Created");
-  const [trackingCode, setTrackingCode] = useState("");
-  const [trackingUrl, setTrackingUrl] = useState("");
+const FulfillmentCard = ({ orderData }) => {
+  const [status, setStatus] = useState(orderData?.fulfillment?.status || "Created");
+  const [trackingCode, setTrackingCode] = useState(orderData?.fulfillment?.tracking_code || "");
+  const [trackingUrl, setTrackingUrl] = useState(orderData?.fulfillment?.tracking_url || "");
+  const [showStatusDropdown, setShowStatusDropdown] = useState(false);
+
+  const statusOptions = ["Created", "Packed", "Shipped", "Delivered", "Cancelled"];
+
+  const handleStatusSelect = (selectedStatus) => {
+    setStatus(selectedStatus);
+    setShowStatusDropdown(false);
+  };
 
   return (
     <View style={base.card}>
       <Text style={base.title}>Fulfillment</Text>
 
       <Text style={base.label}>Status</Text>
-      <TouchableOpacity style={styles.dropdown}>
-        <Text style={styles.dropdownText}>{status}</Text>
-        <Ionicons name="chevron-down" size={18} color={COLORS.textMuted} />
-      </TouchableOpacity>
+      <View style={styles.dropdownContainer}>
+        <TouchableOpacity 
+          style={styles.dropdown}
+          onPress={() => setShowStatusDropdown(!showStatusDropdown)}
+        >
+          <Text style={styles.dropdownText}>{status}</Text>
+          <Ionicons name="chevron-down" size={18} color={COLORS.textMuted} />
+        </TouchableOpacity>
+
+        {/* Status Dropdown Options */}
+        {showStatusDropdown && (
+          <View style={styles.dropdownOptions}>
+            {statusOptions.map((option) => (
+              <TouchableOpacity
+                key={option}
+                style={styles.dropdownOption}
+                onPress={() => handleStatusSelect(option)}
+              >
+                <Text style={styles.dropdownOptionText}>{option}</Text>
+              </TouchableOpacity>
+            ))}
+          </View>
+        )}
+      </View>
 
       <Text style={base.label}>Tracking code</Text>
       <TextInput
@@ -156,7 +190,7 @@ const FulfillmentCard = () => {
 
       <Text style={base.label}>Tracking URL (optional)</Text>
       <TextInput
-        placeholder="https://..."
+        placeholder="https://tracking.example.com/..."
         placeholderTextColor="#9ca3af"
         value={trackingUrl}
         onChangeText={setTrackingUrl}
@@ -171,18 +205,18 @@ const FulfillmentCard = () => {
   );
 };
 
-const SummaryCard = () => (
+const SummaryCard = ({ orderData }) => (
   <View style={base.card}>
     <Text style={base.title}>Summary</Text>
 
     <View style={base.rowBetween}>
       <Text style={base.label}>Shop subtotal</Text>
-      <Text style={base.value}>₹ 2099</Text>
+      <Text style={base.value}>₹ {orderData?.shop_subtotal || '0'}</Text>
     </View>
 
     <View style={[base.rowBetween, { marginTop: 10 }]}>
       <Text style={base.label}>Order status</Text>
-      <Text style={base.value}>Created</Text>
+      <Text style={base.value}>{orderData?.order_status || 'Created'}</Text>
     </View>
   </View>
 );
@@ -190,13 +224,61 @@ const SummaryCard = () => (
 /* ===================== MAIN SCREEN ===================== */
 
 export default function OrderDetailScreen() {
+  const navigation = useNavigation();
+  const route = useRoute();
+  const { orderId } = route.params || {};
+  
+  const [orderData, setOrderData] = useState(null);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    fetchOrderDetails();
+  }, [orderId]);
+
+  const fetchOrderDetails = async () => {
+    try {
+      setLoading(true);
+      const response = await orders.getOrder(orderId);
+      console.log('Order details response:', JSON.stringify(response));
+      setOrderData(response?.order);
+    } catch (error) {
+      console.error('Error fetching order details:', error);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  if (loading) {
+    return (
+      <SafeAreaView style={styles.safeArea}>
+        <View style={styles.loadingContainer}>
+          <ActivityIndicator size="large" color={COLORS.accent} />
+          <Text style={styles.loadingText}>Loading order details...</Text>
+        </View>
+      </SafeAreaView>
+    );
+  }
+
+  if (!orderData) {
+    return (
+      <SafeAreaView style={styles.safeArea}>
+        <View style={styles.errorContainer}>
+          <Text style={styles.errorText}>Failed to load order details</Text>
+          <TouchableOpacity style={styles.retryButton} onPress={fetchOrderDetails}>
+            <Text style={styles.retryButtonText}>Retry</Text>
+          </TouchableOpacity>
+        </View>
+      </SafeAreaView>
+    );
+  }
+
   return (
     <SafeAreaView style={styles.safeArea}>
       <ScrollView style={styles.container}>
-        <OrderHeaderCard />
-        <OrderItemCard />
-        <FulfillmentCard />
-        <SummaryCard />
+        <OrderHeaderCard orderData={orderData} navigation={navigation} />
+        <OrderItemCard orderData={orderData} />
+        <FulfillmentCard orderData={orderData} />
+        <SummaryCard orderData={orderData} />
 
         <Text style={styles.footer}>
           © 2026 Social Commerce SaaS • Business Console
@@ -339,5 +421,77 @@ const styles = StyleSheet.create({
 
   buttonText: {
     fontWeight: "600",
+  },
+
+  loadingContainer: {
+    flex: 1,
+    justifyContent: "center",
+    alignItems: "center",
+  },
+
+  loadingText: {
+    marginTop: 10,
+    fontSize: 16,
+    color: COLORS.textSecondary,
+  },
+
+  errorContainer: {
+    flex: 1,
+    justifyContent: "center",
+    alignItems: "center",
+    padding: 20,
+  },
+
+  errorText: {
+    fontSize: 16,
+    color: COLORS.textSecondary,
+    marginBottom: 20,
+  },
+
+  retryButton: {
+    backgroundColor: COLORS.accent,
+    paddingHorizontal: 20,
+    paddingVertical: 10,
+    borderRadius: 20,
+  },
+
+  retryButtonText: {
+    color: COLORS.white,
+    fontWeight: "600",
+  },
+
+  dropdownOptions: {
+    position: "absolute",
+    top: 45, // Position below the dropdown button
+    left: 0,
+    right: 0,
+    backgroundColor: COLORS.white,
+    borderWidth: 1,
+    borderColor: COLORS.border,
+    borderRadius: 8,
+    zIndex: 1000,
+    elevation: 5,
+    shadowColor: "#000",
+    shadowOffset: {
+      width: 0,
+      height: 2,
+    },
+    shadowOpacity: 0.1,
+    shadowRadius: 4,
+  },
+
+  dropdownContainer: {
+    position: "relative",
+  },
+
+  dropdownOption: {
+    padding: 12,
+    borderBottomWidth: 1,
+    borderBottomColor: COLORS.border,
+  },
+
+  dropdownOptionText: {
+    fontSize: 16,
+    color: COLORS.textPrimary,
   },
 });

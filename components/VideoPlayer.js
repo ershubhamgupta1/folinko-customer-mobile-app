@@ -3,7 +3,7 @@ import { View, StyleSheet, TouchableOpacity, Text } from "react-native";
 import { Video, ResizeMode } from "expo-av";
 import { Ionicons } from "@expo/vector-icons";
 
-export default function VideoPlayer() {
+export default function VideoPlayer({ url }) {
   const videoRef = useRef(null);
   const [status, setStatus] = useState();
 
@@ -14,7 +14,7 @@ export default function VideoPlayer() {
       await videoRef.current?.playAsync();
     }
   };
-
+console.log('url=========', url)
   return (
     <View style={styles.container}>
       {/* VIDEO */}
@@ -22,7 +22,8 @@ export default function VideoPlayer() {
         ref={videoRef}
         style={styles.video}
         source={{
-          uri: "https://business.folinko.com/uploads/feed/ba074101703543099db1d5fb627dfe10.mp4", // sample video
+          uri: url
+          // uri: "https://business.folinko.com/uploads/feed/ba074101703543099db1d5fb627dfe10.mp4", // sample video
         }}
         useNativeControls={false}
         resizeMode={ResizeMode.COVER}
