@@ -135,7 +135,7 @@ export default function AddPostScreen({ route }) {
         sort_order: index + 1
       }));
       
-      let postData = {
+      const postData = {
         title: title,
         price: parseFloat(price),
         attributes: {
@@ -152,6 +152,9 @@ export default function AddPostScreen({ route }) {
       if (isEditMode) {
         response = await inventory.updatePost(post.id, postData);
       } else {
+        postData.social_platform = selectedPlatform;
+        postData.social_url = url;
+
         response = await inventory.createPost(postData);
       }
       
