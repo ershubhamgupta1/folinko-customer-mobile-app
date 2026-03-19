@@ -1,8 +1,8 @@
-import React, { useState, useCallback } from "react";
-import { View, Text, StyleSheet, ScrollView, TouchableOpacity, RefreshControl, ActivityIndicator } from "react-native";
+import React, { useState, useCallback, useEffect } from "react";
+import { View, Text, StyleSheet, ScrollView, TouchableOpacity, RefreshControl, ActivityIndicator, Alert } from "react-native";
 import { Feather } from "@expo/vector-icons";
 import { SafeAreaView } from "react-native-safe-area-context";
-import { useEffect } from "react";
+import { TextInput } from "react-native";
 import { verification } from '../services/api';
 import { useNavigation } from "@react-navigation/native";
 
@@ -29,9 +29,110 @@ export default function VerificationScreen() {
   const [progress, setProgress] = useState(0);
   const [shopStatus, setShopStatus] = useState(null);
   const [refreshing, setRefreshing] = useState(false);
+  const [submission, setSubmission] = useState(null);
+
+  const [gstNumber, setGstNumber] = useState("");
+  const [gstDocumentUrl, setGstDocumentUrl] = useState("");
+  const [socialProofUrl, setSocialProofUrl] = useState("");
+  const [followerCount, setFollowerCount] = useState("");
+  const [shopPhotoUrls, setShopPhotoUrls] = useState([""]);
+
+  const [savingDraft, setSavingDraft] = useState(false);
+  const [submitting, setSubmitting] = useState(false);
+
   useEffect(()=>{
     fetchVerificationData();
   }, []);
+
+  const buildPayload = () => {
+    const cleanedShopPhotoUrls = (shopPhotoUrls || [])
+      .map((u) => (u || "").trim())
+      .filter(Boolean);
+
+    return {
+      gst_number: (gstNumber || "").trim(),
+      gst_document_url: (gstDocumentUrl || "").trim(),
+      shop_photo_urls: cleanedShopPhotoUrls,
+      social_proof_url: (socialProofUrl || "").trim(),
+      follower_count: followerCount === "" ? null : Number(followerCount),
+    };
+  };
+
+  const validateForSubmit = (payload) => {
+    if (!payload.gst_number) return "GST number is required.";
+    if (!payload.gst_document_url) return "GST certificate URL is required.";
+    if (!payload.social_proof_url) return "Social proof URL is required.";
+    if (!payload.follower_count || Number.isNaN(payload.follower_count)) return "Follower count is required.";
+    if (!Array.isArray(payload.shop_photo_urls) || payload.shop_photo_urls.length === 0) return "At least 1 shop photo URL is required.";
+    return null;
+  };
+
+  const handleSaveDraft = async () => {
+    try {
+      if (savingDraft || submitting) return;
+      setSavingDraft(true);
+      const payload = buildPayload();
+      await verification.saveDraft(payload);
+      Alert.alert("Saved", "Draft saved successfully");
+      fetchVerificationData();
+    } catch (error) {
+      console.error('Error saving draft:', error);
+      Alert.alert("Error", "Failed to save draft");
+    } finally {
+      setSavingDraft(false);
+    }
+  };
+
+  const handleSubmitForReview = async () => {
+    try {
+      if (savingDraft || submitting) return;
+      setSubmitting(true);
+      const payload = buildPayload();
+      const validationError = validateForSubmit(payload);
+      if (validationError) {
+        Alert.alert("Validation", validationError);
+        return;
+      }
+      await verification.submitForReview(payload);
+      Alert.alert("Submitted", "Submitted for review successfully");
+      fetchVerificationData();
+    } catch (error) {
+      console.error('Error submitting for review:', error);
+      Alert.alert("Error", "Failed to submit for review");
+    } finally {
+      setSubmitting(false);
+    }
+  };
+
+  const updateShopPhotoUrl = (index, value) => {
+    setShopPhotoUrls((prev) => {
+      const next = [...(prev || [])];
+      next[index] = value;
+      return next;
+    });
+  };
+
+  const addShopPhotoUrl = () => {
+    setShopPhotoUrls((prev) => ([...(prev || []), ""]));
+  };
+
+  const hydrateFormFromSubmission = (submission) => {
+    if (!submission) return;
+
+    setGstNumber(submission?.gst_number || "");
+    setGstDocumentUrl(submission?.gst_document_url || "");
+    setSocialProofUrl(submission?.social_proof_url || "");
+    setFollowerCount(
+      submission?.follower_count !== null && submission?.follower_count !== undefined
+        ? String(submission.follower_count)
+        : ""
+    );
+
+    const urls = Array.isArray(submission?.shop_photo_urls)
+      ? submission.shop_photo_urls.filter(Boolean)
+      : [];
+    setShopPhotoUrls(urls.length > 0 ? urls : [""]);
+  };
 
   const fetchVerificationData = async()=>{
     try {
@@ -59,8 +160,9 @@ export default function VerificationScreen() {
       setTotalScore(apiTotalScore);
       setProgress(apiProgress);
       setShopStatus(apiShopStatus);
-      
-      // You can use submissionData if needed
+
+      setSubmission(submissionData);
+      hydrateFormFromSubmission(submissionData);
     } catch (error) {
       console.error('Error fetching verification status:', error);
     } finally {
@@ -91,6 +193,18 @@ export default function VerificationScreen() {
     </View>
   );
   console.log('shopStatus=========', shopStatus);
+
+  const submissionStatus =
+    submission?.status ||
+    submission?.submission_status ||
+    null;
+
+  const effectiveStatus = shopStatus || submissionStatus;
+
+  const isInReview =
+    effectiveStatus === 'SUBMITTED' ||
+    !!submission?.submitted_at;
+
   return (
     <SafeAreaView style={styles.safeArea}>
       <View style={styles.customHeader}>
@@ -107,10 +221,15 @@ export default function VerificationScreen() {
         <View style={styles.card}>
           <View style={styles.header}>
             <Text style={styles.smallTitle}>Trust & Verification</Text>
-            {shopStatus === 'VERIFIED' ? (
+            {effectiveStatus === 'VERIFIED' ? (
               <View style={styles.verifiedBadge}>
                 <Feather name="check-circle" size={16} color="#1c7c54" />
                 <Text style={styles.verifiedText}>Verified</Text>
+              </View>
+            ) : isInReview ? (
+              <View style={styles.inReviewBadge}>
+                <Feather name="clock" size={16} color="#b45309" />
+                <Text style={styles.inReviewText}>In Review</Text>
               </View>
             ) : (
               <View style={styles.pendingBadge}>
@@ -150,6 +269,103 @@ export default function VerificationScreen() {
             ))}
 
           </View>
+          {shopStatus !== 'VERIFIED' && (
+            <View style={styles.card}>
+
+              {/* GST NUMBER */}
+              <Text style={styles.inputLabel}>GST number</Text>
+              <TextInput
+                placeholder="GSTIN"
+                style={styles.input}
+                placeholderTextColor="#9ca3af"
+                value={gstNumber}
+                onChangeText={setGstNumber}
+              />
+
+              {/* GST URL */}
+              <Text style={styles.inputLabel}>GST certificate URL</Text>
+              <TextInput
+                placeholder="https://..."
+                style={styles.input}
+                placeholderTextColor="#9ca3af"
+                value={gstDocumentUrl}
+                onChangeText={setGstDocumentUrl}
+              />
+
+              {/* SOCIAL PROOF */}
+              <Text style={styles.inputLabel}>Social proof URL</Text>
+              <TextInput
+                placeholder="Instagram profile / press / etc"
+                style={styles.input}
+                placeholderTextColor="#9ca3af"
+                value={socialProofUrl}
+                onChangeText={setSocialProofUrl}
+              />
+
+              {/* FOLLOWERS */}
+              <Text style={styles.inputLabel}>Follower count</Text>
+              <TextInput
+                placeholder="10000"
+                style={styles.input}
+                keyboardType="numeric"
+                placeholderTextColor="#9ca3af"
+                value={followerCount}
+                onChangeText={setFollowerCount}
+              />
+
+              {/* SHOP PHOTOS */}
+              <View style={styles.uploadCard}>
+                <View style={styles.rowBetween}>
+                  <View style={{width:'70%'}}>
+                    <Text style={styles.uploadTitle}>Physical shop photos</Text>
+                    <Text style={styles.uploadDesc}>
+                      Paste photo URLs for now (GCS uploads coming).
+                    </Text>
+                  </View>
+            
+                  <TouchableOpacity style={styles.addBtn} onPress={addShopPhotoUrl}>
+                    <Text style={styles.addBtnText}>Add</Text>
+                  </TouchableOpacity>
+                </View>
+
+                {shopPhotoUrls.map((url, idx) => (
+                  <TextInput
+                    key={idx}
+                    placeholder="https://..."
+                    style={styles.input}
+                    placeholderTextColor="#9ca3af"
+                    value={url}
+                    onChangeText={(text) => updateShopPhotoUrl(idx, text)}
+                  />
+                ))}
+              </View>
+
+              {/* ACTION BUTTONS */}
+              <View style={styles.actionRow}>
+                <TouchableOpacity style={styles.secondaryBtn} onPress={handleSaveDraft} disabled={savingDraft || submitting}>
+                  {savingDraft ? (
+                    <ActivityIndicator size="small" color="#111827" />
+                  ) : (
+                    <Text style={styles.secondaryBtnText}>Save draft</Text>
+                  )}
+                </TouchableOpacity>
+
+                <TouchableOpacity style={styles.primaryBtn} onPress={handleSubmitForReview} disabled={savingDraft || submitting}>
+                  {submitting ? (
+                    <ActivityIndicator size="small" color="#111827" />
+                  ) : (
+                    <Text style={styles.primaryBtnText}>Submit for review</Text>
+                  )}
+                </TouchableOpacity>
+              </View>
+
+              {/* NOTE */}
+              <Text style={styles.warningText}>
+                Upload your Shop QR to your Instagram Highlights. Admin verification is approved only after checking your Instagram page for that QR highlight (fraud prevention).
+              </Text>
+
+            </View>
+          )}
           {shopStatus === 'VERIFIED' && (
             <View style={styles.successCard}>
               <Text style={styles.successLabel}>Blue Tick</Text>
@@ -198,7 +414,7 @@ export default function VerificationScreen() {
             Admin approval/rejection workflow will be built in the Super Admin Hub next.
           </Text>
         </View>
-
+      {/* ================= FORM SECTION ================= */}
       </ScrollView>
     </SafeAreaView>
   );
@@ -221,7 +437,7 @@ const styles = StyleSheet.create({
   card: {
     backgroundColor: "#f4f4f4",
     borderRadius: 20,
-    padding: 18,
+    padding: 8,
     marginVertical: 10,
   },
 
@@ -275,6 +491,20 @@ const styles = StyleSheet.create({
   pendingText: {
     marginLeft: 5,
     color: "#dc2626"
+  },
+
+  inReviewBadge: {
+    flexDirection: "row",
+    alignItems: "center",
+    backgroundColor: "#fef3c7",
+    paddingHorizontal: 10,
+    paddingVertical: 4,
+    borderRadius: 20
+  },
+
+  inReviewText: {
+    marginLeft: 5,
+    color: "#b45309"
   },
 
   trustBox: {
@@ -453,5 +683,99 @@ const styles = StyleSheet.create({
 
   headerSpacer: {
     width: 34
-  }
+  },
+
+
+
+
+  inputLabel: {
+    fontSize: 13,
+    color: "#6b7280",
+    marginTop: 14,
+  },
+
+  input: {
+    backgroundColor: "#fff",
+    borderRadius: 14,
+    paddingHorizontal: 14,
+    paddingVertical: 14,
+    marginTop: 6,
+    borderWidth: 1,
+    borderColor: "#e5e7eb",
+    fontSize: 14,
+  },
+
+  uploadCard: {
+    backgroundColor: "#fff",
+    borderRadius: 18,
+    padding: 14,
+    marginTop: 16,
+    borderWidth: 1,
+    borderColor: "#e5e7eb",
+  },
+
+  uploadTitle: {
+    fontSize: 14,
+    fontWeight: "600",
+    color: "#111827",
+  },
+
+  uploadDesc: {
+    fontSize: 12,
+    color: "#6b7280",
+    marginTop: 2,
+  },
+
+  addBtn: {
+    backgroundColor: "#f3f4f6",
+    paddingHorizontal: 14,
+    paddingVertical: 6,
+    borderRadius: 20,
+  },
+
+  addBtnText: {
+    fontSize: 13,
+    fontWeight: "500",
+  },
+
+  actionRow: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+    marginTop: 20,
+    gap: 10,
+  },
+
+  secondaryBtn: {
+    flex: 1,
+    backgroundColor: "white",
+    paddingVertical: 14,
+    borderRadius: 30,
+    alignItems: "center",
+  },
+
+  secondaryBtnText: {
+    fontWeight: "600",
+    color: "#111827",
+  },
+
+  primaryBtn: {
+    flex: 1,
+    backgroundColor: "#f59e0b",
+    paddingVertical: 14,
+    // paddingHorizontal: 10,
+    borderRadius: 20,
+    alignItems: "center",
+  },
+
+  primaryBtnText: {
+    fontWeight: "600",
+    color: "#111827",
+  },
+
+  warningText: {
+    marginTop: 14,
+    fontSize: 12,
+    color: "#dc2626",
+    lineHeight: 18,
+  },  
 });

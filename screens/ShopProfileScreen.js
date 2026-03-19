@@ -11,8 +11,10 @@ import * as Sharing from 'expo-sharing';
 import { SvgXml } from 'react-native-svg';
 import { SafeAreaView } from "react-native-safe-area-context";
 import ViewShot from "react-native-view-shot";
+import { useAuth } from '../contexts/AuthContext';
 
 const ShopProfileScreen = ({ navigation }) => {
+  const { logout } = useAuth();
   const [loading, setLoading] = useState(true);
   const [shopData, setShopData] = useState(null);
   const [isEditingProfile, setIsEditingProfile] = useState(false);
@@ -111,6 +113,23 @@ const ShopProfileScreen = ({ navigation }) => {
     await fetchShopData();
     await fetchPayoutData();
     setRefreshing(false);
+  };
+
+  const handleLogout = () => {
+    Alert.alert(
+      'Logout',
+      'Are you sure you want to logout?',
+      [
+        { text: 'Cancel', style: 'cancel' },
+        {
+          text: 'Logout',
+          style: 'destructive',
+          onPress: async () => {
+            await logout();
+          },
+        },
+      ]
+    );
   };
 
   const fetchShopData = async () => {
@@ -1074,6 +1093,10 @@ const ShopProfileScreen = ({ navigation }) => {
               </TouchableOpacity>
             )}
             </View>
+
+          <TouchableOpacity style={styles.logoutButton} onPress={handleLogout}>
+            <Text style={styles.logoutButtonText}>Logout</Text>
+          </TouchableOpacity>
         </View>
       </ScrollView>
     </SafeAreaView>
@@ -1599,6 +1622,21 @@ const styles = StyleSheet.create({
     fontSize: 12,
     fontWeight: '500',
     marginLeft: 6,
+  },
+  logoutButton: {
+    marginBottom: 40,
+    borderWidth: 1,
+    borderColor: '#dc2626',
+    backgroundColor: '#fff',
+    paddingVertical: 14,
+    borderRadius: 30,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  logoutButtonText: {
+    color: '#dc2626',
+    fontSize: 16,
+    fontWeight: '600',
   },
 });
 

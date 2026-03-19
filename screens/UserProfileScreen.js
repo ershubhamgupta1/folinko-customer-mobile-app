@@ -5,14 +5,17 @@ import {
   StyleSheet,
   ScrollView,
   TextInput,
-  TouchableOpacity
+  TouchableOpacity,
+  Alert
 } from "react-native";
 import { Feather } from "@expo/vector-icons";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { useNavigation } from "@react-navigation/native";
+import { useAuth } from "../contexts/AuthContext";
 
 export default function ProfileScreen() {
   const navigation = useNavigation();
+  const { logout } = useAuth();
 
   const [email, setEmail] = useState("smridh@tandev.us");
   const [name, setName] = useState("Arvind Sharma");
@@ -22,6 +25,23 @@ export default function ProfileScreen() {
   const [confirmPassword, setConfirmPassword] = useState("");
   const handleSave = () => {
     console.log("Saved profile", { email, name, phone });
+  };
+
+  const handleLogout = () => {
+    Alert.alert(
+      "Logout",
+      "Are you sure you want to logout?",
+      [
+        { text: "Cancel", style: "cancel" },
+        {
+          text: "Logout",
+          style: "destructive",
+          onPress: async () => {
+            await logout();
+          },
+        },
+      ]
+    );
   };
 
   return (
@@ -164,6 +184,10 @@ export default function ProfileScreen() {
           </View>
 
         </View>
+
+        <TouchableOpacity style={styles.logoutButton} onPress={handleLogout}>
+          <Text style={styles.logoutButtonText}>Logout</Text>
+        </TouchableOpacity>
       </ScrollView>
     </SafeAreaView>
 
@@ -304,13 +328,25 @@ const styles = StyleSheet.create({
     padding: 5
   },
 
-  headerTitle: {
-    fontSize: 18,
-    fontWeight: "600",
-    color: "#333"
-  },
+headerTitle: {
+fontSize: 18,
+fontWeight: "600",
+},
 
-  headerSpacer: {
-    width: 34
-  }
+logoutButton: {
+marginBottom: 40,
+borderWidth: 1,
+borderColor: "#dc2626",
+backgroundColor: "#fff",
+paddingVertical: 14,
+borderRadius: 30,
+alignItems: "center",
+justifyContent: "center",
+},
+
+logoutButtonText: {
+color: "#dc2626",
+fontSize: 16,
+fontWeight: "600",
+},
 });

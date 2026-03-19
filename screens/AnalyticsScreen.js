@@ -1,15 +1,71 @@
-import React from "react";
+import React, { useCallback, useEffect, useState } from "react";
 import {
   View,
   Text,
   StyleSheet,
-  ScrollView
+  ScrollView,
+  ActivityIndicator,
+  RefreshControl
 } from "react-native";
 import { Feather } from "@expo/vector-icons";
 import { SafeAreaView } from "react-native-safe-area-context";
 import Header from '../components/Header';
+import { analytics } from "../services/api";
+import { useNavigation } from "@react-navigation/native";
 
 export default function AnalyticsScreen() {
+
+  const navigation = useNavigation();
+
+  const [loading, setLoading] = useState(true);
+  const [refreshing, setRefreshing] = useState(false);
+  const [summary, setSummary] = useState(null);
+  const [overview, setOverview] = useState(null);
+
+  const fetchAnalyticsData = useCallback(async () => {
+    try {
+      if (!refreshing) setLoading(true);
+      const [summaryRes, overviewRes] = await Promise.all([
+        analytics.getSummary(),
+        analytics.getOverview(),
+      ]);
+
+      console.log('summary=========', JSON.stringify(summaryRes, null, 2));
+      console.log('overview=========', JSON.stringify(overviewRes, null, 2));
+
+      setSummary(summaryRes || null);
+      setOverview(overviewRes || null);
+    } catch (e) {
+      console.error('Error fetching analytics:', e);
+    } finally {
+      setLoading(false);
+      setRefreshing(false);
+    }
+  }, [refreshing]);
+
+  useEffect(() => {
+    fetchAnalyticsData();
+  }, [fetchAnalyticsData]);
+
+  const onRefresh = useCallback(() => {
+    setRefreshing(true);
+    fetchAnalyticsData();
+  }, [fetchAnalyticsData]);
+
+  const shopName = summary?.shop?.name || overview?.shop?.name || "—";
+  const kpis = overview?.kpis || {};
+  const inventory = overview?.inventory || {};
+  const engagement = overview?.engagement || {};
+  const topPosts = overview?.tables?.top_posts || [];
+  const recentPosts = overview?.tables?.recent_posts || [];
+  const metrics = summary?.metrics || {};
+
+  const formatDate = (ts) => {
+    if (!ts) return "";
+    const d = new Date(ts);
+    if (Number.isNaN(d.getTime())) return "";
+    return d.toISOString().split('T')[0];
+  };
 
   const Metric = ({ title, value, desc }) => (
     <View style={styles.metric}>
@@ -30,9 +86,23 @@ export default function AnalyticsScreen() {
     </View>
   )
 
+  if (loading && !summary && !overview) {
+    return (
+      <SafeAreaView style={styles.safeArea}>
+        <View style={styles.loadingContainer}>
+          <ActivityIndicator size="large" color="#000" />
+          <Text style={styles.loadingText}>Loading analytics...</Text>
+        </View>
+      </SafeAreaView>
+    );
+  }
+
   return (
     <SafeAreaView style={styles.safeArea}>
-      <ScrollView style={styles.container}>
+      <ScrollView
+        style={styles.container}
+        refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} />}
+      >
         <Header
           title="Analytics"
           onNotificationPress={() => console.log("Notification pressed")}
@@ -43,17 +113,17 @@ export default function AnalyticsScreen() {
           <View style={styles.card}>
 
             <Text style={styles.smallTitle}>Shop Analytics</Text>
-            <Text style={styles.title}>Sharma Sarees</Text>
+            <Text style={styles.title}>{shopName}</Text>
 
             <Text style={styles.description}>
               Sales, customers, payouts, and growth signals — shop-scoped and built for decision-making.
             </Text>
 
-            <Metric title="Gross Sales" value="10794" desc="GMV (before platform fee)" />
-            <Metric title="Platform Fee" value="1079" desc="10% marketplace fee" />
-            <Metric title="Net Sales" value="9715" desc="GMV after fee" />
-            <Metric title="Orders" value="4" desc="Track conversion and AOV" />
-            <Metric title="Payouts Pending" value="8715" desc="Settlement pipeline" />
+            <Metric title="Gross Sales" value={`₹${kpis.gross_sales ?? 0}`} desc="GMV (before platform fee)" />
+            <Metric title="Platform Fee" value={`₹${kpis.platform_fee ?? 0}`} desc="10% marketplace fee" />
+            <Metric title="Net Sales" value={`₹${kpis.net_sales ?? 0}`} desc="GMV after fee" />
+            <Metric title="Orders" value={`${kpis.orders ?? 0}`} desc="Track conversion and AOV" />
+            <Metric title="Payouts Pending" value={`₹${kpis.payouts_pending ?? 0}`} desc="Settlement pipeline" />
 
           </View>
           {/* Inventory Growth */}
@@ -61,7 +131,7 @@ export default function AnalyticsScreen() {
 
             <View style={styles.rowBetween}>
               <Text style={styles.smallTitle}>Inventory Growth</Text>
-              <Text style={styles.smallTitle}>1 in 7d · 2 in 30d</Text>
+              <Text style={styles.smallTitle}>{inventory.total_posts ?? metrics.total_posts ?? 0} posts</Text>
             </View>
 
             <Text style={styles.titleSmall}>Posts (last 14 days)</Text>
@@ -73,7 +143,7 @@ export default function AnalyticsScreen() {
           <View style={styles.card}>
             <View style={styles.rowBetween}>
               <Text style={styles.smallTitle}>Engagement</Text>
-              <Text style={styles.smallTitle}>0 in 7d · 0 in 30d</Text>
+              <Text style={styles.smallTitle}>{engagement.shares_7d ?? 0} in 7d · {engagement.shares_30d ?? 0} in 30d</Text>
             </View>
             <Text style={styles.titleSmall}>Shares (last 14 days)</Text>
             <View style={styles.chart}></View>
@@ -91,8 +161,18 @@ export default function AnalyticsScreen() {
 
             <Text style={styles.titleSmall}>Best performing by shares</Text>
 
-            <Row title="Saree 2" subtitle="Instagram · 2026-03-02" right="0" />
-            <Row title="Silk Saree" subtitle="Instagram · 2026-02-25" right="0" />
+            {topPosts.length === 0 ? (
+              <Row title="No posts yet" subtitle="" right="" />
+            ) : (
+              topPosts.slice(0, 5).map((p) => (
+                <Row
+                  key={p.id}
+                  title={p.title || `Post #${p.id}`}
+                  subtitle={`${(p.social_platform || "").toString()} · ${formatDate(p.created_at)}`}
+                  right={`${p.share_count ?? 0}`}
+                />
+              ))
+            )}
 
           </View>
 
@@ -108,8 +188,18 @@ export default function AnalyticsScreen() {
 
             <Text style={styles.titleSmall}>Latest posts created</Text>
 
-            <Row title="Saree 2" subtitle="Instagram · 2026-03-02" right="INR 2099" />
-            <Row title="Silk Saree" subtitle="Instagram · 2026-02-25" right="INR 1499" />
+            {recentPosts.length === 0 ? (
+              <Row title="No recent activity" subtitle="" right="" />
+            ) : (
+              recentPosts.slice(0, 5).map((p) => (
+                <Row
+                  key={p.id}
+                  title={p.title || `Post #${p.id}`}
+                  subtitle={`${(p.social_platform || "").toString()} · ${formatDate(p.created_at)}`}
+                  right={`${p.currency || "INR"} ${p.price ?? 0}`}
+                />
+              ))
+            )}
 
           </View>
           {/* Catalog Snapshot */}
@@ -123,9 +213,13 @@ export default function AnalyticsScreen() {
 
             <Text style={styles.titleSmall}>Catalog snapshot</Text>
 
-            <Metric title="Total Posts" value="2" desc="" />
-            <Metric title="Priced Posts" value="2" desc="1499 min · 2099 max" />
-            <Metric title="Catalog Value" value="3598" desc="Sum of all priced posts" />
+            <Metric title="Total Posts" value={`${inventory.total_posts ?? 0}`} desc="" />
+            <Metric
+              title="Priced Posts"
+              value={`${inventory.priced_posts ?? 0}`}
+              desc={`${inventory.min_price ?? 0} min · ${inventory.max_price ?? 0} max`}
+            />
+            <Metric title="Catalog Value" value={`${inventory.catalog_value ?? 0}`} desc="Sum of all priced posts" />
 
           </View>
           {/* Social Signal */}
@@ -143,12 +237,12 @@ export default function AnalyticsScreen() {
 
               <View style={styles.metricHalf}>
                 <Text style={styles.metricTitle}>Total Shares</Text>
-                <Text style={styles.metricValue}>0</Text>
+                <Text style={styles.metricValue}>{metrics.total_shares ?? engagement.total_shares ?? 0}</Text>
               </View>
 
               <View style={styles.metricHalf}>
                 <Text style={styles.metricTitle}>Images</Text>
-                <Text style={styles.metricValue}>2</Text>
+                <Text style={styles.metricValue}>{metrics.total_images ?? inventory.total_images ?? 0}</Text>
               </View>
 
             </View>
@@ -181,6 +275,19 @@ const styles = StyleSheet.create({
   container: {
     flex: 1,
     backgroundColor: "#fff",
+  },
+
+  loadingContainer: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+    backgroundColor: '#f8f9fa',
+  },
+
+  loadingText: {
+    marginTop: 10,
+    fontSize: 16,
+    color: '#666',
   },
 
   card: {
