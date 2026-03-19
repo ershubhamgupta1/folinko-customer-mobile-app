@@ -12,6 +12,7 @@ import { SafeAreaView } from "react-native-safe-area-context";
 import Header from '../components/Header';
 import { analytics } from "../services/api";
 import { useNavigation } from "@react-navigation/native";
+import Svg, { Path } from "react-native-svg";
 
 export default function AnalyticsScreen() {
 
@@ -21,6 +22,7 @@ export default function AnalyticsScreen() {
   const [refreshing, setRefreshing] = useState(false);
   const [summary, setSummary] = useState(null);
   const [overview, setOverview] = useState(null);
+  const [postsChartSize, setPostsChartSize] = useState({ width: 0, height: 0 });
 
   const fetchAnalyticsData = useCallback(async () => {
     try {
@@ -30,8 +32,8 @@ export default function AnalyticsScreen() {
         analytics.getOverview(),
       ]);
 
-      console.log('summary=========', JSON.stringify(summaryRes, null, 2));
-      console.log('overview=========', JSON.stringify(overviewRes, null, 2));
+      // console.log('summary=========', JSON.stringify(summaryRes, null, 2));
+      // console.log('overview=========', JSON.stringify(overviewRes, null, 2));
 
       setSummary(summaryRes || null);
       setOverview(overviewRes || null);
@@ -60,11 +62,33 @@ export default function AnalyticsScreen() {
   const recentPosts = overview?.tables?.recent_posts || [];
   const metrics = summary?.metrics || {};
 
+  const seriesPosts = overview?.series?.posts || [];
+
   const formatDate = (ts) => {
     if (!ts) return "";
     const d = new Date(ts);
     if (Number.isNaN(d.getTime())) return "";
     return d.toISOString().split('T')[0];
+  };
+
+  const buildSparklinePath = (values, width, height, padding = 10) => {
+    const pts = (values || []).map((v) => (typeof v === 'number' ? v : Number(v) || 0));
+    if (pts.length === 0) return "";
+
+    const max = Math.max(...pts, 1);
+    const usableW = Math.max(1, width - padding * 2);
+    const usableH = Math.max(1, height - padding * 2);
+
+    const step = pts.length === 1 ? 0 : usableW / (pts.length - 1);
+
+    const toX = (i) => padding + i * step;
+    const toY = (v) => padding + (usableH - (v / max) * usableH);
+
+    let d = `M ${toX(0)} ${toY(pts[0])}`;
+    for (let i = 1; i < pts.length; i++) {
+      d += ` L ${toX(i)} ${toY(pts[i])}`;
+    }
+    return d;
   };
 
   const Metric = ({ title, value, desc }) => (
@@ -129,14 +153,50 @@ export default function AnalyticsScreen() {
           {/* Inventory Growth */}
           <View style={styles.card}>
 
-            <View style={styles.rowBetween}>
-              <Text style={styles.smallTitle}>Inventory Growth</Text>
-              <Text style={styles.smallTitle}>{inventory.total_posts ?? metrics.total_posts ?? 0} posts</Text>
+            <View style={styles.growthHeaderRow}>
+              <Text style={styles.growthHeaderTitle}>Inventory Growth</Text>
+              <Text style={styles.growthHeaderRight}>
+                {engagement.posts_7d ?? 0} in 7d · {engagement.posts_30d ?? 0} in 30d
+              </Text>
             </View>
 
-            <Text style={styles.titleSmall}>Posts (last 14 days)</Text>
+            <Text style={styles.growthMainTitle}>Posts (last 14 days)</Text>
 
-            <View style={styles.chart}></View>
+            <View style={styles.chartOuter}>
+              <View style={styles.chartInner}>
+                <View
+                  style={styles.chartSvgContainer}
+                  onLayout={(e) => {
+                    const { width, height } = e.nativeEvent.layout;
+                    if (width && height) {
+                      setPostsChartSize({ width, height });
+                    }
+                  }}
+                >
+                  {postsChartSize.width > 0 && postsChartSize.height > 0 && (
+                    <Svg
+                      width={postsChartSize.width}
+                      height={postsChartSize.height}
+                      viewBox={`0 0 ${postsChartSize.width} ${postsChartSize.height}`}
+                    >
+                      <Path
+                        d={buildSparklinePath(
+                          seriesPosts.slice(-14),
+                          postsChartSize.width,
+                          postsChartSize.height,
+                          14
+                        )}
+                        stroke="#f59e0b"
+                        strokeWidth={4}
+                        fill="none"
+                        strokeLinecap="round"
+                        strokeLinejoin="round"
+                      />
+                    </Svg>
+                  )}
+                </View>
+              </View>
+            </View>
 
           </View>
           {/* Engagement */}
@@ -270,7 +330,7 @@ export default function AnalyticsScreen() {
 const styles = StyleSheet.create({
   safeArea: {
     flex: 1,
-    backgroundColor: "#fff",
+    backgroundColor: "red",
   },
   container: {
     flex: 1,
@@ -297,6 +357,55 @@ const styles = StyleSheet.create({
     marginBottom: 20,
     borderWidth: 1,
     borderColor: "#e5e7eb"
+  },
+
+  growthHeaderRow: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "center",
+  },
+
+  growthHeaderTitle: {
+    fontSize: 14,
+    fontWeight: "500",
+    color: "#374151",
+  },
+
+  growthHeaderRight: {
+    fontSize: 14,
+    fontWeight: "500",
+    color: "#4b5563",
+  },
+
+  growthMainTitle: {
+    fontSize: 14,
+    fontWeight: "700",
+    color: "#111827",
+    marginTop: 8,
+  },
+
+  chartOuter: {
+    backgroundColor: "#e5e7eb",
+    borderRadius: 28,
+    padding: 18,
+    marginTop: 16,
+    borderWidth: 1,
+    borderColor: "#d1d5db",
+  },
+
+  chartInner: {
+    backgroundColor: "#fff",
+    borderRadius: 22,
+    padding: 14,
+    height: 140,
+    borderWidth: 1,
+    borderColor: "#e5e7eb",
+  },
+
+  chartSvgContainer: {
+    flex: 1,
+    width: '100%',
+    justifyContent: 'center',
   },
 
   rowBetween: {
