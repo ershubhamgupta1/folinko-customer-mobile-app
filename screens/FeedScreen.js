@@ -13,6 +13,7 @@ import { SafeAreaView } from "react-native-safe-area-context";
 import { Ionicons } from "@expo/vector-icons";
 import VideoPlayer from "../components/VideoPlayer";
 import { API_BASE, feed } from "../services/api";
+import { useNavigation } from "@react-navigation/native";
 
 /* ===================== TOKENS ===================== */
 const COLORS = {
@@ -207,6 +208,7 @@ const HowToCard = () => (
 /* ===================== MAIN SCREEN ===================== */
 
 export default function FeedScreen() {
+  const navigation = useNavigation();
   const [feedData, setFeedData] = useState([]);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
@@ -248,6 +250,20 @@ export default function FeedScreen() {
 
   return (
     <SafeAreaView style={styles.safeArea}>
+      <View style={styles.customHeader}>
+        <TouchableOpacity
+          style={styles.backButton}
+          onPress={() => {
+            if (navigation.canGoBack()) navigation.goBack();
+            else navigation.navigate('dashboard');
+          }}
+        >
+          <Ionicons name="chevron-back" size={24} color="#111827" />
+        </TouchableOpacity>
+        <Text style={styles.headerTitle}>Feed</Text>
+        <View style={styles.headerRightSpacer} />
+      </View>
+
       <ScrollView 
         style={styles.container}
         refreshControl={
@@ -278,6 +294,37 @@ const styles = StyleSheet.create({
   safeArea: {
     flex: 1,
     backgroundColor: COLORS.white,
+  },
+
+  customHeader: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
+    paddingHorizontal: 16,
+    paddingVertical: 12,
+    backgroundColor: COLORS.white,
+    borderBottomWidth: 1,
+    borderBottomColor: COLORS.border,
+  },
+
+  backButton: {
+    width: 40,
+    height: 40,
+    borderRadius: 20,
+    alignItems: "center",
+    justifyContent: "center",
+    backgroundColor: COLORS.light,
+  },
+
+  headerTitle: {
+    fontSize: 18,
+    fontWeight: "700",
+    color: COLORS.textPrimary,
+  },
+
+  headerRightSpacer: {
+    width: 40,
+    height: 40,
   },
 
   container: {
