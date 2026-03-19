@@ -45,7 +45,7 @@ export default function ProfileScreen() {
   };
 
   return (
-    <SafeAreaView style={styles.safeArea} edges={['top']}>
+    <SafeAreaView style={styles.safeArea} >
       <View style={styles.customHeader}>
         <TouchableOpacity 
           style={styles.backButton} 
@@ -81,6 +81,7 @@ export default function ProfileScreen() {
           <TextInput
             style={styles.input}
             value={email}
+            readOnly
             onChangeText={setEmail}
           />
 
@@ -335,17 +336,15 @@ fontWeight: "600",
 
 logoutButton: {
 marginBottom: 40,
-borderWidth: 1,
-borderColor: "#dc2626",
-backgroundColor: "#fff",
-paddingVertical: 14,
-borderRadius: 30,
+backgroundColor: "#f59e0b",
+borderRadius: 16,
+padding: 16,
 alignItems: "center",
 justifyContent: "center",
 },
 
 logoutButtonText: {
-color: "#dc2626",
+color: "#fff",
 fontSize: 16,
 fontWeight: "600",
 },

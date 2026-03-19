@@ -143,7 +143,6 @@ const ShopProfileScreen = ({ navigation }) => {
       setQrImageUrl(qrCode)
       // Extract shop data from nested response
       const shopResponse = response?.shop || {};
-      console.log('shopResponse============', shopResponse)
       setShopData(shopResponse);
       setFormData({
         name: shopResponse?.name || '',
@@ -218,7 +217,6 @@ const ShopProfileScreen = ({ navigation }) => {
         known_for: formData.known_for,
         story: formData.story
       };
-      console.log('profileData=========', profileData);
       await shop.createOrUpdateShop(profileData);
       
       setShopData({ ...shopData, ...profileData });
@@ -1625,16 +1623,14 @@ const styles = StyleSheet.create({
   },
   logoutButton: {
     marginBottom: 40,
-    borderWidth: 1,
-    borderColor: '#dc2626',
-    backgroundColor: '#fff',
-    paddingVertical: 14,
-    borderRadius: 30,
+    backgroundColor: '#f59e0b',
+    borderRadius: 8,
+    padding: 16,
     alignItems: 'center',
     justifyContent: 'center',
   },
   logoutButtonText: {
-    color: '#dc2626',
+    color: '#fff',
     fontSize: 16,
     fontWeight: '600',
   },

@@ -190,7 +190,6 @@ const DashboardScreen = ({ navigation }) => {
   const fetchSummaryData = async () => {
     try {
       const res = await analytics.getSummary();
-      console.log('res==========', res);
       setMetrics(res?.metrics || {});
     } catch (e) {
       console.error(e);

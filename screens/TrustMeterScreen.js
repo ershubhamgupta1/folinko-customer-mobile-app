@@ -141,7 +141,6 @@ export default function VerificationScreen() {
       // Extract data from API response
       const trustMeterData = response?.trust_meter || {};
       const submissionData = response?.submission || {};
-      console.log('response==============', response);
       const apiShopStatus = response?.shop_status || null;
       
       // Update verification items with real data
@@ -192,7 +191,6 @@ export default function VerificationScreen() {
       </Text>
     </View>
   );
-  console.log('shopStatus=========', shopStatus);
 
   const submissionStatus =
     submission?.status ||
@@ -206,7 +204,7 @@ export default function VerificationScreen() {
     !!submission?.submitted_at;
 
   return (
-    <SafeAreaView style={styles.safeArea} edges={['top']}>
+    <SafeAreaView style={styles.safeArea}>
       <View style={styles.customHeader}>
         <TouchableOpacity 
           style={styles.backButton} 

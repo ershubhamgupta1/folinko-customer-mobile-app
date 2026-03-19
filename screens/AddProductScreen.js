@@ -135,19 +135,17 @@ export default function AddPostScreen({ route }) {
         sort_order: index + 1
       }));
       
-      const postData = {
-        social_platform: selectedPlatform,
-        social_url: url,
+      let postData = {
         title: title,
-        caption: caption || "",
         price: parseFloat(price),
-        material: material || "",
         attributes: {
           color: color || "",
           size: size || "",
           delivery_fee_amount: delivery ? parseFloat(delivery) : 0
         },
-        images: images
+        images: images,
+        caption: caption || "",
+        material: material || "",
       };
 
       let response;
@@ -256,7 +254,7 @@ export default function AddPostScreen({ route }) {
   ];
 
   return (
-    <SafeAreaView style={styles.safeArea} edges={['top']}>
+    <SafeAreaView style={styles.safeArea}>
       <View style={styles.customHeader}>
         <TouchableOpacity 
           style={styles.backButton} 

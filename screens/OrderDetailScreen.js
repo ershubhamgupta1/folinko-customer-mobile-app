@@ -289,7 +289,6 @@ export default function OrderDetailScreen() {
     try {
       setLoading(true);
       const response = await orders.getOrder(orderId);
-      console.log('Order details response:', JSON.stringify(response));
       setOrderData(response?.order);
     } catch (error) {
       console.error('Error fetching order details:', error);
@@ -323,7 +322,7 @@ export default function OrderDetailScreen() {
   }
 
   return (
-    <SafeAreaView style={styles.safeArea} edges={['top']}>
+    <SafeAreaView style={styles.safeArea}>
       <ScrollView style={styles.container}>
         <OrderHeaderCard orderData={orderData} navigation={navigation} />
         <OrderItemCard orderData={orderData} />

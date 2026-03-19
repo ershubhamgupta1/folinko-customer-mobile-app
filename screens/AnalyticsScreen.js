@@ -32,9 +32,6 @@ export default function AnalyticsScreen() {
         analytics.getOverview(),
       ]);
 
-      // console.log('summary=========', JSON.stringify(summaryRes, null, 2));
-      // console.log('overview=========', JSON.stringify(overviewRes, null, 2));
-
       setSummary(summaryRes || null);
       setOverview(overviewRes || null);
     } catch (e) {
