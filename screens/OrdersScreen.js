@@ -164,22 +164,30 @@ const getDateFromTimestamp = (timestamp)=> {
                 <Text style={styles.emptyText}>No orders found</Text>
               </View>
             ) : (
-              ordersData.map((item) => (
+              ordersData.map((item) => {
+                const currentStatus = item.fulfillment?.status || item.order_status;
+                return (
                 <TouchableOpacity key={item.id} onPress={()=>{navigation.navigate('orderDetailsScreen', {orderId: item.id})}}>
                   <View  style={styles.orderCard}>
                     <View style={styles.orderHeader}>
                       <Text style={styles.orderId}>#{item.order_number || `ORD-${item.id}`}</Text>
                       <View style={[
-                        item.order_status === 'CREATED' ? styles.newBadge : 
-                        item.order_status === 'PACKED' ? styles.progressBadge : 
-                        styles.shippedBadge
+                        currentStatus === 'CREATED' ? styles.newBadge : 
+                        currentStatus === 'PACKED' ? styles.progressBadge : 
+                        currentStatus === 'SHIPPED' ? styles.shippedBadge :
+                        currentStatus === 'DELIVERED' ? styles.deliveredBadge :
+                        currentStatus === 'CANCELLED' ? styles.cancelledBadge :
+                        styles.newBadge
                       ]}>
                         <Text style={[
-                          item.order_status === 'CREATED' ? styles.newBadgeText : 
-                          item.order_status === 'PACKED' ? styles.progressBadgeText : 
-                          styles.shippedBadgeText
+                          currentStatus === 'CREATED' ? styles.newBadgeText : 
+                          currentStatus === 'PACKED' ? styles.progressBadgeText : 
+                          currentStatus === 'SHIPPED' ? styles.shippedBadgeText :
+                          currentStatus === 'DELIVERED' ? styles.deliveredBadgeText :
+                          currentStatus === 'CANCELLED' ? styles.cancelledBadgeText :
+                          styles.newBadgeText
                         ]}>
-                          {item.order_status || 'NEW'}
+                          {currentStatus || 'NEW'}
                         </Text>
                       </View>
                     </View>
@@ -242,7 +250,8 @@ const getDateFromTimestamp = (timestamp)=> {
                     )} */}
                   </View>
                 </TouchableOpacity>
-              ))
+              )
+              })
             )}
           </View>
 
@@ -572,6 +581,28 @@ const styles = StyleSheet.create({
     borderRadius: 4,
   },
   shippedBadgeText: {
+    color: '#fff',
+    fontSize: 11,
+    fontWeight: '600',
+  },
+  deliveredBadge: {
+    backgroundColor: '#2196F3',
+    paddingHorizontal: 8,
+    paddingVertical: 4,
+    borderRadius: 4,
+  },
+  deliveredBadgeText: {
+    color: '#fff',
+    fontSize: 11,
+    fontWeight: '600',
+  },
+  cancelledBadge: {
+    backgroundColor: '#F44336',
+    paddingHorizontal: 8,
+    paddingVertical: 4,
+    borderRadius: 4,
+  },
+  cancelledBadgeText: {
     color: '#fff',
     fontSize: 11,
     fontWeight: '600',

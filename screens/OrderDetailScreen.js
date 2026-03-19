@@ -8,6 +8,7 @@ import {
   TextInput,
   TouchableOpacity,
   ActivityIndicator,
+  Alert,
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { Ionicons } from "@expo/vector-icons";
@@ -137,12 +138,53 @@ const FulfillmentCard = ({ orderData }) => {
   const [trackingCode, setTrackingCode] = useState(orderData?.fulfillment?.tracking_code || "");
   const [trackingUrl, setTrackingUrl] = useState(orderData?.fulfillment?.tracking_url || "");
   const [showStatusDropdown, setShowStatusDropdown] = useState(false);
+  const [saving, setSaving] = useState(false);
 
   const statusOptions = ["Created", "Packed", "Shipped", "Delivered", "Cancelled"];
 
   const handleStatusSelect = (selectedStatus) => {
     setStatus(selectedStatus);
     setShowStatusDropdown(false);
+  };
+
+  const handleSaveUpdate = async () => {
+    // Validate required fields for shipped/delivered status
+    if ((status === "SHIPPED" || status === "DELIVERED") && !trackingCode && !trackingUrl) {
+      Alert.alert("Validation Error", "Tracking code or tracking URL is required for shipped/delivered orders.");
+      return;
+    }
+
+    try {
+      setSaving(true);
+      
+      const fulfillmentData = {
+        status: status.toUpperCase(),
+      };
+
+      // Add tracking information if provided
+      if (trackingCode) {
+        fulfillmentData.tracking_code = trackingCode;
+      }
+      if (trackingUrl) {
+        fulfillmentData.tracking_url = trackingUrl;
+      }
+
+      console.log('Updating fulfillment:', fulfillmentData);
+      
+      const response = await orders.updateFulfillment(orderData?.id, fulfillmentData);
+      console.log('Fulfillment update response:', response);
+      
+      Alert.alert("Success", "Order fulfillment updated successfully!");
+      
+      // Optionally refresh order data
+      // fetchOrderDetails();
+      
+    } catch (error) {
+      console.error('Error updating fulfillment:', error);
+      Alert.alert("Error", "Failed to update order fulfillment. Please try again.");
+    } finally {
+      setSaving(false);
+    }
   };
 
   return (
@@ -197,9 +239,19 @@ const FulfillmentCard = ({ orderData }) => {
         style={styles.input}
       />
 
-      <TouchableOpacity style={styles.button}>
-        <Ionicons name="save-outline" size={18} color={COLORS.textPrimary} />
-        <Text style={styles.buttonText}>Save update</Text>
+      <TouchableOpacity 
+        style={styles.button}
+        onPress={handleSaveUpdate}
+        disabled={saving}
+      >
+        {saving ? (
+          <ActivityIndicator size="small" color={COLORS.textPrimary} />
+        ) : (
+          <Ionicons name="save-outline" size={18} color={COLORS.textPrimary} />
+        )}
+        <Text style={styles.buttonText}>
+          {saving ? "Saving..." : "Save update"}
+        </Text>
       </TouchableOpacity>
     </View>
   );
