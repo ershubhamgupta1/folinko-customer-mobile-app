@@ -202,7 +202,7 @@ export default function FeedScreen() {
 
   if (loading) {
     return (
-      <SafeAreaView style={styles.safeArea}>
+      <SafeAreaView style={styles.safeArea}  edges={['top']}>
         <View style={styles.loadingContainer}>
           <ActivityIndicator size="large" color={COLORS.accent || "#f59e0b"} />
           <Text style={styles.loadingText}>Loading feed...</Text>
@@ -212,7 +212,7 @@ export default function FeedScreen() {
   }
 
   return (
-    <SafeAreaView style={styles.safeArea}>
+    <SafeAreaView style={styles.safeArea} edges={['top']} >
       <ScrollView 
         style={styles.container}
         refreshControl={

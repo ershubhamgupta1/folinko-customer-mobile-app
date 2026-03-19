@@ -300,7 +300,7 @@ export default function OrderDetailScreen() {
 
   if (loading) {
     return (
-      <SafeAreaView style={styles.safeArea}>
+      <SafeAreaView style={styles.safeArea} edges={['top']}>
         <View style={styles.loadingContainer}>
           <ActivityIndicator size="large" color={COLORS.accent} />
           <Text style={styles.loadingText}>Loading order details...</Text>
@@ -311,7 +311,7 @@ export default function OrderDetailScreen() {
 
   if (!orderData) {
     return (
-      <SafeAreaView style={styles.safeArea}>
+      <SafeAreaView style={styles.safeArea} edges={['top']}>
         <View style={styles.errorContainer}>
           <Text style={styles.errorText}>Failed to load order details</Text>
           <TouchableOpacity style={styles.retryButton} onPress={fetchOrderDetails}>
@@ -323,7 +323,7 @@ export default function OrderDetailScreen() {
   }
 
   return (
-    <SafeAreaView style={styles.safeArea}>
+    <SafeAreaView style={styles.safeArea} edges={['top']}>
       <ScrollView style={styles.container}>
         <OrderHeaderCard orderData={orderData} navigation={navigation} />
         <OrderItemCard orderData={orderData} />

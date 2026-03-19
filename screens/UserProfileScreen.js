@@ -45,7 +45,7 @@ export default function ProfileScreen() {
   };
 
   return (
-    <SafeAreaView style={styles.safeArea}>
+    <SafeAreaView style={styles.safeArea} edges={['top']}>
       <View style={styles.customHeader}>
         <TouchableOpacity 
           style={styles.backButton} 

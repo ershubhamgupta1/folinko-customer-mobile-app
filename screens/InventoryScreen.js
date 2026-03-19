@@ -65,7 +65,7 @@ const InventoryScreen = ({ navigation }) => {
     console.log('posts============', posts);
     return (
 
-        <SafeAreaView style={styles.safeArea}>
+        <SafeAreaView style={styles.safeArea} edges={['top']}>
 
             <ScrollView 
                 style={styles.container}

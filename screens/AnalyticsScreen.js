@@ -112,7 +112,7 @@ export default function AnalyticsScreen() {
 
   if (loading && !summary && !overview) {
     return (
-      <SafeAreaView style={styles.safeArea}>
+      <SafeAreaView style={styles.safeArea} edges={['top']}>
         <View style={styles.loadingContainer}>
           <ActivityIndicator size="large" color="#000" />
           <Text style={styles.loadingText}>Loading analytics...</Text>
@@ -122,7 +122,7 @@ export default function AnalyticsScreen() {
   }
 
   return (
-    <SafeAreaView style={styles.safeArea}>
+    <SafeAreaView style={styles.safeArea} edges={['top']}>
       <ScrollView
         style={styles.container}
         refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} />}
@@ -330,7 +330,6 @@ export default function AnalyticsScreen() {
 const styles = StyleSheet.create({
   safeArea: {
     flex: 1,
-    backgroundColor: "red",
   },
   container: {
     flex: 1,
