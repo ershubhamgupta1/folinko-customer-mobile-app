@@ -207,6 +207,7 @@ const DashboardScreen = ({ navigation }) => {
     <SafeAreaView style={styles.safeArea} edges={['top']}>
       <ScrollView
         style={styles.container}
+        keyboardShouldPersistTaps="handled"
         refreshControl={
           <RefreshControl refreshing={refreshing} onRefresh={onRefresh} />
         }

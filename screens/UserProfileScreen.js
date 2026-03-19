@@ -56,7 +56,7 @@ export default function ProfileScreen() {
         <Text style={styles.headerTitle}>User Profile</Text>
         <View style={styles.headerSpacer} />
       </View>
-      <ScrollView style={styles.container}>
+      <ScrollView style={styles.container} keyboardShouldPersistTaps="handled">
         {/* Profile Card */}
 
         <View style={styles.card}>

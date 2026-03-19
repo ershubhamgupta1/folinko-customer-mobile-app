@@ -68,212 +68,11 @@ const base = StyleSheet.create({
   },
 });
 
-/* ===================== COMPONENTS ===================== */
-
-const OrderHeaderCard = ({ orderData, navigation }) => (
-  <View style={base.card}>
-    <View style={styles.topRow}>
-      <View style={{ flex: 1 }}>
-        <Text style={base.label}>Order</Text>
-        <Text style={styles.orderId}>#{orderData?.id || 'N/A'}</Text>
-        <Text style={styles.subText}>Placed {new Date(orderData?.created_at).toLocaleDateString()}</Text>
-        <Text style={styles.email}>Customer: {orderData?.customer?.email || 'N/A'}</Text>
-      </View>
-
-      <View style={styles.actions}>
-        <View>
-          <TouchableOpacity style={styles.pill}>
-            <Ionicons name="document-text-outline" size={18} />
-            <Text style={styles.pillText}>Bill</Text>
-          </TouchableOpacity>
-        </View>
-        <View>
-          <TouchableOpacity style={styles.pill} onPress={() => navigation.goBack()}>
-            <Ionicons name="arrow-back" size={18} />
-            <Text style={styles.pillText}>Back</Text>
-          </TouchableOpacity>
-        </View>
-      </View>
-    </View>
-  </View>
-);
-
-const OrderItemCard = ({ orderData }) => (
-  <View style={base.card}>
-    <Text style={base.title}>Items (your shop)</Text>
-
-    {orderData?.items?.map((item, index) => (
-      <View key={item.id || index} style={styles.itemCard}>
-        <Image
-          source={{
-            uri: item?.post?.image_url || "https://via.placeholder.com/72x90",
-          }}
-          style={styles.image}
-        />
-
-        <View style={styles.content}>
-          <Text style={styles.itemTitle}>{item?.post?.title || 'Product'}</Text>
-
-          <View style={base.rowBetween}>
-            <View>
-              <Text style={base.label}>Unit price</Text>
-              <Text style={base.value}>INR {item?.unit_price || '0'}</Text>
-            </View>
-
-            <View>
-              <Text style={base.label}>Qty</Text>
-              <Text style={base.value}>{item?.quantity || '1'}</Text>
-            </View>
-          </View>
-
-          <View style={{ marginTop: 10 }}>
-            <Text style={base.label}>Line total</Text>
-            <Text style={base.value}>INR {item?.line_total || '0'}</Text>
-          </View>
-        </View>
-      </View>
-    ))}
-  </View>
-);
-
-const FulfillmentCard = ({ orderData }) => {
-  const [status, setStatus] = useState(orderData?.fulfillment?.status || "Created");
-  const [trackingCode, setTrackingCode] = useState(orderData?.fulfillment?.tracking_code || "");
-  const [trackingUrl, setTrackingUrl] = useState(orderData?.fulfillment?.tracking_url || "");
-  const [showStatusDropdown, setShowStatusDropdown] = useState(false);
-  const [saving, setSaving] = useState(false);
-
-  const statusOptions = ["Created", "Packed", "Shipped", "Delivered", "Cancelled"];
-
-  const handleStatusSelect = (selectedStatus) => {
-    setStatus(selectedStatus);
-    setShowStatusDropdown(false);
-  };
-
-  const handleSaveUpdate = async () => {
-    // Validate required fields for shipped/delivered status
-    if ((status === "SHIPPED" || status === "DELIVERED") && !trackingCode && !trackingUrl) {
-      Alert.alert("Validation Error", "Tracking code or tracking URL is required for shipped/delivered orders.");
-      return;
-    }
-
-    try {
-      setSaving(true);
-      
-      const fulfillmentData = {
-        status: status.toUpperCase(),
-      };
-
-      // Add tracking information if provided
-      if (trackingCode) {
-        fulfillmentData.tracking_code = trackingCode;
-      }
-      if (trackingUrl) {
-        fulfillmentData.tracking_url = trackingUrl;
-      }
-
-      const response = await orders.updateFulfillment(orderData?.id, fulfillmentData);
-      Alert.alert("Success", "Order fulfillment updated successfully!");
-      // Optionally refresh order data
-      fetchOrderDetails();
-      
-    } catch (error) {
-      console.error('Error updating fulfillment:', error);
-      Alert.alert("Error", "Failed to update order fulfillment. Please try again.");
-    } finally {
-      setSaving(false);
-    }
-  };
-
-  return (
-    <View style={base.card}>
-      <Text style={base.title}>Fulfillment</Text>
-
-      <Text style={base.label}>Status</Text>
-      <View style={styles.dropdownContainer}>
-        <TouchableOpacity 
-          style={styles.dropdown}
-          onPress={() => setShowStatusDropdown(!showStatusDropdown)}
-        >
-          <Text style={styles.dropdownText}>{status}</Text>
-          <Ionicons name="chevron-down" size={18} color={COLORS.textMuted} />
-        </TouchableOpacity>
-
-        {/* Status Dropdown Options */}
-        {showStatusDropdown && (
-          <View style={styles.dropdownOptions}>
-            {statusOptions.map((option) => (
-              <TouchableOpacity
-                key={option}
-                style={styles.dropdownOption}
-                onPress={() => handleStatusSelect(option)}
-              >
-                <Text style={styles.dropdownOptionText}>{option}</Text>
-              </TouchableOpacity>
-            ))}
-          </View>
-        )}
-      </View>
-
-      <Text style={base.label}>Tracking code</Text>
-      <TextInput
-        placeholder="E.g. DELH123456"
-        placeholderTextColor="#9ca3af"
-        value={trackingCode}
-        onChangeText={setTrackingCode}
-        style={styles.input}
-      />
-
-      <Text style={styles.helper}>
-        Required when status is Shipped/Delivered (MVP).
-      </Text>
-
-      <Text style={base.label}>Tracking URL (optional)</Text>
-      <TextInput
-        placeholder="https://tracking.example.com/..."
-        placeholderTextColor="#9ca3af"
-        value={trackingUrl}
-        onChangeText={setTrackingUrl}
-        style={styles.input}
-      />
-
-      <TouchableOpacity 
-        style={styles.button}
-        onPress={handleSaveUpdate}
-        disabled={saving}
-      >
-        {saving ? (
-          <ActivityIndicator size="small" color={COLORS.textPrimary} />
-        ) : (
-          <Ionicons name="save-outline" size={18} color={COLORS.textPrimary} />
-        )}
-        <Text style={styles.buttonText}>
-          {saving ? "Saving..." : "Save update"}
-        </Text>
-      </TouchableOpacity>
-    </View>
-  );
-};
-
-const SummaryCard = ({ orderData }) => (
-  <View style={base.card}>
-    <Text style={base.title}>Summary</Text>
-
-    <View style={base.rowBetween}>
-      <Text style={base.label}>Shop subtotal</Text>
-      <Text style={base.value}>₹ {orderData?.shop_subtotal || '0'}</Text>
-    </View>
-
-    <View style={[base.rowBetween, { marginTop: 10 }]}>
-      <Text style={base.label}>Order status</Text>
-      <Text style={base.value}>{orderData?.order_status || 'Created'}</Text>
-    </View>
-  </View>
-);
 
 /* ===================== MAIN SCREEN ===================== */
 
 export default function OrderDetailScreen() {
+  
   const navigation = useNavigation();
   const route = useRoute();
   const { orderId } = route.params || {};
@@ -296,6 +95,208 @@ export default function OrderDetailScreen() {
       setLoading(false);
     }
   };
+/* ===================== COMPONENTS ===================== */
+
+  const OrderHeaderCard = ({ orderData, navigation }) => (
+    <View style={base.card}>
+      <View style={styles.topRow}>
+        <View style={{ flex: 1 }}>
+          <Text style={base.label}>Order</Text>
+          <Text style={styles.orderId}>#{orderData?.id || 'N/A'}</Text>
+          <Text style={styles.subText}>Placed {new Date(orderData?.created_at).toLocaleDateString()}</Text>
+          <Text style={styles.email}>Customer: {orderData?.customer?.email || 'N/A'}</Text>
+        </View>
+
+        <View style={styles.actions}>
+          <View>
+            <TouchableOpacity style={styles.pill}>
+              <Ionicons name="document-text-outline" size={18} />
+              <Text style={styles.pillText}>Bill</Text>
+            </TouchableOpacity>
+          </View>
+          <View>
+            <TouchableOpacity style={styles.pill} onPress={() => navigation.goBack()}>
+              <Ionicons name="arrow-back" size={18} />
+              <Text style={styles.pillText}>Back</Text>
+            </TouchableOpacity>
+          </View>
+        </View>
+      </View>
+    </View>
+  );
+
+  const OrderItemCard = ({ orderData }) => (
+    <View style={base.card}>
+      <Text style={base.title}>Items (your shop)</Text>
+
+      {orderData?.items?.map((item, index) => (
+        <View key={item.id || index} style={styles.itemCard}>
+          <Image
+            source={{
+              uri: item?.post?.image_url || "https://via.placeholder.com/72x90",
+            }}
+            style={styles.image}
+          />
+
+          <View style={styles.content}>
+            <Text style={styles.itemTitle}>{item?.post?.title || 'Product'}</Text>
+
+            <View style={base.rowBetween}>
+              <View>
+                <Text style={base.label}>Unit price</Text>
+                <Text style={base.value}>INR {item?.unit_price || '0'}</Text>
+              </View>
+
+              <View>
+                <Text style={base.label}>Qty</Text>
+                <Text style={base.value}>{item?.quantity || '1'}</Text>
+              </View>
+            </View>
+
+            <View style={{ marginTop: 10 }}>
+              <Text style={base.label}>Line total</Text>
+              <Text style={base.value}>INR {item?.line_total || '0'}</Text>
+            </View>
+          </View>
+        </View>
+      ))}
+    </View>
+  );
+
+  const FulfillmentCard = ({ orderData }) => {
+    const [status, setStatus] = useState(orderData?.fulfillment?.status || "Created");
+    const [trackingCode, setTrackingCode] = useState(orderData?.fulfillment?.tracking_code || "");
+    const [trackingUrl, setTrackingUrl] = useState(orderData?.fulfillment?.tracking_url || "");
+    const [showStatusDropdown, setShowStatusDropdown] = useState(false);
+    const [saving, setSaving] = useState(false);
+
+    const statusOptions = ["Created", "Packed", "Shipped", "Delivered", "Cancelled"];
+
+    const handleStatusSelect = (selectedStatus) => {
+      setStatus(selectedStatus);
+      setShowStatusDropdown(false);
+    };
+
+    const handleSaveUpdate = async () => {
+      // Validate required fields for shipped/delivered status
+      if ((status === "SHIPPED" || status === "DELIVERED") && !trackingCode && !trackingUrl) {
+        Alert.alert("Validation Error", "Tracking code or tracking URL is required for shipped/delivered orders.");
+        return;
+      }
+
+      try {
+        setSaving(true);
+        
+        const fulfillmentData = {
+          status: status.toUpperCase(),
+        };
+
+        // Add tracking information if provided
+        if (trackingCode) {
+          fulfillmentData.tracking_code = trackingCode;
+        }
+        if (trackingUrl) {
+          fulfillmentData.tracking_url = trackingUrl;
+        }
+
+        const response = await orders.updateFulfillment(orderData?.id, fulfillmentData);
+        Alert.alert("Success", "Order fulfillment updated successfully!");
+        // Optionally refresh order data
+        fetchOrderDetails();
+        
+      } catch (error) {
+        console.error('Error updating fulfillment:', error);
+        Alert.alert("Error", "Failed to update order fulfillment. Please try again.");
+      } finally {
+        setSaving(false);
+      }
+    };
+
+    return (
+      <View style={base.card}>
+        <Text style={base.title}>Fulfillment</Text>
+
+        <Text style={base.label}>Status</Text>
+        <View style={styles.dropdownContainer}>
+          <TouchableOpacity 
+            style={styles.dropdown}
+            onPress={() => setShowStatusDropdown(!showStatusDropdown)}
+          >
+            <Text style={styles.dropdownText}>{status}</Text>
+            <Ionicons name="chevron-down" size={18} color={COLORS.textMuted} />
+          </TouchableOpacity>
+
+          {/* Status Dropdown Options */}
+          {showStatusDropdown && (
+            <View style={styles.dropdownOptions}>
+              {statusOptions.map((option) => (
+                <TouchableOpacity
+                  key={option}
+                  style={styles.dropdownOption}
+                  onPress={() => handleStatusSelect(option)}
+                >
+                  <Text style={styles.dropdownOptionText}>{option}</Text>
+                </TouchableOpacity>
+              ))}
+            </View>
+          )}
+        </View>
+
+        <Text style={base.label}>Tracking code</Text>
+        <TextInput
+          placeholder="E.g. DELH123456"
+          placeholderTextColor="#9ca3af"
+          value={trackingCode}
+          onChangeText={setTrackingCode}
+          style={styles.input}
+        />
+
+        <Text style={styles.helper}>
+          Required when status is Shipped/Delivered (MVP).
+        </Text>
+
+        <Text style={base.label}>Tracking URL (optional)</Text>
+        <TextInput
+          placeholder="https://tracking.example.com/..."
+          placeholderTextColor="#9ca3af"
+          value={trackingUrl}
+          onChangeText={setTrackingUrl}
+          style={styles.input}
+        />
+
+        <TouchableOpacity 
+          style={styles.button}
+          onPress={handleSaveUpdate}
+          disabled={saving}
+        >
+          {saving ? (
+            <ActivityIndicator size="small" color={COLORS.textPrimary} />
+          ) : (
+            <Ionicons name="save-outline" size={18} color={COLORS.textPrimary} />
+          )}
+          <Text style={styles.buttonText}>
+            {saving ? "Saving..." : "Save update"}
+          </Text>
+        </TouchableOpacity>
+      </View>
+    );
+  };
+
+  const SummaryCard = ({ orderData }) => (
+    <View style={base.card}>
+      <Text style={base.title}>Summary</Text>
+
+      <View style={base.rowBetween}>
+        <Text style={base.label}>Shop subtotal</Text>
+        <Text style={base.value}>₹ {orderData?.shop_subtotal || '0'}</Text>
+      </View>
+
+      <View style={[base.rowBetween, { marginTop: 10 }]}>
+        <Text style={base.label}>Order status</Text>
+        <Text style={base.value}>{orderData?.order_status || 'Created'}</Text>
+      </View>
+    </View>
+  );
 
   if (loading) {
     return (
@@ -323,7 +324,7 @@ export default function OrderDetailScreen() {
 
   return (
     <SafeAreaView style={styles.safeArea}>
-      <ScrollView style={styles.container}>
+      <ScrollView style={styles.container} keyboardShouldPersistTaps="handled">
         <OrderHeaderCard orderData={orderData} navigation={navigation} />
         <OrderItemCard orderData={orderData} />
         <FulfillmentCard orderData={orderData} />

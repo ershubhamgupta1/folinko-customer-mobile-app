@@ -76,9 +76,14 @@ const OrdersScreen = ({ navigation }) => {
     <SafeAreaView style={styles.safeArea} edges={['top']}>
       <ScrollView
         style={styles.container}
+        keyboardShouldPersistTaps="handled"
         refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} />}
       >
-        <Header title="Orders" />
+        <Header 
+          title="Orders"
+          onNotificationPress={() => {}}
+          onProfilePress={() => navigation.navigate("userProfile")}
+        />
 
         <View style={styles.content}>
 

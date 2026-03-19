@@ -104,6 +104,7 @@ const HomeScreen = ({ navigation }) => {
   return (
     <ScrollView 
       style={styles.container}
+      keyboardShouldPersistTaps="handled"
       refreshControl={
         <RefreshControl refreshing={refreshing} onRefresh={onRefresh} />
       }

@@ -50,7 +50,7 @@ const SettingsScreen = ({ navigation }) => {
     }
   };
   return (
-    <ScrollView style={styles.container}>
+    <ScrollView style={styles.container} keyboardShouldPersistTaps="handled">
       <Header
         title="Settings"
         onNotificationPress={() => console.log('Notification pressed')}

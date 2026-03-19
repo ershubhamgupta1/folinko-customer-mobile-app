@@ -266,6 +266,7 @@ export default function FeedScreen() {
 
       <ScrollView 
         style={styles.container}
+        keyboardShouldPersistTaps="handled"
         refreshControl={
           <RefreshControl refreshing={refreshing} onRefresh={onRefresh} />
         }

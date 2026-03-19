@@ -268,7 +268,7 @@ export default function AddPostScreen({ route }) {
         <Text style={styles.headerTitle}>{isEditMode ? 'Edit post' : 'Create post'}</Text>
         <View style={styles.headerSpacer} />
       </View>
-      <ScrollView style={styles.container}>
+      <ScrollView style={styles.container} keyboardShouldPersistTaps="handled">
         <View style={{ padding: 20 }}>
           {/* Create Post */}
 

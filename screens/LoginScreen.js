@@ -46,7 +46,8 @@ const LoginScreen = ({ navigation }) => {
       style={styles.container} 
       behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
     >
-      <ScrollView contentContainerStyle={styles.scrollContainer}>
+      <ScrollView keyboardShouldPersistTaps="handled"
+         contentContainerStyle={styles.scrollContainer}>
         <View style={styles.header}>
           <Text style={styles.logo}>E-KOM</Text>
           <Text style={styles.subtitle}>

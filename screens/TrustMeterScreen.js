@@ -215,7 +215,7 @@ export default function VerificationScreen() {
         <Text style={styles.headerTitle}>Trust Meter</Text>
         <View style={styles.headerSpacer} />
       </View>
-      <ScrollView style={styles.container}>
+      <ScrollView style={styles.container} keyboardShouldPersistTaps="handled">
         <View style={styles.card}>
           <View style={styles.header}>
             <Text style={styles.smallTitle}>Trust & Verification</Text>
