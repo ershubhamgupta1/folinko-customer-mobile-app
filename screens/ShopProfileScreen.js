@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { View, Text, StyleSheet, ScrollView, TouchableOpacity, ActivityIndicator, Image, Alert, TextInput, RefreshControl, Linking } from 'react-native';
 import { FontAwesome5, FontAwesome } from '@expo/vector-icons';
 import Header from '../components/Header';
@@ -10,6 +10,7 @@ import * as MediaLibrary from 'expo-media-library';
 import * as Sharing from 'expo-sharing';
 import { SvgXml } from 'react-native-svg';
 import { SafeAreaView } from "react-native-safe-area-context";
+import ViewShot from "react-native-view-shot";
 
 const ShopProfileScreen = ({ navigation }) => {
   const [loading, setLoading] = useState(true);
@@ -19,6 +20,8 @@ const ShopProfileScreen = ({ navigation }) => {
   const [payoutData, setPayoutData] = useState([]);
   const [refreshing, setRefreshing] = useState(false);
   const [qrImageUrl, setQrImageUrl] = useState(null);
+  console.log('qrImageUrl===========', qrImageUrl);
+  const viewShotRef = useRef(null);
   const [formData, setFormData] = useState({
     name: '',
     email: '',
@@ -116,8 +119,13 @@ const ShopProfileScreen = ({ navigation }) => {
     try {
       setLoading(true);
       const response = await shop.getMyShop();
+      let qrCode = await shop.getQRCode();
+      console.log('qrCode============>>>>>', qrCode);
+      qrCode = qrCode.replace(/svg:/g, "")
+      .replace(/xmlns:svg="[^"]*"/g, "");
+
+      setQrImageUrl(qrCode)
       console.log('shop response============', JSON.stringify(response))
-      
       // Extract shop data from nested response
       const shopResponse = response?.shop || {};
       
@@ -368,54 +376,41 @@ const ShopProfileScreen = ({ navigation }) => {
     </View>
   );
 
-  const downloadQR = async (uri) => {
+  const downloadQR = async () => {
     try {
+      const uri = await viewShotRef.current.capture();
+
       const { status } = await MediaLibrary.requestPermissionsAsync();
+
       if (status !== "granted") {
-        Alert.alert("Permission required to save image");
+        Alert.alert("Permission required", "Please allow gallery access");
         return;
       }
 
-      // If it's a remote URL → download first
-      let localUri = uri;
-      if (uri.startsWith("http")) {
-        const fileUri = FileSystem.documentDirectory + "qr-code.png";
-        const download = await FileSystem.downloadAsync(uri, fileUri);
-        localUri = download.uri;
-      }
+      const asset = await MediaLibrary.createAssetAsync(uri);
+      await MediaLibrary.createAlbumAsync("Download", asset, false);
 
-      await MediaLibrary.saveToLibraryAsync(localUri);
       Alert.alert("Success", "QR Code saved to gallery");
-    } catch (err) {
-      console.log(err);
+    } catch (error) {
+      console.log(error);
+      Alert.alert("Error", "Download failed");
     }
   };
-
-  const shareQR = async (uri) => {
+  const shareQR = async () => {
     try {
-      let localUri = uri;
-
-      if (uri.startsWith("http")) {
-        const fileUri = FileSystem.documentDirectory + "qr-code.png";
-        const download = await FileSystem.downloadAsync(uri, fileUri);
-        localUri = download.uri;
-      }
+      const uri = await viewShotRef.current.capture();
 
       if (!(await Sharing.isAvailableAsync())) {
         Alert.alert("Sharing not available on this device");
         return;
       }
 
-      await Sharing.shareAsync(localUri, {
-        mimeType: "image/png",
-        dialogTitle: "Share QR Code",
-      });
-    } 
-    catch (err) {
-      console.log(err);
+      await Sharing.shareAsync(uri);
+    } catch (error) {
+      console.log(error);
+      Alert.alert("Error", "Failed to share QR code");
     }
   };
-
   if (loading && !shopData) {
     return (
       <View style={styles.loadingContainer}>
@@ -770,7 +765,7 @@ const ShopProfileScreen = ({ navigation }) => {
                 <Text style={styles.sectionTitle}>Payout settings</Text>
                 <Text style={styles.sectionDescription}>Manage your bank details and payout preferences</Text>
               </View>
-              {!isEditingProfile ? (
+              {/* {!isEditingProfile ? (
                 <TouchableOpacity style={styles.editButton} onPress={() => setisEditingProfile(true)}>
                   <FontAwesome5 name="edit" size={14} color="#000" />
                   <Text style={styles.editButtonText}>Edit</Text>
@@ -784,12 +779,12 @@ const ShopProfileScreen = ({ navigation }) => {
                     <Text style={styles.saveButtonText}>Save</Text>
                   </TouchableOpacity>
                 </View>
-              )}
+              )} */}
             </View>
             <View style={styles.infoContainer}>
               <View style={styles.infoRow}>
                 <View style={styles.infoIcon}>
-                  <FontAwesome5 name="bank" size={16} color="#666" />
+                  <FontAwesome5 name="university" size={16} color="#666" />
                 </View>
                 <View style={styles.infoContent}>
                   <Text style={styles.infoLabel}>IFSC Code</Text>
@@ -924,7 +919,7 @@ const ShopProfileScreen = ({ navigation }) => {
                     <FontAwesome5 name="copy" size={14} color="#fff" />
                   </TouchableOpacity>
                   <TouchableOpacity style={styles.openBioButton} onPress={() => {
-                    const link = shopData?.bio_link || 'https://e-kom.io/yourshop';
+                    const link = shopData?.bio_link;
                     Alert.alert(
                       'Open Link',
                       'Do you want to open this link in your browser?',
@@ -963,14 +958,16 @@ const ShopProfileScreen = ({ navigation }) => {
                 </View>
               </View>
               <View style={styles.qrCodeImageContainer}>
-                {qrImageUrl ? (
+              {qrImageUrl ? (
+                <ViewShot ref={viewShotRef} options={{ format: "png", quality: 1 }}>
                   <SvgXml
                     xml={qrImageUrl}
                     width={150}
                     height={150}
                     style={styles.qrCodeImage}
                   />
-                ) : (
+                </ViewShot>
+              ) : (
                   <View style={styles.qrCodePlaceholder}>
                     <FontAwesome5 name="qrcode" size={60} color="#ccc" />
                     <Text style={styles.qrCodePlaceholderText}>Loading QR Code...</Text>
@@ -978,11 +975,11 @@ const ShopProfileScreen = ({ navigation }) => {
                 )}
               </View>
               <View style={styles.qrCodeActions}>
-                <TouchableOpacity style={styles.qrActionButton} onPress={() => downloadQR(qrImageUrl)}>
+                <TouchableOpacity style={styles.qrActionButton} onPress={downloadQR}>
                   <FontAwesome5 name="download" size={14} color="#fff" />
                   <Text style={styles.qrActionText}>Download</Text>
                 </TouchableOpacity>
-                <TouchableOpacity style={styles.qrActionButton} onPress={() => shareQR(qrImageUrl)}>
+                <TouchableOpacity style={styles.qrActionButton} onPress={shareQR}>
                   <FontAwesome5 name="whatsapp" size={14} color="#fff" />
                   <Text style={styles.qrActionText}>Share</Text>
                 </TouchableOpacity>

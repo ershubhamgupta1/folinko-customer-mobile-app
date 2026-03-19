@@ -41,7 +41,7 @@ export default function VerificationScreen() {
       // Extract data from API response
       const trustMeterData = response?.trust_meter || {};
       const submissionData = response?.submission || {};
-      const apiShopStatus = response?.shop_status || null;
+      const apiShopStatus = submissionData?.shop_status || null;
       
       // Update verification items with real data
       const updatedVerificationItems = trustMeterData.checks?.map(check => ({
@@ -105,12 +105,7 @@ export default function VerificationScreen() {
         <Text style={styles.headerTitle}>Trust Meter</Text>
         <View style={styles.headerSpacer} />
       </View>
-      <ScrollView 
-        style={styles.container}
-        refreshControl={
-          <RefreshControl refreshing={refreshing} onRefresh={onRefresh} />
-        }
-      >
+      <ScrollView style={styles.container}>
         <View style={styles.card}>
           <View style={styles.header}>
             <Text style={styles.smallTitle}>Trust & Verification</Text>

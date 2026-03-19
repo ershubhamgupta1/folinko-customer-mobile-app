@@ -70,8 +70,10 @@ const OrdersScreen = ({ navigation }) => {
   }
 
 const getDateFromTimestamp = (timestamp)=> {
+  if(!timestamp) return ''
   const date = new Date(timestamp);
-  return date.toISOString().split('T')[0];
+  console.log('date========',date, timestamp)
+  return date.toISOString?.().split('T')[0];
 }
 
 
@@ -150,81 +152,83 @@ const getDateFromTimestamp = (timestamp)=> {
               </View>
             ) : (
               ordersData.map((item) => (
-                <View key={item.id} style={styles.orderCard}>
-                  <View style={styles.orderHeader}>
-                    <Text style={styles.orderId}>#{item.order_number || `ORD-${item.id}`}</Text>
-                    <View style={[
-                      item.order_status === 'CREATED' ? styles.newBadge : 
-                      item.order_status === 'PACKED' ? styles.progressBadge : 
-                      styles.shippedBadge
-                    ]}>
-                      <Text style={[
-                        item.order_status === 'CREATED' ? styles.newBadgeText : 
-                        item.order_status === 'PACKED' ? styles.progressBadgeText : 
-                        styles.shippedBadgeText
+                <TouchableOpacity key={item.id} onPress={()=>{navigation.navigate('orderDetailsScreen', {orderId: item.id})}}>
+                  <View  style={styles.orderCard}>
+                    <View style={styles.orderHeader}>
+                      <Text style={styles.orderId}>#{item.order_number || `ORD-${item.id}`}</Text>
+                      <View style={[
+                        item.order_status === 'CREATED' ? styles.newBadge : 
+                        item.order_status === 'PACKED' ? styles.progressBadge : 
+                        styles.shippedBadge
                       ]}>
-                        {item.order_status || 'NEW'}
-                      </Text>
+                        <Text style={[
+                          item.order_status === 'CREATED' ? styles.newBadgeText : 
+                          item.order_status === 'PACKED' ? styles.progressBadgeText : 
+                          styles.shippedBadgeText
+                        ]}>
+                          {item.order_status || 'NEW'}
+                        </Text>
+                      </View>
                     </View>
-                  </View>
-                  {/* <Text style={styles.customerName}>{item.customer_name || 'Customer'}</Text> */}
-                  <View style={styles.productInfo}>
-                    <View style={styles.productImage}>
-                      {item.first_item?.image_url ? (
-                        <Image
-                          source={{ uri: item.first_item?.image_url}} 
-                          style={styles.productIcon} 
-                        />
-                      ) : (
-                        <Text style={styles.noImageText}>No Image</Text>
+                    {/* <Text style={styles.customerName}>{item.customer_name || 'Customer'}</Text> */}
+                    <View style={styles.productInfo}>
+                      <View style={styles.productImage}>
+                        {item.first_item?.image_url ? (
+                          <Image
+                            source={{ uri: item.first_item?.image_url}} 
+                            style={styles.productIcon} 
+                          />
+                        ) : (
+                          <Text style={styles.noImageText}>No Image</Text>
+                        )}
+                      </View>
+                      <View style={styles.productDetails}>
+                        <Text style={styles.productName}>
+                          {/* {item.first_item?.title || 'No product title'} {item.size && `(${item.size})`} */}
+                          {item.first_item?.title || 'No product title'}
+                        </Text>
+                        <Text style={styles.stockInfo}>
+                          {getDateFromTimestamp(item.updated_at)}
+                        </Text>
+                        <Text style={styles.stockInfo}>
+                          Qty {item.total_qty}
+                        </Text>
+                        <Text style={styles.price}>
+                          ₹{item.shop_subtotal || '0'} +GST
+                        </Text>
+                      </View>
+                    </View>
+                    {/* <View style={styles.orderActions}>
+                      {item.order_status === 'CREATED' && (
+                        <TouchableOpacity 
+                          style={styles.actionButton}
+                          onPress={() => updateOrderStatus(item.id, 'PACKED')}
+                        >
+                          <Text style={styles.actionButtonText}>Mark 'In-Progress'</Text>
+                        </TouchableOpacity>
                       )}
-                    </View>
-                    <View style={styles.productDetails}>
-                      <Text style={styles.productName}>
-                        {/* {item.first_item?.title || 'No product title'} {item.size && `(${item.size})`} */}
-                        {item.first_item?.title || 'No product title'}
-                      </Text>
-                      <Text style={styles.stockInfo}>
-                        {getDateFromTimestamp(item.updated_at)}
-                      </Text>
-                      <Text style={styles.stockInfo}>
-                        Qty {item.total_qty}
-                      </Text>
-                      <Text style={styles.price}>
-                        ₹{item.shop_subtotal || '0'} +GST
-                      </Text>
-                    </View>
+                      {item.order_status === 'PACKED' && (
+                        <TouchableOpacity 
+                          style={[styles.actionButton, styles.completeButton]}
+                          onPress={() => updateOrderStatus(item.id, 'SHIPPED')}
+                        >
+                          <Text style={[styles.actionButtonText, styles.completeButtonText]}>Complete Order</Text>
+                        </TouchableOpacity>
+                      )}
+                      <TouchableOpacity style={styles.chatButton}>
+                        <Text style={item.order_status === 'PACKED' ? styles.phoneIcon : styles.chatIcon}>
+                          {item.order_status === 'PACKED' ? 
+                            <FontAwesome name="phone" size={16} color="666" /> : 
+                            <FontAwesome name="whatsapp" size={16} color="666" />
+                          }
+                        </Text>
+                      </TouchableOpacity>
+                    </View> */}
+                    {/* {item.order_status === 'PACKED' && (
+                      <Text style={styles.stockNote}>Stock will decrement by 1 upon completion.</Text>
+                    )} */}
                   </View>
-                  {/* <View style={styles.orderActions}>
-                    {item.order_status === 'CREATED' && (
-                      <TouchableOpacity 
-                        style={styles.actionButton}
-                        onPress={() => updateOrderStatus(item.id, 'PACKED')}
-                      >
-                        <Text style={styles.actionButtonText}>Mark 'In-Progress'</Text>
-                      </TouchableOpacity>
-                    )}
-                    {item.order_status === 'PACKED' && (
-                      <TouchableOpacity 
-                        style={[styles.actionButton, styles.completeButton]}
-                        onPress={() => updateOrderStatus(item.id, 'SHIPPED')}
-                      >
-                        <Text style={[styles.actionButtonText, styles.completeButtonText]}>Complete Order</Text>
-                      </TouchableOpacity>
-                    )}
-                    <TouchableOpacity style={styles.chatButton}>
-                      <Text style={item.order_status === 'PACKED' ? styles.phoneIcon : styles.chatIcon}>
-                        {item.order_status === 'PACKED' ? 
-                          <FontAwesome name="phone" size={16} color="666" /> : 
-                          <FontAwesome name="whatsapp" size={16} color="666" />
-                        }
-                      </Text>
-                    </TouchableOpacity>
-                  </View> */}
-                  {/* {item.order_status === 'PACKED' && (
-                    <Text style={styles.stockNote}>Stock will decrement by 1 upon completion.</Text>
-                  )} */}
-                </View>
+                </TouchableOpacity>
               ))
             )}
           </View>

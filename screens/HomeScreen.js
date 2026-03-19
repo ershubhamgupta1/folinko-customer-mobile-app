@@ -56,51 +56,46 @@ const HomeScreen = ({ navigation }) => {
       </View>
     );
   }
-  const downloadQR = async (uri) => {
+  const downloadQR = async (svgString) => {
     try {
-      const { status } = await MediaLibrary.requestPermissionsAsync();
-      console.log('status======', )
-      if (status !== "granted") {
-        Alert.alert("Permission required to save image");
-        return;
-      }
-
-      // If it's a remote URL → download first
-      let localUri = uri;
-      if (uri.startsWith("http")) {
-        const fileUri = FileSystem.documentDirectory + "qr-code.png";
-        const download = await FileSystem.downloadAsync(uri, fileUri);
-        localUri = download.uri;
-      }
-
-      await MediaLibrary.saveToLibraryAsync(localUri);
-      Alert.alert("Success", "QR Code saved to gallery");
+      // Skip permission request for now and save to documents directory
+      const fileName = "qr-code.png";
+      const fileUri = FileSystem.documentDirectory + fileName;
+      
+      // Convert SVG to file (for now, we'll create a simple file)
+      // In a real implementation, you'd use a library to convert SVG to PNG
+      await FileSystem.writeAsStringAsync(fileUri, svgString, {
+        encoding: FileSystem.EncodingType.UTF8,
+      });
+      
+      Alert.alert("Success", "QR Code saved to device");
     } catch (err) {
-      console.log(err);
+      console.error("Error saving QR code:", err);
+      Alert.alert("Error", "Failed to save QR code");
     }
   };
-  const shareQR = async (uri) => {
+  const shareQR = async (svgString) => {
     try {
-      let localUri = uri;
-
-      if (uri.startsWith("http")) {
-        const fileUri = FileSystem.documentDirectory + "qr-code.png";
-        const download = await FileSystem.downloadAsync(uri, fileUri);
-        localUri = download.uri;
-      }
+      const fileName = "qr-code.svg";
+      const fileUri = FileSystem.documentDirectory + fileName;
+      
+      // Save SVG as a file
+      await FileSystem.writeAsStringAsync(fileUri, svgString, {
+        encoding: FileSystem.EncodingType.UTF8,
+      });
 
       if (!(await Sharing.isAvailableAsync())) {
         Alert.alert("Sharing not available on this device");
         return;
       }
 
-      await Sharing.shareAsync(localUri, {
-        mimeType: "image/png",
+      await Sharing.shareAsync(fileUri, {
+        mimeType: "image/svg+xml",
         dialogTitle: "Share QR Code",
       });
-    } 
-    catch (err) {
-      console.log(err);
+    } catch (err) {
+      console.error("Error sharing QR code:", err);
+      Alert.alert("Error", "Failed to share QR code");
     }
   };
   const handleCopy = async () => {

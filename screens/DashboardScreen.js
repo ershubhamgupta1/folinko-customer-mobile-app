@@ -69,6 +69,10 @@ const DashboardScreen = ({ navigation }) => {
         />
 
         <View style={styles.content}>
+        <TouchableOpacity style={styles.button} onPress={() => navigation.navigate('feedScreen')}>
+          <Text style={styles.buttonText}>Open Feed</Text>
+          <Feather name="arrow-right" size={16} color="#1f2937" />
+        </TouchableOpacity>
 
           {/* Quick Actions */}
           <View style={styles.card}>

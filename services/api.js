@@ -1,6 +1,6 @@
 import AsyncStorage from '@react-native-async-storage/async-storage';
 
-const API_BASE = 'http://89.127.232.81';
+const API_BASE = 'https://business.folinko.com';
 const TOKEN_KEY = '@business_token';
 
 // Global navigation reference for redirects
@@ -38,7 +38,7 @@ export const removeAuthToken = async () => {
 // Generic API request function
 const apiRequest = async (endpoint, options = {}) => {
   const url = `${API_BASE}${endpoint}`;
-  
+  console.log('url============', url);
   const token = await getAuthToken();
   const headers = {
     'Content-Type': 'application/json',
@@ -63,7 +63,13 @@ const apiRequest = async (endpoint, options = {}) => {
       // Handle authentication errors (401 Unauthorized)
       if (response.status === 401) {
         await removeAuthToken();
-        // The AuthContext will detect the token removal and redirect to login
+        // Navigate to LoginScreen
+        if (navigationRef) {
+          navigationRef.reset({
+            index: 0,
+            routes: [{ name: 'Login' }],
+          });
+        }
         console.warn('Authentication expired - redirecting to login');
         return;
       }
@@ -86,6 +92,13 @@ const apiRequest = async (endpoint, options = {}) => {
     // Handle network errors or other auth-related issues
     if (error.message.includes('401') || error.message.includes('Unauthorized')) {
       await removeAuthToken();
+      // Navigate to LoginScreen
+      if (navigationRef) {
+        navigationRef.reset({
+          index: 0,
+          routes: [{ name: 'Login' }],
+        });
+      }
       console.warn('Authentication error - redirecting to login');
       return;
     }
