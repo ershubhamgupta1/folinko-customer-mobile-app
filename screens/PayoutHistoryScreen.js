@@ -17,7 +17,6 @@ const PayoutHistoryScreen = ({ navigation }) => {
     try {
       setLoading(true);
       const response = await payouts.getPayouts();
-      console.log('Payout response:', response);
       
       // Mock data for testing if API returns empty
       let payoutList = response?.payouts || [];

@@ -22,13 +22,10 @@ const OrdersScreen = ({ navigation }) => {
       if (!refreshing) {
         setLoading(true);
       }
-      console.log('ordwer service---------', orders);
       const response = await orders?.getOrders();
       const feeds = await feed?.getFeed();
-      console.log('feeds---------', JSON.stringify(feeds));
 
       let ordersDataRes = response?.orders || [];
-      console.log('ordersDataRes---------', ordersDataRes);
       // Add mock data for testing if API returns empty
       if (ordersDataRes.length === 0) {
         ordersDataRes = [{
@@ -85,7 +82,6 @@ const OrdersScreen = ({ navigation }) => {
 const getDateFromTimestamp = (timestamp)=> {
   if(!timestamp) return ''
   const date = new Date(timestamp);
-  console.log('date========',date, timestamp)
   return date.toISOString?.().split('T')[0];
 }
 
@@ -104,61 +100,8 @@ const getDateFromTimestamp = (timestamp)=> {
           onProfilePress={() => navigation.navigate('userProfile')}
         />
         <View style={styles.content}>
-          {/* <View style={styles.ordersHeader}>
-            <Text style={styles.ordersTitle}>Orders</Text>
-            <TouchableOpacity style={styles.filterButton}>
-              <FontAwesome name="filter" size={14} style={{paddingTop: 4, marginRight: 4}} color="black" />
-              <Text style={styles.filterText}>Filter</Text>
-            </TouchableOpacity>
-          </View> */}
-
-          {/* <View style={styles.tabsContainer}>
-            <TouchableOpacity
-              style={[styles.tab, selectedTab === 'new' && styles.activeTab]}
-              onPress={() => setSelectedTab('new')}
-            >
-              <Text style={[styles.tabText, selectedTab === 'new' && styles.activeTabText]}>
-                New (3)
-              </Text>
-            </TouchableOpacity>
-            <TouchableOpacity
-              style={[styles.tab, selectedTab === 'active' && styles.activeTab]}
-              onPress={() => setSelectedTab('active')}
-            >
-              <Text style={[styles.tabText, selectedTab === 'active' && styles.activeTabText]}>
-                Active
-              </Text>
-            </TouchableOpacity>
-            <TouchableOpacity
-              style={[styles.tab, selectedTab === 'history' && styles.activeTab]}
-              onPress={() => setSelectedTab('history')}
-            >
-              <Text style={[styles.tabText, selectedTab === 'history' && styles.activeTabText]}>
-                History
-              </Text>
-            </TouchableOpacity>
-          </View> */}
-
-          {/* <View style={styles.summaryCards}>
-            <View style={styles.summaryCard}>
-              <Text style={styles.summaryTitle}>STOCK ALERTS</Text>
-              <View style={styles.summaryStockAlertContainer}>
-                <FontAwesome name="warning" size={14} style={{paddingTop: 4, marginRight: 4}} color="black" />
-                <Text style={styles.summaryValue}>2 items low</Text>
-              </View>
-            </View>
-            <View style={styles.summaryCard}>
-              <Text style={styles.summaryTitle}>TODAY'S SALES</Text>
-              <View style={styles.summaryStockAlertContainer}>
-                <Octicons name="graph" size={14} style={{paddingTop: 4, marginRight: 4}} color="black" />
-                <Text style={styles.summaryValue}>{ordersData.length} orders</Text>
-              </View>
-            </View>
-          </View> */}
 
           <View style={styles.pendingSection}>
-            {/* <Text style={{...styles.sectionTitle, paddingBottom: 10, fontSize: 10}}>PENDING ACTION</Text> */}
-            
             {ordersData.length === 0 ? (
               <View style={styles.emptyContainer}>
                 <Text style={styles.emptyText}>No orders found</Text>
@@ -191,7 +134,6 @@ const getDateFromTimestamp = (timestamp)=> {
                         </Text>
                       </View>
                     </View>
-                    {/* <Text style={styles.customerName}>{item.customer_name || 'Customer'}</Text> */}
                     <View style={styles.productInfo}>
                       <View style={styles.productImage}>
                         {item.first_item?.image_url ? (
@@ -205,7 +147,6 @@ const getDateFromTimestamp = (timestamp)=> {
                       </View>
                       <View style={styles.productDetails}>
                         <Text style={styles.productName}>
-                          {/* {item.first_item?.title || 'No product title'} {item.size && `(${item.size})`} */}
                           {item.first_item?.title || 'No product title'}
                         </Text>
                         <Text style={styles.stockInfo}>
@@ -219,64 +160,12 @@ const getDateFromTimestamp = (timestamp)=> {
                         </Text>
                       </View>
                     </View>
-                    {/* <View style={styles.orderActions}>
-                      {item.order_status === 'CREATED' && (
-                        <TouchableOpacity 
-                          style={styles.actionButton}
-                          onPress={() => updateOrderStatus(item.id, 'PACKED')}
-                        >
-                          <Text style={styles.actionButtonText}>Mark 'In-Progress'</Text>
-                        </TouchableOpacity>
-                      )}
-                      {item.order_status === 'PACKED' && (
-                        <TouchableOpacity 
-                          style={[styles.actionButton, styles.completeButton]}
-                          onPress={() => updateOrderStatus(item.id, 'SHIPPED')}
-                        >
-                          <Text style={[styles.actionButtonText, styles.completeButtonText]}>Complete Order</Text>
-                        </TouchableOpacity>
-                      )}
-                      <TouchableOpacity style={styles.chatButton}>
-                        <Text style={item.order_status === 'PACKED' ? styles.phoneIcon : styles.chatIcon}>
-                          {item.order_status === 'PACKED' ? 
-                            <FontAwesome name="phone" size={16} color="666" /> : 
-                            <FontAwesome name="whatsapp" size={16} color="666" />
-                          }
-                        </Text>
-                      </TouchableOpacity>
-                    </View> */}
-                    {/* {item.order_status === 'PACKED' && (
-                      <Text style={styles.stockNote}>Stock will decrement by 1 upon completion.</Text>
-                    )} */}
                   </View>
                 </TouchableOpacity>
               )
               })
             )}
           </View>
-
-          {/* <View style={styles.inventorySection}>
-            <View style={styles.sectionHeader}>
-              <Text style={styles.sectionTitle}>Inventory Logic</Text>
-              <TouchableOpacity style={styles.refreshIcon}>
-                <FontAwesome name="refresh" size={16} color="#666" />
-              </TouchableOpacity>
-            </View>
-            <View style={styles.toggleItem}>
-              <Text style={styles.toggleLabel}>Auto-Decrement</Text>
-              <Switch
-                value={autoDecrement}
-                onValueChange={setAutoDecrement}
-              />
-            </View>
-            <View style={{...styles.toggleItem, borderBottomWidth:0}}>
-              <Text style={styles.toggleLabel}>Low Stock Notification</Text>
-              <Switch
-                value={lowStockNotification}
-                onValueChange={setLowStockNotification}
-              />
-            </View>
-          </View> */}
         </View>
       </ScrollView>
     </SafeAreaView>
@@ -374,38 +263,8 @@ const styles = StyleSheet.create({
     color: '#000',
     fontWeight: '600',
   },
-  summaryCards: {
-    flexDirection: 'row',
-    gap: 15,
-    marginBottom: 30,
-  },
-  summaryCard: {
-    flex: 1,
-    backgroundColor: '#f5f5f5',
-    padding: 15,
-    borderRadius: 8,
-    alignItems: 'center',
-  },
-  summaryIcon: {
-    fontSize: 16,
-    marginBottom: 8,
-  },
-  summaryTitle: {
-    fontSize: 12,
-    color: '#666',
-    marginBottom: 4,
-  },
-  summaryValue: {
-    fontSize: 16,
-    fontWeight: 'bold',
-    color: '#000',
-  },
-  summaryStockAlertContainer: {
-    flexDirection: 'row'
-  },
-
   pendingSection: {
-    marginBottom: 30,
+    marginTop: 30,
   },
   sectionTitle: {
     fontSize: 16,

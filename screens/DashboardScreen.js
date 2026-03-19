@@ -32,8 +32,6 @@ const DashboardScreen = ({ navigation }) => {
   const fetchSummaryData = async () => {
     try {
       const summaryResponse = await analytics.getSummary();
-      console.log('summaryResponse========', JSON.stringify(summaryResponse))
-      
       // Extract data from API response
       const metricsData = summaryResponse?.metrics || {};
       const shopData = summaryResponse?.shop || {};
@@ -41,10 +39,6 @@ const DashboardScreen = ({ navigation }) => {
       // Set state variables
       setMetrics(metricsData);
       setShop(shopData);
-      
-      console.log('Metrics:', metricsData);
-      console.log('Shop:', shopData);
-      
     } catch (error) {
       console.error("Error fetching summary data:", error);
     }
@@ -121,7 +115,7 @@ const DashboardScreen = ({ navigation }) => {
               Use a single QR to bridge offline traffic to your video-first storefront.
             </Text>
 
-            <TouchableOpacity style={styles.button}>
+            <TouchableOpacity style={styles.button} onPress={() => navigation.navigate('shopProfile')}>
               <Text style={styles.buttonText}>Manage</Text>
               <Feather name="arrow-right" size={16} color="#1f2937" />
             </TouchableOpacity>
@@ -233,6 +227,7 @@ safeArea: {
     borderWidth: 1,
     borderColor: "#d1d5db",
     backgroundColor: "#f8f8f8",
+    marginBottom: 10
   },
 
   buttonText: {

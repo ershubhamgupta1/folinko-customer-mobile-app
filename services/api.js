@@ -38,7 +38,6 @@ export const removeAuthToken = async () => {
 // Generic API request function
 const apiRequest = async (endpoint, options = {}) => {
   const url = `${API_BASE}${endpoint}`;
-  console.log('url============', url);
   const token = await getAuthToken();
   const headers = {
     'Content-Type': 'application/json',
@@ -56,7 +55,6 @@ const apiRequest = async (endpoint, options = {}) => {
 
   try {
     const response = await fetch(url, config);
-    console.log('response========', response, url);
     if (!response.ok) {
       const errorData = await response.json().catch(() => ({}));
       

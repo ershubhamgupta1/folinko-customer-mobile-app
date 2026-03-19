@@ -20,7 +20,6 @@ const ShopProfileScreen = ({ navigation }) => {
   const [payoutData, setPayoutData] = useState([]);
   const [refreshing, setRefreshing] = useState(false);
   const [qrImageUrl, setQrImageUrl] = useState(null);
-  console.log('qrImageUrl===========', qrImageUrl);
   const viewShotRef = useRef(null);
   const [formData, setFormData] = useState({
     name: '',
@@ -58,7 +57,6 @@ const ShopProfileScreen = ({ navigation }) => {
   const fetchPayoutData = async () => {
     try {
       const response = await payouts.getPayouts();
-      console.log('Payout response:', response);
       
       // Mock data for testing if API returns empty
       let payoutList = response?.payouts || [];
@@ -120,12 +118,10 @@ const ShopProfileScreen = ({ navigation }) => {
       setLoading(true);
       const response = await shop.getMyShop();
       let qrCode = await shop.getQRCode();
-      console.log('qrCode============>>>>>', qrCode);
       qrCode = qrCode.replace(/svg:/g, "")
       .replace(/xmlns:svg="[^"]*"/g, "");
 
       setQrImageUrl(qrCode)
-      console.log('shop response============', JSON.stringify(response))
       // Extract shop data from nested response
       const shopResponse = response?.shop || {};
       
@@ -435,7 +431,7 @@ const ShopProfileScreen = ({ navigation }) => {
         />
         <View style={styles.content}>
           {/* Shop Logo Section */}
-          <View style={styles.logoSection}>
+          {/* <View style={styles.logoSection}>
             <View style={styles.logoContainer}>
               {formData.logo ? (
                 <Image source={{ uri: formData.logo }} style={styles.logoImage} />
@@ -451,7 +447,7 @@ const ShopProfileScreen = ({ navigation }) => {
               )}
             </View>
             <Text style={styles.shopName}>{formData.name || 'Shop Name'}</Text>
-          </View>
+          </View> */}
 
           {/* Profile Information */}
           <View style={styles.profileSection}>

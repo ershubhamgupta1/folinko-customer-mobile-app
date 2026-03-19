@@ -39,7 +39,6 @@ const InventoryScreen = ({ navigation }) => {
             }
 
             const response = await inventory?.getPosts();
-            console.log('posts========', JSON.stringify(response))
             let postsData = response?.posts || [];
             setPosts(postsData);
 
@@ -63,7 +62,6 @@ const InventoryScreen = ({ navigation }) => {
             </View>
         );
     }
-
     return (
 
         <SafeAreaView style={styles.safeArea}>

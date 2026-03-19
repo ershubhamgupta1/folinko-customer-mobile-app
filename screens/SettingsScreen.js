@@ -46,7 +46,6 @@ const SettingsScreen = ({ navigation }) => {
     });
 
     if (!result.canceled) {
-      console.log('result.assets[0].uri============',)
       setImage(result.assets[0].uri);
     }
   };

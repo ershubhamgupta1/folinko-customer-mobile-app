@@ -133,7 +133,6 @@ const AppNavigator = () => {
       </View>
     );
   }
-  console.log("isAuthenticated", isAuthenticated);
   if (!isAuthenticated) {
     return <LoginScreen />;
   }

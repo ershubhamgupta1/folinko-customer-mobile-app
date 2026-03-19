@@ -36,7 +36,6 @@ export default function VerificationScreen() {
   const fetchVerificationData = async()=>{
     try {
       const response = await verification.getVerificationStatus();
-      console.log('verification response========', JSON.stringify(response));
       
       // Extract data from API response
       const trustMeterData = response?.trust_meter || {};
@@ -61,8 +60,6 @@ export default function VerificationScreen() {
       setShopStatus(apiShopStatus);
       
       // You can use submissionData if needed
-      console.log('Trust meter data:', trustMeterData);
-      console.log('Submission data:', submissionData);
     } catch (error) {
       console.error('Error fetching verification status:', error);
     } finally {
@@ -92,7 +89,6 @@ export default function VerificationScreen() {
       </Text>
     </View>
   );
-  console.log('shopStatus=======', shopStatus);
   return (
     <SafeAreaView style={styles.safeArea}>
       <View style={styles.customHeader}>

@@ -169,15 +169,10 @@ const FulfillmentCard = ({ orderData }) => {
         fulfillmentData.tracking_url = trackingUrl;
       }
 
-      console.log('Updating fulfillment:', fulfillmentData);
-      
       const response = await orders.updateFulfillment(orderData?.id, fulfillmentData);
-      console.log('Fulfillment update response:', response);
-      
       Alert.alert("Success", "Order fulfillment updated successfully!");
-      
       // Optionally refresh order data
-      // fetchOrderDetails();
+      fetchOrderDetails();
       
     } catch (error) {
       console.error('Error updating fulfillment:', error);

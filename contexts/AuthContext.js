@@ -31,7 +31,6 @@ export const AuthProvider = ({ children }) => {
   const checkAuthStatus = async () => {
     try {
       const token = await getAuthToken();
-      console.log('token', token);
       if (token) {
         const userData = await businessAuth.getMe();
         setUser(userData);

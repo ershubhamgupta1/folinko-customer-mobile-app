@@ -18,7 +18,6 @@ export default function AddPostScreen({ route }) {
   const navigation = useNavigation();
   const { post } = route.params || {};
   const isEditMode = !!post;
-  console.log('post=========', post, isEditMode);
   const [url, setUrl] = useState(post?.social_url || "");
   const [title, setTitle] = useState(post?.title || "");
   const [material, setMaterial] = useState(post?.material || "");
@@ -66,7 +65,6 @@ export default function AddPostScreen({ route }) {
         title: title,
         caption: caption || "",
         price: parseFloat(price),
-        currency: "INR",
         material: material || "",
         attributes: {
           color: color || "",
@@ -76,27 +74,8 @@ export default function AddPostScreen({ route }) {
         images: images
       };
 
-      console.log('postData===========', postData);
-      
       let response;
       if (isEditMode) {
-        console.log('post.id=========', post.id);
-        // const payload = {
-        //   "attributes": {"color": "Black", "delivery_fee_amount": 10, "size": "Medium"}, 
-        //   "caption": "No caption", 
-        //   // "currency": "INR", 
-        //   "images": [{"sort_order": 1, "url": "https://imagery.com"}], 
-        //   "material": "Cotton", 
-        //   "price": 1700, 
-        //   // "social_platform": "instagram", 
-        //   // "social_url": "https://Instagram.com", 
-        //   "title": "Jeans1"
-        // }
-        delete postData.social_platform;
-        delete postData.social_url;
-        delete postData.currency;
-        console.log('postData=========', postData);
-
         response = await inventory.updatePost(post.id, postData);
       } else {
         response = await inventory.createPost(postData);
@@ -257,7 +236,7 @@ export default function AddPostScreen({ route }) {
                 <Feather name="chevron-down" size={18} />
               </TouchableOpacity>
 
-              {showPlatformDropdown && (
+              {/* {showPlatformDropdown && (
                 <View style={styles.dropdownList}>
                   {platforms.map((platform) => (
                     <TouchableOpacity
@@ -272,7 +251,7 @@ export default function AddPostScreen({ route }) {
                     </TouchableOpacity>
                   ))}
                 </View>
-              )}
+              )} */}
             </View>
 
 
@@ -318,6 +297,7 @@ export default function AddPostScreen({ route }) {
               style={styles.input}
               placeholder="https://www.instagram.com/reel/..."
               value={url}
+              readOnly
               onChangeText={setUrl}
             />
 

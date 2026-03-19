@@ -14,7 +14,6 @@ export default function VideoPlayer({ url }) {
       await videoRef.current?.playAsync();
     }
   };
-console.log('url=========', url)
   return (
     <View style={styles.container}>
       {/* VIDEO */}

@@ -186,7 +186,6 @@ export default function FeedScreen() {
         setLoading(true);
       }
       const response = await feed.getFeed();
-      console.log('Feed response:', response);
       setFeedData(response?.posts || []);
     } catch (error) {
       console.error('Error fetching feed data:', error);
