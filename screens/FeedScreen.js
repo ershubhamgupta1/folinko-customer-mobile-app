@@ -11,7 +11,7 @@ import StoreCard from "../components/StoreCard";
 import DiscoveryCard from "../components/DiscoveryCard";
 import Header from "../components/Header";
 import { useNavigation } from "@react-navigation/native";
-import { markets, shops } from "../services/api";
+import { customerAuth, feed, markets, shops } from "../services/api";
 
 export default function FeedScreen() {
   const navigation = useNavigation();
@@ -24,11 +24,13 @@ export default function FeedScreen() {
 
   const fetchData = async () => {
     try {
-      const [marketsRes, shopsData] = await Promise.all([
+      const [marketsRes, shopsData, feeds] = await Promise.all([
         markets.list(),
         shops.discover(),
+        feed.getFeed(),
       ]);
 
+      console.log('feeds==========', JSON.stringify(feeds));
       const nextStores = Array.isArray(shopsData?.shops) ? shopsData.shops : [];
       const nextMarkets = Array.isArray(marketsRes?.markets) ? marketsRes.markets : [];
       
@@ -47,7 +49,7 @@ export default function FeedScreen() {
         <Header
           title="Feed"
           onNotificationPress={() => console.log("Notification pressed")}
-          onProfilePress={() => navigation.navigate("storeDetail")}
+          onProfilePress={() => navigation.navigate("userProfile")}
         />
         {/* Header */}
         <HeaderSearch />

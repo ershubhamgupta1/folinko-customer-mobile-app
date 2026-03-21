@@ -15,14 +15,25 @@ import { useNavigation, useRoute } from "@react-navigation/native";
 import { shops } from "../services/api";
 
 
+const SOCIAL_META = [
+  { key: "instagram", label: "Instagram", icon: "instagram" },
+  { key: "facebook", label: "Facebook", icon: "facebook-f" },
+  { key: "youtube", label: "YouTube", icon: "youtube" },
+];
+
+const FALLBACK_POST_IMAGE =
+  "https://images.unsplash.com/photo-1529139574466-a303027c1d8b?auto=format&fit=crop&w=1000&q=80";
+
+
 const getArray = (value) => (Array.isArray(value) ? value : []);
 
 export default function StoreDetailScreen() {
   const navigation = useNavigation();
   const route = useRoute();
-  // const shopSlug = route.params?.shopSlug || initialStore?.slug;
-  const shopSlug = 'sharma-sarees';
+  const shopSlug = route.params?.shopSlug;
+  // const shopSlug = 'sharma-sarees';
 
+  console.log('shopSlug=========',shopSlug);
   const [shopData, setShopData] = useState({});
   const [shopPosts, setShopPosts] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -30,7 +41,7 @@ export default function StoreDetailScreen() {
 
   useEffect(() => {
     const fetchShop = async () => {
-      if (shopSlug) {
+      if (!shopSlug) {
         setError("Store not found");
         setShopData({});
         setShopPosts([]);
@@ -90,7 +101,7 @@ export default function StoreDetailScreen() {
       name: shop?.name || "Store",
       city: shop?.city || "Delhi",
       category: shop?.category || "Fashion",
-      coverImage: shop?.cover_image_url || FALLBACK_STORE_IMAGE,
+      coverImage: shop?.cover_image_url ,
       postCount: Number(shop?.post_count || shopPosts.length || 0),
       trustScore,
       trustLabel: trustMeter?.label || "New",
@@ -100,7 +111,7 @@ export default function StoreDetailScreen() {
       promoted: Boolean(shop?.is_promoted),
       overview,
     };
-  }, [initialStore, shopData, shopPosts.length, shopSlug]);
+  }, [shopData, shopPosts.length, shopSlug]);
 
   const normalizedPosts = useMemo(() => {
     return getArray(shopPosts).map((item, index) => ({
@@ -116,7 +127,7 @@ export default function StoreDetailScreen() {
   }, [normalizedStore.currency, normalizedStore?.social_url, shopPosts]);
 
   const socialLinks = useMemo(() => {
-    const shop = shopData || initialStore || {};
+    const shop = shopData || {};
     return SOCIAL_META.map((item) => ({
       ...item,
       url:
@@ -124,10 +135,14 @@ export default function StoreDetailScreen() {
         shop?.[`${item.key}_url`] ||
         (item.key === "instagram" ? shop?.social_url : ""),
     }));
-  }, [initialStore, shopData]);
+  }, [shopData]);
 
   const navigateToTab = (screen) => {
     navigation.navigate("Main", { screen });
+  };
+
+  const openProductDetail = (productId) => {
+    navigation.navigate("productDetail", { productId });
   };
 
   const handleOpenUrl = async (url) => {
@@ -158,7 +173,7 @@ export default function StoreDetailScreen() {
           <Text style={styles.stateSubtitle}>{error}</Text>
           <TouchableOpacity
             style={styles.retryButton}
-            onPress={() => navigation.replace("storeDetail", { shopSlug, store: initialStore })}
+            onPress={() => navigation.replace("storeDetail", { shopSlug })}
           >
             <Text style={styles.retryButtonText}>Retry</Text>
           </TouchableOpacity>
@@ -260,7 +275,12 @@ export default function StoreDetailScreen() {
         ) : null}
 
         {normalizedPosts.map((item) => (
-          <View key={item.id} style={styles.postCard}>
+          <TouchableOpacity
+            key={item.id}
+            activeOpacity={0.92}
+            style={styles.postCard}
+            onPress={() => openProductDetail(item.id)}
+          >
             <View style={styles.postHeaderRow}>
               <View style={styles.platformChip}>
                 <FontAwesome5
@@ -284,7 +304,7 @@ export default function StoreDetailScreen() {
               <View style={styles.postActionRow}>
                 <TouchableOpacity
                   style={styles.lightButton}
-                  onPress={() => navigation.navigate("productDetail", { productId: item.id })}
+                  onPress={() => openProductDetail(item.id)}
                 >
                   <Text style={styles.lightButtonText}>View</Text>
                 </TouchableOpacity>
@@ -301,7 +321,7 @@ export default function StoreDetailScreen() {
                 <Text style={styles.openLinkButtonText}>Open original</Text>
               </TouchableOpacity>
             </View>
-          </View>
+          </TouchableOpacity>
         ))}
 
         {normalizedPosts.length === 0 ? (

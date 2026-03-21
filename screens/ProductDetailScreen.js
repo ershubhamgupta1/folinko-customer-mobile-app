@@ -28,20 +28,21 @@ export default function ProductDetailScreen() {
   const navigation = useNavigation();
   const route = useRoute();
   const { logout } = useAuth();
-  let productId = route.params?.productId ?? route.params?.id;
-  productId = 2;
+  const productId = route.params?.productId ?? route.params?.id;
   const [productData, setProductData] = useState(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
   const [selectedSize, setSelectedSize] = useState("Select");
   const [showSizeOptions, setShowSizeOptions] = useState(false);
   const [isSaved, setIsSaved] = useState(false);
+  const [relatedProductsData, setRelatedProductsData] = useState([]);
 
   useEffect(() => {
     const fetchProduct = async () => {
       if (!productId) {
         setError("Product not found");
         setProductData(null);
+        setRelatedProductsData([]);
         setLoading(false);
         return;
       }
@@ -50,11 +51,16 @@ export default function ProductDetailScreen() {
       setError("");
 
       try {
-        const response = await posts.getById(productId);
+        const [response, relatedRes] = await Promise.all([
+          posts.getById(productId),
+          posts.related(productId).catch(() => ({ posts: [] })),
+        ]);
         setProductData(response?.post || null);
+        setRelatedProductsData(Array.isArray(relatedRes?.posts) ? relatedRes.posts : []);
       } catch (e) {
         setError(e?.message || "Failed to load product");
         setProductData(null);
+        setRelatedProductsData([]);
       } finally {
         setLoading(false);
       }
@@ -123,20 +129,31 @@ export default function ProductDetailScreen() {
     };
   }, [productData, productId]);
 
-  const relatedProducts = useMemo(
-    () => [
-      {
-        id: `${normalizedProduct.id}-related-1`,
-        title: "Xy",
-        seller: "EKAM SINGH",
-        price: "INR 1500",
-      },
-    ],
-    [normalizedProduct.id]
-  );
+  const relatedProducts = useMemo(() => {
+    const currentProductId = String(productData?.id || productId || "");
+
+    return (Array.isArray(relatedProductsData) ? relatedProductsData : [])
+      .filter((post) => String(post?.id || "") !== currentProductId)
+      .map((post) => ({
+        id: String(post?.id || ""),
+        title: post?.title || "Product",
+        seller: post?.shop?.name || "Business shop",
+        price: formatMoney(post?.price || 0),
+        imageUrl: post?.cover_image_url || post?.images?.[0]?.url || FALLBACK_IMAGE,
+      }))
+      .filter((post) => post.id);
+  }, [productData?.id, productId, relatedProductsData]);
 
   const navigateToTab = (screen) => {
     navigation.navigate("Main", { screen });
+  };
+
+  const openRelatedProduct = (nextProductId) => {
+    if (!nextProductId || String(nextProductId) === String(productId)) {
+      return;
+    }
+
+    navigation.replace("productDetail", { productId: nextProductId });
   };
 
   const handleBackToFeed = () => {
@@ -334,18 +351,27 @@ export default function ProductDetailScreen() {
 
         <View style={styles.infoCard}>
           <Text style={styles.infoLabel}>Related products</Text>
-          {relatedProducts.map((item) => (
-            <View key={item.id} style={styles.relatedCard}>
-              <View style={styles.relatedThumb}>
-                <Text style={styles.relatedThumbText}>Xy</Text>
-              </View>
-              <View style={styles.relatedContent}>
-                <Text style={styles.relatedTitle}>{item.title}</Text>
-                <Text style={styles.relatedSeller}>{item.seller}</Text>
-                <Text style={styles.relatedPrice}>{item.price}</Text>
-              </View>
-            </View>
-          ))}
+          {relatedProducts.length ? (
+            relatedProducts.map((item) => (
+              <TouchableOpacity
+                key={item.id}
+                activeOpacity={0.92}
+                style={styles.relatedCard}
+                onPress={() => openRelatedProduct(item.id)}
+              >
+                <View style={styles.relatedThumb}>
+                  <Image source={{ uri: item.imageUrl }} style={styles.relatedThumbImage} />
+                </View>
+                <View style={styles.relatedContent}>
+                  <Text style={styles.relatedTitle} numberOfLines={1}>{item.title}</Text>
+                  <Text style={styles.relatedSeller} numberOfLines={1}>{item.seller}</Text>
+                  <Text style={styles.relatedPrice}>{item.price}</Text>
+                </View>
+              </TouchableOpacity>
+            ))
+          ) : (
+            <Text style={styles.infoMeta}>No related products available right now.</Text>
+          )}
         </View>
       </ScrollView>
     </SafeAreaView>
@@ -780,6 +806,11 @@ const styles = StyleSheet.create({
     alignItems: "center",
     justifyContent: "center",
     marginRight: 10,
+    overflow: "hidden",
+  },
+  relatedThumbImage: {
+    width: "100%",
+    height: "100%",
   },
   relatedThumbText: {
     fontSize: 14,

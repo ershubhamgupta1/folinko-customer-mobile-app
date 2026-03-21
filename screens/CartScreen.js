@@ -10,15 +10,21 @@ import {
   TextInput,
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
+import { useNavigation } from "@react-navigation/native";
 import { cart } from "../services/api";
 
 const CartScreen = () => {
+  const navigation = useNavigation();
   const [refreshing, setRefreshing] = useState(false);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
   const [cartItems, setCartItems] = useState([]);
   const [subtotalAmount, setSubtotalAmount] = useState(0);
   const [qtyByItemId, setQtyByItemId] = useState({});
+
+  const openProductDetail = (productId) => {
+    navigation.navigate("productDetail", { productId });
+  };
 
   const onRefresh = useCallback(() => {
     setRefreshing(true);
@@ -135,13 +141,18 @@ const CartScreen = () => {
             const itemId = String(item?.id);
 
             return (
-              <View key={itemId} style={styles.productCard}>
+              <TouchableOpacity
+                key={itemId}
+                activeOpacity={0.92}
+                style={styles.productCard}
+                onPress={() => openProductDetail(post?.id)}
+              >
                 <Image source={{ uri: imageUrl }} style={styles.image} />
 
                 <View style={styles.productContent}>
                   <View style={styles.rowBetween}>
                     <Text style={styles.productName} numberOfLines={1}>{title}</Text>
-                    <TouchableOpacity style={styles.viewBtn}>
+                    <TouchableOpacity style={styles.viewBtn} onPress={() => openProductDetail(post?.id)}>
                       <Text>View</Text>
                     </TouchableOpacity>
                   </View>
@@ -180,7 +191,7 @@ const CartScreen = () => {
 
                   <Text style={styles.itemTotalText}>{`Item total: ${itemTotal}`}</Text>
                 </View>
-              </View>
+              </TouchableOpacity>
             );
           })}
         </View>

@@ -9,6 +9,7 @@ import {
   TouchableOpacity,
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
+import { useNavigation } from "@react-navigation/native";
 
 const mockData = [
   {
@@ -30,7 +31,12 @@ const mockData = [
 ];
 
 const WishListScreen = () => {
+  const navigation = useNavigation();
   const [refreshing, setRefreshing] = useState(false);
+
+  const openProductDetail = (productId) => {
+    navigation.navigate("productDetail", { productId });
+  };
 
   const onRefresh = useCallback(() => {
     setRefreshing(true);
@@ -56,7 +62,12 @@ const WishListScreen = () => {
 
         {/* Wishlist Items */}
         {mockData.map((item) => (
-          <View key={item.id} style={styles.card}>
+          <TouchableOpacity
+            key={item.id}
+            activeOpacity={0.92}
+            style={styles.card}
+            onPress={() => openProductDetail(item.id)}
+          >
             <Image source={{ uri: item.image }} style={styles.image} />
 
             <View style={styles.content}>
@@ -73,13 +84,13 @@ const WishListScreen = () => {
                 <TouchableOpacity style={styles.removeBtn}>
                   <Text>Remove</Text>
                 </TouchableOpacity>
-                <TouchableOpacity style={styles.removeBtn}>
+                <TouchableOpacity style={styles.removeBtn} onPress={() => openProductDetail(item.id)}>
                   <Text>View</Text>
                 </TouchableOpacity>
               </View>
 
             </View>
-          </View>
+          </TouchableOpacity>
         ))}
       </ScrollView>
     </SafeAreaView>
