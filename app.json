@@ -1,7 +1,7 @@
 {
   "expo": {
-    "name": "mobile-seller-app",
-    "slug": "mobile-seller-app",
+    "name": "mobile-customer-app",
+    "slug": "mobile-customer-app",
     "version": "1.0.0",
     "orientation": "portrait",
     "icon": "./assets/icon.png",
@@ -50,6 +50,12 @@
     },
     "web": {
       "favicon": "./assets/favicon.png"
-    }
+    },
+    "extra": {
+      "eas": {
+        "projectId": "de1f2fa0-b261-4013-84f4-22cd5eb78f80"
+      }
+    },
+    "owner": "ershubhamgupta1"
   }
 }

@@ -6,24 +6,14 @@ import { useAuth } from '../contexts/AuthContext';
 import { FontAwesome5 } from '@expo/vector-icons';
 import Octicons from '@expo/vector-icons/Octicons';
 
-import UserProfileScreen from '../screens/UserProfileScreen';
 import OrdersScreen from '../screens/OrdersScreen';
-import OrderDetailScreen from '../screens/OrderDetailScreen';
-
-import ShopProfileScreen from '../screens/ShopProfileScreen';
-
-import InventoryScreen from '../screens/InventoryScreen';
-import DashboardScreen from '../screens/DashboardScreen';
-import PayoutHistoryScreen from '../screens/PayoutHistoryScreen';
-
-import AddProductScreen from '../screens/AddProductScreen';
-import SettingsScreen from '../screens/SettingsScreen';
-import AnalyticsScreen from '../screens/AnalyticsScreen';
 import LoginScreen from '../screens/LoginScreen';
 import { NavigationContainer } from '@react-navigation/native';
 import { createStackNavigator } from '@react-navigation/stack';
-import TrustMeterScreen from '../screens/TrustMeterScreen';
 import FeedScreen from '../screens/FeedScreen';
+import WishListScreen from '../screens/WishListScreen';
+import CartScreen from '../screens/CartScreen';
+import UserProfileScreen from '../screens/UserProfileScreen';
 
 const Tab = createBottomTabNavigator();
 const Stack = createStackNavigator();
@@ -66,32 +56,37 @@ const MainTabs = () => {
       })}
     >
       <Tab.Screen 
-        name="Dashboard" 
-        component={DashboardScreen}
+        name="Feed" 
+        component={FeedScreen}
         options={{ 
           headerShown: false,
-          tabBarLabel: 'Home',
+          tabBarLabel: 'Feed',
           tabBarIcon: ({ focused, color, size }) => (
             <View style={[styles.addButton, focused && styles.addButtonFocused, { marginBottom: 24 }]}>
-              <FontAwesome5 name="home" size={20} color={focused ? '#fff' : color} />
+              <FontAwesome5 name="play" size={20} color={focused ? '#fff' : color} />
             </View>
           )
         }}
       />
       <Tab.Screen 
-        name="Orders" 
-        component={InventoryScreen}
+        name="Wishlist" 
+        component={WishListScreen}
         options={{ 
           headerShown: false,
-          tabBarLabel: 'Inventory'
+          tabBarLabel: 'Wishlist',
+          tabBarIcon: ({ focused, color, size }) => (
+            <View style={[styles.addButton, focused && styles.addButtonFocused, { marginBottom: 24 }]}>
+              <FontAwesome5 name="heart" size={20} color={focused ? '#fff' : color} />
+            </View>
+          )
         }}
       />
       <Tab.Screen 
-        name="orders" 
-        component={OrdersScreen}
+        name="cart" 
+        component={CartScreen}
         options={{ 
           headerShown: false,
-          tabBarLabel: 'Orders',
+          tabBarLabel: 'Cart',
           tabBarIcon: ({ focused, color, size }) => (
             <View style={[styles.addButton, focused && styles.addButtonFocused, { marginBottom: 24 }]}>
               <FontAwesome5 name="shopping-bag" size={20} color={focused ? '#fff' : color} />
@@ -100,21 +95,15 @@ const MainTabs = () => {
         }}
       />
       <Tab.Screen 
-        name="Analytics" 
-        component={AnalyticsScreen}
+        name="Orders" 
+        component={OrdersScreen}
         options={{ 
           headerShown: false,
-          tabBarLabel: 'Analytics'
-        }}
-      />
-      <Tab.Screen 
-        name="shopIdentity" 
-        component={ShopProfileScreen}
-        options={{ 
-          headerShown: false,
-          tabBarLabel: 'Shop Profile',
+          tabBarLabel: 'Orders',
           tabBarIcon: ({ focused, color, size }) => (
-            <FontAwesome5 name="store" size={20} color={color} />
+            <View style={[styles.addButton, focused && styles.addButtonFocused, { marginBottom: 24 }]}>
+              <FontAwesome5 name="dollar-sign" size={20} color={focused ? '#fff' : color} />
+            </View>
           )
         }}
       />
@@ -141,14 +130,14 @@ const AppNavigator = () => {
       <Stack.Navigator screenOptions={{ headerShown: false }}>
         <Stack.Screen name="Main" component={MainTabs} />
         <Stack.Screen name="orderScreen" component={OrdersScreen} />
-        <Stack.Screen name="orderDetailsScreen" component={OrderDetailScreen} />
+        {/* <Stack.Screen name="orderDetailsScreen" component={OrderDetailScreen} /> */}
 
-        <Stack.Screen name="shopProfile" component={ShopProfileScreen} />
+        {/* <Stack.Screen name="shopProfile" component={ShopProfileScreen} />
         <Stack.Screen name="trustMeter" component={TrustMeterScreen} />
-        <Stack.Screen name="dashboard" component={DashboardScreen} />
-        <Stack.Screen name="payoutHistory" component={PayoutHistoryScreen} />
+        <Stack.Screen name="dashboard" component={DashboardScreen} /> */}
+        {/* <Stack.Screen name="payoutHistory" component={PayoutHistoryScreen} /> */}
         <Stack.Screen name="userProfile" component={UserProfileScreen} />
-        <Stack.Screen name="addPost" component={AddProductScreen} />
+        {/* <Stack.Screen name="addPost" component={AddProductScreen} /> */}
         <Stack.Screen name="feedScreen" component={FeedScreen} />
 
         <Stack.Screen name="Login" component={LoginScreen} />

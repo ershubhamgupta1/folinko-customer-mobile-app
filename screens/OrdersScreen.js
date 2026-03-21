@@ -1,324 +1,383 @@
-import React, { useState, useEffect } from 'react';
+import { useCallback, useState, useEffect } from "react";
 import {
+  ScrollView,
+  RefreshControl,
+  StyleSheet,
   View,
   Text,
-  StyleSheet,
-  ScrollView,
-  TouchableOpacity,
-  ActivityIndicator,
   Image,
-  RefreshControl,
-} from 'react-native';
-import { feed, orders } from '../services/api';
-import Header from '../components/Header';
+  TouchableOpacity,
+} from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
+import { cart, orders } from "../services/api";
 
-const OrdersScreen = ({ navigation }) => {
-  const [loading, setLoading] = useState(true);
-  const [ordersData, setOrdersData] = useState([]);
+const OrderScreen = () => {
   const [refreshing, setRefreshing] = useState(false);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState("");
+  const [orderList, setOrderList] = useState([]);
+
+  const onRefresh = useCallback(() => {
+    setRefreshing(true);
+    fetchOrders({ isRefresh: true });
+  }, []);
 
   useEffect(() => {
     fetchOrders();
   }, []);
 
-  const fetchOrders = async () => {
+  const fetchOrders = async ({ isRefresh } = {}) => {
+    if (!isRefresh) setLoading(true);
+    setError("");
+
     try {
-      if (!refreshing) setLoading(true);
+      const response = await orders.list();
 
-      const response = await orders?.getOrders();
-      let ordersDataRes = response?.orders || [];
-
-      // fallback mock
-      if (ordersDataRes.length === 0) {
-        ordersDataRes = [{
-          id: 3,
-          order_number: '3',
-          customer: { email: 'smridh@tandev.us' },
-          first_item: {
-            image_url: "https://images.unsplash.com/photo-1610189020382-668a64c0c7a6",
-            title: "Saree 2"
-          },
-          fulfillment: { status: "CREATED" },
-          item_count: 1,
-          total_qty: 2,
-          shop_subtotal: 4198,
-          updated_at: new Date().toISOString()
-        }];
-      }
-
-      setOrdersData(ordersDataRes);
+      const nextOrders = Array.isArray(response?.orders) ? response.orders : [];
+      setOrderList(nextOrders);
     } catch (e) {
-      console.error(e);
+      setError(e?.message || "Failed to load orders");
+      setOrderList([]);
     } finally {
       setLoading(false);
+      setRefreshing(false);
     }
   };
 
-  const onRefresh = async () => {
-    setRefreshing(true);
-    await fetchOrders();
-    setRefreshing(false);
+  const formatDate = (iso) => {
+    if (!iso) return "";
+    const d = new Date(iso);
+    if (Number.isNaN(d.getTime())) return String(iso);
+    return d.toISOString().slice(0, 10);
   };
 
-  const getDate = (ts) => ts ? new Date(ts).toISOString().split('T')[0] : '';
+  const formatMoney = (amount) => {
+    if (amount === null || amount === undefined) return "";
+    return `₹ ${amount}`;
+  };
 
-  if (loading) {
-    return (
-      <View style={styles.loadingContainer}>
-        <ActivityIndicator size="large" />
-        <Text>Loading orders...</Text>
-      </View>
-    );
-  }
+  const getStatusLabel = (order) => {
+    return order?.status || order?.order_status || "";
+  };
+
+  const getStatusBadgeStyle = (status) => {
+    const s = String(status || "").toUpperCase();
+    if (s === "DELIVERED") return styles.statusBadgeDelivered;
+    if (s === "SHIPPED") return styles.statusBadgeShipped;
+    if (s === "PACKED") return styles.statusBadgePacked;
+    return styles.statusBadgeDefault;
+  };
 
   return (
-    <SafeAreaView style={styles.safeArea} edges={['top']}>
+    <SafeAreaView style={styles.safeArea} edges={["top"]}>
       <ScrollView
-        style={styles.container}
-        keyboardShouldPersistTaps="handled"
-        refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} />}
+        showsVerticalScrollIndicator={false}
+        refreshControl={
+          <RefreshControl refreshing={refreshing} onRefresh={onRefresh} />
+        }
       >
-        <Header 
-          title="Orders"
-          onNotificationPress={() => {}}
-          onProfilePress={() => navigation.navigate("userProfile")}
-        />
-
-        <View style={styles.content}>
-
-          {/* WRAPPER */}
-          <View style={styles.wrapper}>
-            <Text style={styles.smallTitle}>Orders</Text>
-
-            <Text style={styles.mainTitle}>
-              Manage customer orders
-            </Text>
-
-            <Text style={styles.description}>
-              Update status, add tracking, and keep customers informed.
-            </Text>
-
-            {/* INNER BOX */}
-            <View style={styles.innerBox}>
-
-              {ordersData.length === 0 ? (
-                <View style={styles.emptyContainer}>
-                  <Text>No orders found</Text>
-                </View>
-              ) : (
-                ordersData.map((item) => {
-                  const status = item.fulfillment?.status || item.order_status || 'CREATED';
-
-                  return (
-                    <TouchableOpacity
-                      key={item.id}
-                      onPress={() =>
-                        navigation.navigate('orderDetailsScreen', { orderId: item.id })
-                      }
-                    >
-                      <View style={styles.orderCard}>
-
-                        <View style={styles.row}>
-
-                          {/* LEFT */}
-                          <View style={{ flex: 1 }}>
-                            <Text style={styles.orderTitle}>
-                              Order #{item.order_number || item.id}
-                            </Text>
-
-                            <Text style={styles.orderMeta}>
-                              {item.customer?.email} 
-                            </Text>
-                            <Text style={styles.orderMeta}>
-                              · item {item.item_count || 1}
-                            </Text>
-                            <Text style={styles.orderMeta}>
-                              · Qty {item.total_qty}
-                            </Text>
-
-                            <View style={styles.productRow}>
-                              <Image
-                                source={{ uri: item.first_item?.image_url }}
-                                style={styles.productImage}
-                              />
-                              <Text style={styles.productName}>
-                                {item.first_item?.title}
-                              </Text>
-                            </View>
-                          </View>
-
-                          {/* RIGHT */}
-                          <View style={styles.rightSection}>
-
-                            <View style={styles.statusPill}>
-                              <Text style={styles.statusDot}>•</Text>
-                              <Text style={styles.statusText}>
-                                {status.charAt(0) + status.slice(1).toLowerCase()}
-                              </Text>
-                            </View>
-
-                            <View style={styles.priceContainer}>
-                              <Text style={styles.priceValue}>₹ {item.shop_subtotal}</Text>
-                              <Text style={styles.priceLabel}>Shop subtotal</Text>
-                            </View>
-
-                          </View>
-
-                        </View>
-
-                      </View>
-                    </TouchableOpacity>
-                  );
-                })
-              )}
-
-            </View>
-          </View>
-
+        <View style={styles.pageHeader}>
+          <Text style={styles.pageTitle}>Orders</Text>
+          <Text style={styles.pageSubtitle}>Track your purchases and delivery updates.</Text>
         </View>
+
+        {!!error && (
+          <View style={styles.stateCard}>
+            <Text style={styles.stateTitle}>Couldn’t load orders</Text>
+            <Text style={styles.stateSubtitle}>{error}</Text>
+            <TouchableOpacity style={styles.retryBtn} onPress={() => fetchOrders()}>
+              <Text style={styles.retryText}>Retry</Text>
+            </TouchableOpacity>
+          </View>
+        )}
+
+        {loading && !error && (
+          <View style={styles.stateCard}>
+            <Text style={styles.stateTitle}>Loading...</Text>
+          </View>
+        )}
+
+        {!loading && !error && orderList.length === 0 && (
+          <View style={styles.stateCard}>
+            <Text style={styles.stateTitle}>No orders yet</Text>
+            <Text style={styles.stateSubtitle}>Your orders will show up here after checkout.</Text>
+          </View>
+        )}
+
+        {!loading && !error && orderList.map((order) => {
+          const statusLabel = getStatusLabel(order);
+          const firstItem = order?.first_item;
+          const imageUrl =
+            firstItem?.photo_url ||
+            firstItem?.image_url ||
+            firstItem?.thumbnail_url ||
+            "https://images.unsplash.com/photo-1603252109303-2751441dd157";
+          const title = firstItem?.title || firstItem?.name || "Item";
+          const seller = firstItem?.shop_name || firstItem?.shop?.name || firstItem?.seller_name || "";
+
+          return (
+            <View key={String(order?.id)} style={styles.card}>
+              <View style={styles.rowBetween}>
+                <View>
+                  <Text style={styles.orderId}>#{order?.id}</Text>
+                  <Text style={styles.date}>{formatDate(order?.created_at)}</Text>
+                  <Text style={styles.updated}>Updated {formatDate(order?.updated_at)}</Text>
+                </View>
+
+                <View style={[styles.statusBadge, getStatusBadgeStyle(statusLabel)]}>
+                  <Text style={styles.statusText}>{`• ${statusLabel}`}</Text>
+                </View>
+              </View>
+
+              <View style={styles.divider} />
+
+              <View style={styles.productRow}>
+                <Image source={{ uri: imageUrl }} style={styles.image} />
+
+                <View style={styles.productContent}>
+                  <Text style={styles.itemCount}>{`${order?.item_count || 0} item${order?.item_count === 1 ? "" : "s"}`}</Text>
+                  <Text style={styles.productName} numberOfLines={1}>{title}</Text>
+                  {!!seller && <Text style={styles.seller} numberOfLines={1}>{seller}</Text>}
+
+                  <View style={styles.trustBox}>
+                    <Text>🛡 Trust</Text>
+                    <View style={styles.progressBar}>
+                      <View style={styles.progressFill} />
+                    </View>
+                  </View>
+                </View>
+              </View>
+
+              <View style={styles.divider} />
+
+              <View style={styles.priceRow}>
+                <View>
+                  <Text style={styles.priceLabel}>Subtotal</Text>
+                  <Text style={styles.priceValue}>{formatMoney(order?.subtotal_amount)}</Text>
+                </View>
+
+                <View>
+                  <Text style={styles.priceLabel}>Delivery</Text>
+                  <Text style={styles.priceValue}>{formatMoney(order?.delivery_fee_amount)}</Text>
+                </View>
+
+                <View>
+                  <Text style={styles.priceLabel}>Total</Text>
+                  <Text style={styles.totalValue}>{formatMoney(order?.total_amount)}</Text>
+                </View>
+              </View>
+
+              <TouchableOpacity style={styles.viewBtn}>
+                <Text style={styles.viewText}>View</Text>
+              </TouchableOpacity>
+            </View>
+          );
+        })}
       </ScrollView>
     </SafeAreaView>
   );
 };
 
-export default OrdersScreen;
-
-/* ===================== STYLES ===================== */
-
 const styles = StyleSheet.create({
-  safeArea: { flex: 1, backgroundColor: "#f9fafb" },
-  container: { flex: 1 },
-  content: { padding: 16 },
+  safeArea: {
+    flex: 1,
+    backgroundColor: "#f7f7f7",
+  },
 
-  /* WRAPPER */
-  wrapper: {
+  container: {
+    flex: 1,
+  },
+
+  card: {
     backgroundColor: "#fff",
+    margin: 16,
     borderRadius: 20,
     padding: 16,
-    borderWidth: 1,
-    borderColor: "#e5e7eb",
   },
 
-  smallTitle: {
-    fontSize: 14,
-    color: "#6b7280",
+  pageHeader: {
+    paddingHorizontal: 16,
+    paddingTop: 16,
   },
 
-  mainTitle: {
+  pageTitle: {
     fontSize: 22,
-    fontWeight: "700",
+    fontWeight: "bold",
+  },
+
+  pageSubtitle: {
+    color: "#666",
     marginTop: 4,
-    color: "#111827",
   },
 
-  description: {
-    fontSize: 14,
-    color: "#4b5563",
-    marginVertical: 10,
-  },
-
-  innerBox: {
-    // backgroundColor: "#f9fafb",
-    // borderRadius: 16,
-    // padding: 10,
-  },
-
-  /* ORDER CARD */
-  orderCard: {
+  stateCard: {
     backgroundColor: "#fff",
+    margin: 16,
     borderRadius: 20,
     padding: 16,
-    marginBottom: 12,
+  },
+
+  stateTitle: {
+    fontSize: 16,
+    fontWeight: "600",
+  },
+
+  stateSubtitle: {
+    color: "#666",
+    marginTop: 6,
+  },
+
+  retryBtn: {
+    marginTop: 12,
     borderWidth: 1,
-    borderColor: "#e5e7eb",
-  },
-
-  row: {
-    flexDirection: "row",
-  },
-
-  rightSection: {
-    alignItems: "flex-end",
-    justifyContent: "space-between",
-    marginLeft: 10,
-  },
-
-  orderTitle: {
-    fontSize: 18,
-    fontWeight: "700",
-    color: "#111827",
-  },
-
-  orderMeta: {
-    fontSize: 13,
-    color: "#6b7280",
-    marginTop: 4,
-  },
-
-  statusPill: {
-    flexDirection: "row",
-    alignItems: "center",
-    backgroundColor: "#f3f4f6",
-    paddingHorizontal: 10,
-    paddingVertical: 6,
     borderRadius: 20,
-    alignSelf: "flex-end",
+    paddingVertical: 10,
+    alignItems: "center",
   },
 
-  statusDot: {
-    marginRight: 6,
+  retryText: {
+    fontWeight: "500",
+  },
+
+  rowBetween: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "center",
+  },
+
+  orderId: {
+    fontSize: 18,
+    fontWeight: "bold",
+  },
+
+  date: {
+    color: "#666",
+    marginTop: 2,
+  },
+
+  updated: {
+    color: "#aaa",
+    fontSize: 12,
+  },
+
+  statusBadge: {
+    borderWidth: 1,
+    borderRadius: 20,
+    paddingHorizontal: 12,
+    paddingVertical: 6,
+  },
+
+  statusBadgeDefault: {
+    borderColor: "#ddd",
+    backgroundColor: "#fff",
+  },
+
+  statusBadgePacked: {
+    borderColor: "#fde68a",
+    backgroundColor: "#fffbeb",
+  },
+
+  statusBadgeShipped: {
+    borderColor: "#93c5fd",
+    backgroundColor: "#eff6ff",
+  },
+
+  statusBadgeDelivered: {
+    borderColor: "#86efac",
+    backgroundColor: "#f0fdf4",
   },
 
   statusText: {
-    fontSize: 13,
-    color: "#111827",
-  },
-
-  priceContainer: {
-    alignItems: "flex-end",
-    marginTop: 20,
-  },
-
-  priceValue: {
-    fontSize: 20,
-    fontWeight: "700",
-    color: "#111827",
-  },
-
-  priceLabel: {
     fontSize: 12,
-    color: "#6b7280",
+  },
+
+  divider: {
+    height: 1,
+    backgroundColor: "#eee",
+    marginVertical: 12,
   },
 
   productRow: {
     flexDirection: "row",
-    alignItems: "center",
-    marginTop: 12,
   },
 
-  productImage: {
-    width: 45,
-    height: 45,
-    borderRadius: 12,
-    marginRight: 10,
+  image: {
+    width: 70,
+    height: 90,
+    borderRadius: 10,
+  },
+
+  productContent: {
+    flex: 1,
+    marginLeft: 12,
+  },
+
+  itemCount: {
+    fontSize: 12,
+    color: "#888",
   },
 
   productName: {
     fontSize: 16,
-    color: "#374151",
-    flexShrink: 1,
+    fontWeight: "600",
   },
 
-  /* STATES */
-  loadingContainer: {
-    flex: 1,
-    justifyContent: "center",
+  seller: {
+    color: "#666",
+    marginTop: 2,
+  },
+
+  trustBox: {
+    flexDirection: "row",
+    alignItems: "center",
+    marginTop: 6,
+  },
+
+  progressBar: {
+    width: 80,
+    height: 6,
+    backgroundColor: "#ddd",
+    borderRadius: 10,
+    marginLeft: 8,
+  },
+
+  progressFill: {
+    width: "70%",
+    height: 6,
+    backgroundColor: "#22c55e",
+    borderRadius: 10,
+  },
+
+  priceRow: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+  },
+
+  priceLabel: {
+    color: "#888",
+    fontSize: 12,
+  },
+
+  priceValue: {
+    fontSize: 16,
+    fontWeight: "600",
+  },
+
+  totalValue: {
+    fontSize: 16,
+    fontWeight: "bold",
+  },
+
+  viewBtn: {
+    marginTop: 16,
+    borderWidth: 1,
+    borderRadius: 20,
+    paddingVertical: 10,
     alignItems: "center",
   },
 
-  emptyContainer: {
-    padding: 20,
-    alignItems: "center",
+  viewText: {
+    fontWeight: "500",
   },
 });
+export default OrderScreen;

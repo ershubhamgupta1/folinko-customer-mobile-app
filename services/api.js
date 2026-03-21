@@ -1,7 +1,8 @@
 import AsyncStorage from '@react-native-async-storage/async-storage';
 
 export const API_BASE = 'https://business.folinko.com';
-const TOKEN_KEY = '@business_token';
+const TOKEN_KEY = '@customer_token';
+const LEGACY_TOKEN_KEY = '@business_token';
 
 // Global navigation reference for redirects
 let navigationRef = null;
@@ -68,7 +69,17 @@ export const setAuthToken = async (token) => {
 
 export const getAuthToken = async () => {
   try {
-    return await AsyncStorage.getItem(TOKEN_KEY);
+    const token = await AsyncStorage.getItem(TOKEN_KEY);
+    if (token) return token;
+
+    const legacyToken = await AsyncStorage.getItem(LEGACY_TOKEN_KEY);
+    if (legacyToken) {
+      await AsyncStorage.setItem(TOKEN_KEY, legacyToken);
+      await AsyncStorage.removeItem(LEGACY_TOKEN_KEY);
+      return legacyToken;
+    }
+
+    return null;
   } catch (error) {
     console.error('Error getting auth token:', error);
     return null;
@@ -78,6 +89,7 @@ export const getAuthToken = async () => {
 export const removeAuthToken = async () => {
   try {
     await AsyncStorage.removeItem(TOKEN_KEY);
+    await AsyncStorage.removeItem(LEGACY_TOKEN_KEY);
   } catch (error) {
     console.error('Error removing auth token:', error);
   }
@@ -144,138 +156,176 @@ const apiRequest = async (endpoint, options = {}) => {
   }
 };
 
+const toQueryString = (params = {}) => {
+  const entries = Object.entries(params).filter(([, v]) => v !== undefined && v !== null && v !== '');
+  if (!entries.length) return '';
+  const qs = entries
+    .map(([k, v]) => `${encodeURIComponent(k)}=${encodeURIComponent(String(v))}`)
+    .join('&');
+  return `?${qs}`;
+};
+
 // Health check
 export const healthCheck = () => apiRequest('/api/health');
 
 // Business Auth
-export const businessAuth = {
-  register: (email, password) => 
-    apiRequest('/api/business/auth/register', {
+export const customerAuth = {
+  register: (email, password) =>
+    apiRequest('/api/customer/auth/register', {
       method: 'POST',
       body: JSON.stringify({ email, password }),
     }),
 
   login: async (email, password) => {
-    const response = await apiRequest('/api/business/auth/login', {
+    const response = await apiRequest('/api/customer/auth/login', {
       method: 'POST',
       body: JSON.stringify({ email, password }),
     });
-    
-    if (response.access_token) {
+
+    if (response?.access_token) {
       await setAuthToken(response.access_token);
     }
-    
+
     return response;
   },
 
-  getMe: () => apiRequest('/api/business/auth/me'),
+  getMe: () => apiRequest('/api/customer/auth/me'),
 };
 
-// Shop Management
-export const shop = {
-  getMyShop: () => apiRequest('/api/business/shops/me'),
+export const businessAuth = customerAuth;
 
-  createOrUpdateShop: (shopData) => 
-    apiRequest('/api/business/shops/me', {
-      method: 'POST',
-      body: JSON.stringify(shopData),
-    }),
-
-  getQRCode: () => apiRequest('/api/business/shops/me/qr'),
+// Markets + Feed (browse)
+export const markets = {
+  list: () => apiRequest('/api/customer/markets'),
 };
 
-// Inventory Posts
-export const inventory = {
-  getPosts: (page = 1, pageSize = 20) => 
-    apiRequest(`/api/business/inventory/posts?page=${page}&page_size=${pageSize}`),
+export const feed = {
+  getFeed: ({ city, q, page = 1, page_size = 20 } = {}) =>
+    apiRequest(`/api/customer/feed${toQueryString({ city, q, page, page_size })}`),
+};
 
-  createPost: (postData) => 
-    apiRequest('/api/business/inventory/posts', {
+// Discover shops + shop profile (public)
+export const shops = {
+  discover: ({ city, q, sort, verified, photo, min_posts, page = 1, page_size = 30 } = {}) =>
+    apiRequest(
+      `/api/customer/shops${toQueryString({ city, q, sort, verified, photo, min_posts, page, page_size })}`
+    ),
+
+  getBySlug: (slug, { page = 1, page_size = 30 } = {}) =>
+    apiRequest(`/api/customer/shops/${encodeURIComponent(slug)}${toQueryString({ page, page_size })}`),
+};
+
+// Posts (public)
+export const posts = {
+  getById: (postId) => apiRequest(`/api/customer/posts/${encodeURIComponent(String(postId))}`),
+  related: (postId) => apiRequest(`/api/customer/posts/${encodeURIComponent(String(postId))}/related`),
+  lookupByUrl: (url) => apiRequest(`/api/customer/posts/lookup${toQueryString({ url })}`),
+  unlockByShare: (postId) =>
+    apiRequest(`/api/customer/posts/${encodeURIComponent(String(postId))}/unlock/share`, {
       method: 'POST',
-      body: JSON.stringify(postData),
     }),
+};
 
-  getPost: (postId) => 
-    apiRequest(`/api/business/inventory/posts/${postId}`),
-
-  updatePost: (postId, postData) => 
-    apiRequest(`/api/business/inventory/posts/${postId}`, {
-      method: 'PUT',
-      body: JSON.stringify(postData),
+// Wishlist (requires customer token)
+export const wishlist = {
+  list: () => apiRequest('/api/customer/wishlist'),
+  add: (postId) =>
+    apiRequest(`/api/customer/wishlist/${encodeURIComponent(String(postId))}`, {
+      method: 'POST',
     }),
-
-  deletePost: (postId) => 
-    apiRequest(`/api/business/inventory/posts/${postId}`, {
+  remove: (postId) =>
+    apiRequest(`/api/customer/wishlist/${encodeURIComponent(String(postId))}`, {
       method: 'DELETE',
     }),
-
-  incrementShareCount: (postId) => 
-    apiRequest(`/api/business/inventory/posts/${postId}/share`, {
-      method: 'POST',
-    }),
 };
 
-// Verification
-export const verification = {
-  getVerificationStatus: () => apiRequest('/api/business/verification/me'),
-
-  saveDraft: (verificationData) => 
-    apiRequest('/api/business/verification/draft', {
+// Cart (requires customer token)
+export const cart = {
+  get: () => apiRequest('/api/customer/cart'),
+  add: (postId, { quantity } = {}) =>
+    apiRequest(`/api/customer/cart/${encodeURIComponent(String(postId))}`, {
       method: 'POST',
-      body: JSON.stringify(verificationData),
+      body: JSON.stringify(quantity !== undefined ? { quantity } : {}),
     }),
-
-  submitForReview: (verificationData) => 
-    apiRequest('/api/business/verification/submit', {
-      method: 'POST',
-      body: JSON.stringify(verificationData),
-    }),
-};
-
-// Analytics
-export const analytics = {
-  getSummary: () => apiRequest('/api/business/analytics/summary'),
-
-  getOverview: () => apiRequest('/api/business/analytics/overview'),
-};
-
-// Orders
-export const orders = {
-  getOrders: (page = 1, pageSize = 20) => 
-    apiRequest(`/api/business/orders?page=${page}&page_size=${pageSize}`),
-
-  getOrder: (orderId) => 
-    apiRequest(`/api/business/orders/${orderId}`),
-
-  updateFulfillment: (orderId, fulfillmentData) => 
-    apiRequest(`/api/business/orders/${orderId}/fulfillment`, {
+  updateQuantity: (postId, { quantity }) =>
+    apiRequest(`/api/customer/cart/${encodeURIComponent(String(postId))}`, {
       method: 'PUT',
-      body: JSON.stringify(fulfillmentData),
+      body: JSON.stringify({ quantity }),
+    }),
+  remove: (postId) =>
+    apiRequest(`/api/customer/cart/${encodeURIComponent(String(postId))}`, {
+      method: 'DELETE',
     }),
 };
 
-// Feed
-export const feed = {
-  getFeed: (limit = 50) => 
-    apiRequest(`/api/business/feed?limit=${limit}`),
+// Saved addresses (requires customer token)
+export const addresses = {
+  list: () => apiRequest('/api/customer/addresses'),
+  create: (address) =>
+    apiRequest('/api/customer/addresses', {
+      method: 'POST',
+      body: JSON.stringify(address),
+    }),
+  remove: (addressId) =>
+    apiRequest(`/api/customer/addresses/${encodeURIComponent(String(addressId))}`, {
+      method: 'DELETE',
+    }),
 };
 
-// Payouts
-export const payouts = {
-  getPayouts: () => apiRequest('/api/business/payouts/me'),
+// Payment methods (requires customer token)
+export const paymentMethods = {
+  list: () => apiRequest('/api/customer/payment-methods'),
+  create: (paymentMethod) =>
+    apiRequest('/api/customer/payment-methods', {
+      method: 'POST',
+      body: JSON.stringify(paymentMethod),
+    }),
+  remove: (paymentMethodId) =>
+    apiRequest(`/api/customer/payment-methods/${encodeURIComponent(String(paymentMethodId))}`, {
+      method: 'DELETE',
+    }),
+};
+
+// Checkout + Orders (requires customer token)
+export const orders = {
+  checkout: ({ post_id, address_id, payment_method_id } = {}) =>
+    apiRequest('/api/customer/orders/checkout', {
+      method: 'POST',
+      body: JSON.stringify(
+        post_id !== undefined || address_id !== undefined || payment_method_id !== undefined
+          ? { post_id, address_id, payment_method_id }
+          : {}
+      ),
+    }),
+  list: () => apiRequest('/api/customer/orders'),
+  getById: (orderId) => apiRequest(`/api/customer/orders/${encodeURIComponent(String(orderId))}`),
+};
+
+// Reviews
+export const reviews = {
+  listForPost: (postId) => apiRequest(`/api/customer/posts/${encodeURIComponent(String(postId))}/reviews`),
+  upsertMyReview: (postId, { rating, title, body }) =>
+    apiRequest(`/api/customer/posts/${encodeURIComponent(String(postId))}/reviews`, {
+      method: 'POST',
+      body: JSON.stringify({ rating, title, body }),
+    }),
 };
 
 // Export all services as default
 export default {
   healthCheck,
+  customerAuth,
   businessAuth,
-  shop,
-  inventory,
-  verification,
-  analytics,
-  orders,
+  markets,
   feed,
-  payouts,
+  shops,
+  posts,
+  wishlist,
+  cart,
+  addresses,
+  paymentMethods,
+  orders,
+  reviews,
   setAuthToken,
   getAuthToken,
   removeAuthToken,
