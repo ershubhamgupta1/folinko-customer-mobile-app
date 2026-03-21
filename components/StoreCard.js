@@ -1,11 +1,19 @@
 import React from "react";
-import { View, Text, Image, StyleSheet } from "react-native";
+import { View, Text, Image, StyleSheet, TouchableOpacity } from "react-native";
+import { useNavigation } from "@react-navigation/native";
 
 export default function StoreCard({ store, horizontal = false }) {
+  const navigation = useNavigation();
   const hasImage = !!store.cover_image_url;
-  console.log('store=========', store);
+  const isVerified = store.verified ?? store.verification_status === "VERIFIED";
+  const trustScore = store.trustScore ?? Number(store?.trust_meter?.score);
+
   return (
-    <View style={[styles.card, horizontal && styles.horizontal]}>
+    <TouchableOpacity
+      activeOpacity={0.9}
+      style={[styles.card, horizontal && styles.horizontal]}
+      onPress={() => navigation.navigate("storeDetail", { shopSlug: store.slug, store })}
+    >
       {/* Image */}
       {hasImage ? (
         <Image source={{ uri: store.cover_image_url }} style={styles.image} />
@@ -22,14 +30,14 @@ export default function StoreCard({ store, horizontal = false }) {
         <Text style={styles.location}>{store.city}</Text>
 
         {/* Verified */}
-        {store.verified && (
+        {isVerified && (
           <View style={styles.verifiedRow}>
             <Text style={styles.verified}>✔ Verified</Text>
           </View>
         )}
 
         {/* Trust Meter */}
-        {store.trustScore !== undefined && (
+        {Number.isFinite(trustScore) && (
           <View style={styles.trustRow}>
             <Text style={styles.trustLabel}>Trust</Text>
 
@@ -37,12 +45,12 @@ export default function StoreCard({ store, horizontal = false }) {
               <View
                 style={[
                   styles.progressFill,
-                  { width: `${store.trustScore}%` },
+                  { width: `${Math.max(0, Math.min(trustScore, 100))}%` },
                 ]}
               />
             </View>
 
-            <Text style={styles.trustValue}>{store.trustScore}</Text>
+            <Text style={styles.trustValue}>{trustScore}</Text>
           </View>
         )}
 
@@ -51,7 +59,7 @@ export default function StoreCard({ store, horizontal = false }) {
           {store.post_count} listings
         </Text>
       </View>
-    </View>
+    </TouchableOpacity>
   );
 }
 

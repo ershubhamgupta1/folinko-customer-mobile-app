@@ -14,6 +14,8 @@ import FeedScreen from '../screens/FeedScreen';
 import WishListScreen from '../screens/WishListScreen';
 import CartScreen from '../screens/CartScreen';
 import UserProfileScreen from '../screens/UserProfileScreen';
+import ProductDetailScreen from '../screens/ProductDetailScreen';
+import StoreDetailScreen from '../screens/StoreDetailScreen';
 
 const Tab = createBottomTabNavigator();
 const Stack = createStackNavigator();
@@ -139,6 +141,8 @@ const AppNavigator = () => {
         <Stack.Screen name="userProfile" component={UserProfileScreen} />
         {/* <Stack.Screen name="addPost" component={AddProductScreen} /> */}
         <Stack.Screen name="feedScreen" component={FeedScreen} />
+        <Stack.Screen name="productDetail" component={ProductDetailScreen} />
+        <Stack.Screen name="storeDetail" component={StoreDetailScreen} />
 
         <Stack.Screen name="Login" component={LoginScreen} />
 

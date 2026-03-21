@@ -28,9 +28,10 @@ export default function FeedScreen() {
         markets.list(),
         shops.discover(),
       ]);
+
       const nextStores = Array.isArray(shopsData?.shops) ? shopsData.shops : [];
       const nextMarkets = Array.isArray(marketsRes?.markets) ? marketsRes.markets : [];
-
+      
       setStores(nextStores);
       setMarketsData(nextMarkets);
     } catch (e) {
@@ -46,7 +47,7 @@ export default function FeedScreen() {
         <Header
           title="Feed"
           onNotificationPress={() => console.log("Notification pressed")}
-          onProfilePress={() => navigation.navigate("userProfile")}
+          onProfilePress={() => navigation.navigate("storeDetail")}
         />
         {/* Header */}
         <HeaderSearch />
