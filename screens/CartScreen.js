@@ -173,7 +173,7 @@ const CartScreen = () => {
               </Text>
             </View>
 
-            <TouchableOpacity style={styles.browseBtn}>
+            <TouchableOpacity style={styles.browseBtn} onPress={() => navigation.navigate("Feed")}>
               <Text>Browse</Text>
             </TouchableOpacity>
           </View>

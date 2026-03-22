@@ -176,7 +176,10 @@ const OrderScreen = () => {
                 </View>
               </View>
 
-              <TouchableOpacity style={styles.viewBtn}>
+              <TouchableOpacity
+                style={styles.viewBtn}
+                onPress={() => navigation.navigate("orderDetail", { orderId: order?.id, order })}
+              >
                 <Text style={styles.viewText}>View</Text>
               </TouchableOpacity>
             </View>

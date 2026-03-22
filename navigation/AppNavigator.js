@@ -15,6 +15,7 @@ import WishListScreen from '../screens/WishListScreen';
 import CartScreen from '../screens/CartScreen';
 import CheckoutScreen from '../screens/CheckoutScreen';
 import UserProfileScreen from '../screens/UserProfileScreen';
+import OrderDetailScreen from '../screens/OrderDetailScreen';
 import ProductDetailScreen from '../screens/ProductDetailScreen';
 import StoreDetailScreen from '../screens/StoreDetailScreen';
 
@@ -140,13 +141,8 @@ const AppNavigator = () => {
       <Stack.Navigator screenOptions={{ headerShown: false }}>
         <Stack.Screen name="Main" component={MainTabs} />
         <Stack.Screen name="orderScreen" component={OrdersScreen} />
+        <Stack.Screen name="orderDetail" component={OrderDetailScreen} />
         <Stack.Screen name="checkoutScreen" component={CheckoutScreen} />
-        {/* <Stack.Screen name="orderDetailsScreen" component={OrderDetailScreen} /> */}
-
-        {/* <Stack.Screen name="shopProfile" component={ShopProfileScreen} />
-        <Stack.Screen name="trustMeter" component={TrustMeterScreen} />
-        <Stack.Screen name="dashboard" component={DashboardScreen} /> */}
-        {/* <Stack.Screen name="payoutHistory" component={PayoutHistoryScreen} /> */}
         <Stack.Screen name="userProfile" component={UserProfileScreen} />
         {/* <Stack.Screen name="addPost" component={AddProductScreen} /> */}
         <Stack.Screen name="feedScreen" component={FeedScreen} />
