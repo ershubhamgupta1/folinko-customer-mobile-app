@@ -1,5 +1,6 @@
 import React, { useEffect, useState } from "react";
 import {
+  ActivityIndicator,
   View,
   Text,
   ScrollView,
@@ -11,12 +12,16 @@ import StoreCard from "../components/StoreCard";
 import DiscoveryCard from "../components/DiscoveryCard";
 import Header from "../components/Header";
 import { useNavigation } from "@react-navigation/native";
-import { customerAuth, feed, markets, shops } from "../services/api";
+import { FontAwesome5 } from "@expo/vector-icons";
+import { markets, shops } from "../services/api";
 
 export default function FeedScreen() {
   const navigation = useNavigation();
   const [stores, setStores] = useState([]);
   const [marketsData, setMarketsData] = useState([]);
+  const [loadingStores, setLoadingStores] = useState(true);
+  const [applyingFilters, setApplyingFilters] = useState(false);
+  const [storesError, setStoresError] = useState("");
 
   useEffect(() => {
     fetchData();
@@ -24,13 +29,13 @@ export default function FeedScreen() {
 
   const fetchData = async () => {
     try {
-      const [marketsRes, shopsData, feeds] = await Promise.all([
+      setStoresError("");
+      setLoadingStores(true);
+      const [marketsRes, shopsData] = await Promise.all([
         markets.list(),
         shops.discover(),
-        feed.getFeed(),
       ]);
 
-      console.log('feeds==========', JSON.stringify(feeds));
       const nextStores = Array.isArray(shopsData?.shops) ? shopsData.shops : [];
       const nextMarkets = Array.isArray(marketsRes?.markets) ? marketsRes.markets : [];
       
@@ -38,8 +43,26 @@ export default function FeedScreen() {
       setMarketsData(nextMarkets);
     } catch (e) {
       console.error("Failed to load feed data:", e);
+      setStoresError(e?.message || "Failed to load discovery stores");
       setStores([]);
       setMarketsData([]);
+    } finally {
+      setLoadingStores(false);
+    }
+  };
+
+  const handleApplyDiscoveryFilters = async (params) => {
+    try {
+      setApplyingFilters(true);
+      setStoresError("");
+      const shopsData = await shops.discover(params || {});
+      setStores(Array.isArray(shopsData?.shops) ? shopsData.shops : []);
+    } catch (e) {
+      console.error("Failed to apply discovery filters:", e);
+      setStores([]);
+      setStoresError(e?.message || "Failed to apply discovery filters");
+    } finally {
+      setApplyingFilters(false);
     }
   };
 
@@ -75,10 +98,55 @@ export default function FeedScreen() {
         </ScrollView>
 
         {/* Feed List */}
-        <DiscoveryCard />
-        {stores.map((store) => (
+        <DiscoveryCard onApply={handleApplyDiscoveryFilters} applying={applyingFilters} />
+
+        {loadingStores ? (
+          <View style={styles.stateCard}>
+            <ActivityIndicator size="small" color="#111827" />
+            <Text style={styles.stateText}>Loading discovery stores...</Text>
+          </View>
+        ) : null}
+
+        {!loadingStores && !!storesError ? (
+          <View style={styles.stateCard}>
+            <Text style={styles.stateText}>{storesError}</Text>
+          </View>
+        ) : null}
+
+        {!loadingStores && !storesError && stores.length === 0 ? (
+          <View style={styles.stateCard}>
+            <Text style={styles.stateText}>No shops found for the selected filters.</Text>
+          </View>
+        ) : null}
+
+        {!loadingStores && !storesError && stores.map((store) => (
           <StoreCard key={store.id} store={store} />
         ))}
+
+        <View style={styles.confidenceCard}>
+          <Text style={styles.confidenceTitle}>Buyer confidence</Text>
+
+          <View style={styles.confidenceItem}>
+            <View style={styles.confidenceIconWrap}>
+              <FontAwesome5 name="check-circle" size={18} color="#475467" />
+            </View>
+            <Text style={styles.confidenceText}>Verified sellers are highlighted on listings.</Text>
+          </View>
+
+          <View style={styles.confidenceItem}>
+            <View style={styles.confidenceIconWrap}>
+              <FontAwesome5 name="money-check-alt" size={18} color="#475467" />
+            </View>
+            <Text style={styles.confidenceText}>Orders and tracking are visible in your account.</Text>
+          </View>
+
+          <View style={styles.confidenceItem}>
+            <View style={styles.confidenceIconWrap}>
+              <FontAwesome5 name="shield-alt" size={18} color="#475467" />
+            </View>
+            <Text style={styles.confidenceText}>Pricing stays transparent from cart to checkout.</Text>
+          </View>
+        </View>
       </ScrollView>
     </SafeAreaView>
   );
@@ -113,6 +181,63 @@ const styles = StyleSheet.create({
   statLabel: {
     color: "#475467",
     fontSize: 14,
+    fontWeight: "500",
+  },
+
+  stateCard: {
+    backgroundColor: "#fff",
+    marginHorizontal: 16,
+    marginBottom: 16,
+    borderRadius: 20,
+    paddingHorizontal: 16,
+    paddingVertical: 18,
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  stateText: {
+    marginTop: 8,
+    color: "#475467",
+    fontSize: 14,
+    textAlign: "center",
+  },
+
+  confidenceCard: {
+    backgroundColor: "#FFFFFF",
+    marginHorizontal: 16,
+    marginTop: 4,
+    marginBottom: 24,
+    borderRadius: 28,
+    borderWidth: 1,
+    borderColor: "#D9E0EA",
+    paddingHorizontal: 20,
+    paddingVertical: 18,
+    shadowColor: "#000",
+    shadowOffset: { width: 0, height: 10 },
+    shadowOpacity: 0.08,
+    shadowRadius: 20,
+    elevation: 4,
+  },
+  confidenceTitle: {
+    fontSize: 14,
+    color: "#667085",
+    marginBottom: 10,
+  },
+  confidenceItem: {
+    flexDirection: "row",
+    alignItems: "flex-start",
+    marginTop: 8,
+  },
+  confidenceIconWrap: {
+    width: 26,
+    alignItems: "center",
+    marginRight: 8,
+    paddingTop: 2,
+  },
+  confidenceText: {
+    flex: 1,
+    fontSize: 12,
+    lineHeight: 22,
+    color: "#344054",
     fontWeight: "500",
   },
 

@@ -24,7 +24,24 @@ const POST_OPTIONS = [
   '10+ posts',
 ];
 
-export default function DiscoveryCard() {
+const SORT_PARAM_MAP = {
+  'Newest': 'newest',
+  'Oldest': 'oldest',
+  'Most listings': 'most_listings',
+  'Price high-low': 'price_desc',
+  'Price low-high': 'price_asc',
+  'Verified first': 'verified',
+  'Name A-Z': 'name_asc',
+};
+
+const POSTS_PARAM_MAP = {
+  'Any posts': undefined,
+  '1+ posts': 1,
+  '5+ posts': 5,
+  '10+ posts': 10,
+};
+
+export default function DiscoveryCard({ onApply, applying = false }) {
   const [marketsData, setMarketsData] = useState([]);
   const [filter, setFilter] = useState({
     market: 'All',
@@ -67,6 +84,23 @@ export default function DiscoveryCard() {
       console.error('Failed to load markets:', e);
       setMarketsData([]);
     }
+  };
+
+  const handleApply = () => {
+    const params = {
+      city: filter.market !== 'All' ? filter.market : undefined,
+      sort: SORT_PARAM_MAP[filter.sort],
+      min_posts: POSTS_PARAM_MAP[filter.posts],
+      verified: filter.verified ? true : undefined,
+      photo: filter.withPhoto ? true : undefined,
+      page: 1,
+      page_size: 30,
+    };
+
+    setShowDropdown(false);
+    setShowSortDropdown(false);
+    setShowPostsDropdown(false);
+    onApply?.(params, filter);
   };
 
   return (
@@ -186,8 +220,12 @@ export default function DiscoveryCard() {
           <Text>{filter.withPhoto ? '☑ With photo' : '☐ With photo'}</Text>
         </TouchableOpacity>
 
-        <TouchableOpacity style={styles.applyBtn}>
-          <Text style={{ color: "#fff" }}>Apply</Text>
+        <TouchableOpacity
+          style={[styles.applyBtn, applying && styles.applyBtnDisabled]}
+          onPress={handleApply}
+          disabled={applying}
+        >
+          <Text style={styles.applyBtnText}>{applying ? 'Applying...' : 'Apply'}</Text>
         </TouchableOpacity>
       </View>
     </View>
@@ -243,6 +281,12 @@ const styles = StyleSheet.create({
     paddingHorizontal: 16,
     paddingVertical: 10,
     borderRadius: 20,
+  },
+  applyBtnDisabled: {
+    opacity: 0.6,
+  },
+  applyBtnText: {
+    color: "#fff",
   },
 
   marketDropdownContainer: {

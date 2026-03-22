@@ -249,25 +249,6 @@ export default function StoreDetailScreen() {
           </View>
         </View>
 
-        <View style={styles.navRow}>
-          <TouchableOpacity style={styles.navItem} onPress={() => navigateToTab("Feed")}>
-            <FontAwesome5 name="play" size={13} color="#111827" />
-            <Text style={styles.navLabel}>Feed</Text>
-          </TouchableOpacity>
-          <TouchableOpacity style={styles.navItem} onPress={() => navigateToTab("Wishlist")}>
-            <FontAwesome5 name="heart" size={13} color="#111827" />
-            <Text style={styles.navLabel}>Wishlist</Text>
-          </TouchableOpacity>
-          <TouchableOpacity style={styles.navItem} onPress={() => navigateToTab("cart")}>
-            <FontAwesome5 name="shopping-bag" size={13} color="#111827" />
-            <Text style={styles.navLabel}>Cart</Text>
-          </TouchableOpacity>
-          <TouchableOpacity style={styles.navItem} onPress={() => navigateToTab("Orders")}>
-            <FontAwesome5 name="receipt" size={13} color="#111827" />
-            <Text style={styles.navLabel}>Orders</Text>
-          </TouchableOpacity>
-        </View>
-
         {error ? (
           <View style={styles.inlineErrorCard}>
             <Text style={styles.inlineErrorText}>{error}</Text>
