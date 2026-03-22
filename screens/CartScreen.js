@@ -11,6 +11,7 @@ import {
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { useNavigation } from "@react-navigation/native";
+import Header from "../components/Header";
 import { cart } from "../services/api";
 
 const CartScreen = () => {
@@ -21,6 +22,7 @@ const CartScreen = () => {
   const [cartItems, setCartItems] = useState([]);
   const [subtotalAmount, setSubtotalAmount] = useState(0);
   const [qtyByItemId, setQtyByItemId] = useState({});
+  const [removingItemId, setRemovingItemId] = useState("");
 
   const openProductDetail = (productId) => {
     navigation.navigate("productDetail", { productId });
@@ -82,6 +84,32 @@ const CartScreen = () => {
     setQtyByItemId((prev) => ({ ...prev, [String(itemId)]: next }));
   };
 
+  const handleRemoveItem = async (postId) => {
+    const targetPostId = String(postId || "");
+
+    if (!targetPostId) {
+      setError("Failed to remove this cart item.");
+      return;
+    }
+
+    try {
+      setRemovingItemId(targetPostId);
+      setError("");
+
+      const response = await cart.remove(targetPostId);
+
+      if (response === undefined || response?.error || response?.errors || response?.success === false) {
+        throw new Error(response?.message || "Failed to remove cart item");
+      }
+
+      await fetchCart({ isRefresh: true });
+    } catch (e) {
+      setError(e?.message || "Failed to remove cart item");
+    } finally {
+      setRemovingItemId("");
+    }
+  };
+
   return (
     <SafeAreaView style={styles.safeArea} edges={["top"]}>
       <ScrollView
@@ -90,6 +118,11 @@ const CartScreen = () => {
           <RefreshControl refreshing={refreshing} onRefresh={onRefresh} />
         }
       >
+        <Header
+          title="Cart"
+          onNotificationPress={() => console.log("Notification pressed")}
+          onProfilePress={() => navigation.navigate("userProfile")}
+        />
 
         {/* Cart Section */}
         <View style={styles.card}>
@@ -139,6 +172,8 @@ const CartScreen = () => {
             const quantity = Number(item?.quantity || 1);
             const itemTotal = price * quantity;
             const itemId = String(item?.id);
+            const postId = String(post?.id || "");
+            const isRemoving = removingItemId === postId;
 
             return (
               <TouchableOpacity
@@ -169,8 +204,12 @@ const CartScreen = () => {
                   <Text style={styles.price}>{formatMoney(price)}</Text>
 
                   <View style={styles.removeRow}>
-                    <TouchableOpacity style={styles.removeBtn}>
-                      <Text>Remove</Text>
+                    <TouchableOpacity
+                      style={[styles.removeBtn, isRemoving && styles.removeBtnDisabled]}
+                      onPress={() => handleRemoveItem(postId)}
+                      disabled={isRemoving}
+                    >
+                      <Text>{isRemoving ? "Removing..." : "Remove"}</Text>
                     </TouchableOpacity>
                   </View>
 
@@ -339,6 +378,9 @@ const styles = StyleSheet.create({
     paddingVertical: 6,
     borderRadius: 20,
     alignSelf: "flex-start",
+  },
+  removeBtnDisabled: {
+    opacity: 0.6,
   },
 
   removeRow: {

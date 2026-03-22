@@ -9,9 +9,12 @@ import {
   TouchableOpacity,
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
+import { useNavigation } from "@react-navigation/native";
+import Header from "../components/Header";
 import { cart, orders } from "../services/api";
 
 const OrderScreen = () => {
+  const navigation = useNavigation();
   const [refreshing, setRefreshing] = useState(false);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
@@ -76,6 +79,12 @@ const OrderScreen = () => {
           <RefreshControl refreshing={refreshing} onRefresh={onRefresh} />
         }
       >
+        <Header
+          title="Orders"
+          onNotificationPress={() => console.log("Notification pressed")}
+          onProfilePress={() => navigation.navigate("userProfile")}
+        />
+
         <View style={styles.pageHeader}>
           <Text style={styles.pageTitle}>Orders</Text>
           <Text style={styles.pageSubtitle}>Track your purchases and delivery updates.</Text>

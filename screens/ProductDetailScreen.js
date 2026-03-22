@@ -12,7 +12,7 @@ import { SafeAreaView } from "react-native-safe-area-context";
 import { FontAwesome5 } from "@expo/vector-icons";
 import { useNavigation, useRoute } from "@react-navigation/native";
 import { useAuth } from "../contexts/AuthContext";
-import { posts } from "../services/api";
+import { cart, posts, wishlist } from "../services/api";
 
 const FALLBACK_IMAGE =
   "https://images.unsplash.com/photo-1541099649105-f69ad21f3246?auto=format&fit=crop&w=900&q=80";
@@ -36,6 +36,10 @@ export default function ProductDetailScreen() {
   const [showSizeOptions, setShowSizeOptions] = useState(false);
   const [isSaved, setIsSaved] = useState(false);
   const [relatedProductsData, setRelatedProductsData] = useState([]);
+  const [addingToCart, setAddingToCart] = useState(false);
+  const [cartFeedback, setCartFeedback] = useState({ type: "", message: "" });
+  const [savingToWishlist, setSavingToWishlist] = useState(false);
+  const [wishlistFeedback, setWishlistFeedback] = useState({ type: "", message: "" });
 
   useEffect(() => {
     const fetchProduct = async () => {
@@ -156,6 +160,59 @@ export default function ProductDetailScreen() {
     navigation.replace("productDetail", { productId: nextProductId });
   };
 
+  const handleAddToCart = async () => {
+    const targetPostId = productData?.id || productId;
+
+    if (!targetPostId) {
+      setCartFeedback({ type: "error", message: "Product not available for cart." });
+      return;
+    }
+
+    try {
+      setAddingToCart(true);
+      setCartFeedback({ type: "", message: "" });
+
+      const response = await cart.add(targetPostId, { quantity: 1 });
+
+      if (response === undefined || response?.error || response?.errors || response?.success === false) {
+        throw new Error(response?.message || "Failed to add product to cart.");
+      }
+
+      setCartFeedback({ type: "success", message: "Added to cart." });
+    } catch (e) {
+      setCartFeedback({ type: "error", message: e?.message || "Failed to add product to cart." });
+    } finally {
+      setAddingToCart(false);
+    }
+  };
+
+  const handleSaveToWishlist = async () => {
+    const targetPostId = productData?.id || productId;
+
+    if (!targetPostId) {
+      setWishlistFeedback({ type: "error", message: "Product not available for wishlist." });
+      return;
+    }
+
+    try {
+      setSavingToWishlist(true);
+      setWishlistFeedback({ type: "", message: "" });
+
+      const response = await wishlist.add(targetPostId);
+
+      if (response === undefined || response?.error || response?.errors || response?.success === false) {
+        throw new Error(response?.message || "Failed to save product.");
+      }
+
+      setIsSaved(true);
+      setWishlistFeedback({ type: "success", message: "Saved to wishlist." });
+    } catch (e) {
+      setWishlistFeedback({ type: "error", message: e?.message || "Failed to save product." });
+    } finally {
+      setSavingToWishlist(false);
+    }
+  };
+
   const handleBackToFeed = () => {
     navigation.navigate("Main", { screen: "Feed" });
   };
@@ -260,9 +317,13 @@ export default function ProductDetailScreen() {
             )}
 
             <View style={styles.buttonRow}>
-              <TouchableOpacity style={styles.primaryButton}>
+              <TouchableOpacity
+                style={[styles.primaryButton, addingToCart && styles.buttonDisabled]}
+                onPress={handleAddToCart}
+                disabled={addingToCart}
+              >
                 <FontAwesome5 name="shopping-bag" size={12} color="#111827" />
-                <Text style={styles.primaryButtonText}>Add to cart</Text>
+                <Text style={styles.primaryButtonText}>{addingToCart ? "Adding..." : "Add to cart"}</Text>
               </TouchableOpacity>
 
               <TouchableOpacity style={styles.buyButton}>
@@ -271,8 +332,9 @@ export default function ProductDetailScreen() {
               </TouchableOpacity>
 
               <TouchableOpacity
-                style={styles.secondaryButton}
-                onPress={() => setIsSaved((prev) => !prev)}
+                style={[styles.secondaryButton, savingToWishlist && styles.buttonDisabled]}
+                onPress={handleSaveToWishlist}
+                disabled={savingToWishlist}
               >
                 <FontAwesome5
                   name={isSaved ? "heart" : "heart-broken"}
@@ -280,9 +342,31 @@ export default function ProductDetailScreen() {
                   color="#111827"
                   solid={isSaved}
                 />
-                <Text style={styles.secondaryButtonText}>Save</Text>
+                <Text style={styles.secondaryButtonText}>{savingToWishlist ? "Saving..." : "Save"}</Text>
               </TouchableOpacity>
             </View>
+
+            {!!cartFeedback.message && (
+              <Text
+                style={[
+                  styles.actionFeedbackText,
+                  cartFeedback.type === "error" && styles.actionFeedbackErrorText,
+                ]}
+              >
+                {cartFeedback.message}
+              </Text>
+            )}
+
+            {!!wishlistFeedback.message && (
+              <Text
+                style={[
+                  styles.actionFeedbackText,
+                  wishlistFeedback.type === "error" && styles.actionFeedbackErrorText,
+                ]}
+              >
+                {wishlistFeedback.message}
+              </Text>
+            )}
 
             <TouchableOpacity style={styles.linkButton}>
               <FontAwesome5 name="external-link-alt" size={11} color="#111827" />
@@ -633,6 +717,9 @@ const styles = StyleSheet.create({
     paddingVertical: 10,
     gap: 6,
   },
+  buttonDisabled: {
+    opacity: 0.7,
+  },
   primaryButtonText: {
     color: "#111827",
     fontSize: 12,
@@ -669,6 +756,15 @@ const styles = StyleSheet.create({
     color: "#111827",
     fontSize: 12,
     fontWeight: "600",
+  },
+  actionFeedbackText: {
+    marginTop: 10,
+    fontSize: 12,
+    color: "#166534",
+    fontWeight: "600",
+  },
+  actionFeedbackErrorText: {
+    color: "#B42318",
   },
   linkButton: {
     marginTop: 10,
