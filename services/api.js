@@ -128,7 +128,7 @@ const apiRequest = async (endpoint, options = {}) => {
         return;
       }
       
-      throw new Error(errorData.message || `HTTP error! status: ${response.status}`);
+      // throw new Error(errorData.message || `HTTP error! status: ${response.status}`);
     }
 
     // Handle different response types
@@ -141,7 +141,7 @@ const apiRequest = async (endpoint, options = {}) => {
       return await response.json();
     }
   } catch (error) {
-    console.error('API request error:', error);
+    // console.error('API request error:', error);
     
     // Handle network errors or other auth-related issues
     if (error.message.includes('401') || error.message.includes('Unauthorized')) {
@@ -152,7 +152,7 @@ const apiRequest = async (endpoint, options = {}) => {
       return;
     }
     
-    throw error;
+    // throw error;
   }
 };
 

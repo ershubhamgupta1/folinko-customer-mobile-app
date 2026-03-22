@@ -13,7 +13,7 @@ import DiscoveryCard from "../components/DiscoveryCard";
 import Header from "../components/Header";
 import { useNavigation } from "@react-navigation/native";
 import { FontAwesome5 } from "@expo/vector-icons";
-import { markets, shops } from "../services/api";
+import { markets, posts, shops } from "../services/api";
 
 export default function FeedScreen() {
   const navigation = useNavigation();
@@ -22,6 +22,9 @@ export default function FeedScreen() {
   const [loadingStores, setLoadingStores] = useState(true);
   const [applyingFilters, setApplyingFilters] = useState(false);
   const [storesError, setStoresError] = useState("");
+  const [lookupUrl, setLookupUrl] = useState("");
+  const [lookingUpPost, setLookingUpPost] = useState(false);
+  const [lookupError, setLookupError] = useState("");
 
   useEffect(() => {
     fetchData();
@@ -66,16 +69,59 @@ export default function FeedScreen() {
     }
   };
 
+  const handleLookupPost = async () => {
+    const normalizedUrl = String(lookupUrl || "").trim();
+
+    if (!normalizedUrl) {
+      setLookupError("Paste a social post link to search.");
+      return;
+    }
+
+    try {
+      setLookingUpPost(true);
+      setLookupError("");
+
+      const response = await posts.lookupByUrl(normalizedUrl);
+      const postId =
+        response?.post_id ??
+        response?.postId ??
+        response?.id ??
+        response?.post?.id;
+
+      if (!postId) {
+        setLookupError("No product found for this post URL.");
+        return;
+      }
+
+      navigation.navigate("productDetail", { productId: postId });
+    } catch (e) {
+      setLookupError("No product found for this post URL.");
+    } finally {
+      setLookingUpPost(false);
+    }
+  };
+
   return (
     <SafeAreaView style={styles.container}>
-      <ScrollView showsVerticalScrollIndicator={false}>
+      <ScrollView showsVerticalScrollIndicator={false} keyboardShouldPersistTaps="handled">
         <Header
           title="Feed"
           onNotificationPress={() => console.log("Notification pressed")}
           onProfilePress={() => navigation.navigate("userProfile")}
         />
         {/* Header */}
-        <HeaderSearch />
+        <HeaderSearch
+          value={lookupUrl}
+          onChangeText={(value) => {
+            setLookupUrl(value);
+            if (lookupError) {
+              setLookupError("");
+            }
+          }}
+          onSearch={handleLookupPost}
+          loading={lookingUpPost}
+          errorMessage={lookupError}
+        />
 
         <View style={styles.statsContainer}>
           <View style={styles.statBox}>
