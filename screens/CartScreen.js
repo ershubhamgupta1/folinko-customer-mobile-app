@@ -22,6 +22,7 @@ const CartScreen = () => {
   const [cartItems, setCartItems] = useState([]);
   const [subtotalAmount, setSubtotalAmount] = useState(0);
   const [qtyByItemId, setQtyByItemId] = useState({});
+  const [updatingItemId, setUpdatingItemId] = useState("");
   const [removingItemId, setRemovingItemId] = useState("");
 
   const openProductDetail = (productId) => {
@@ -82,6 +83,43 @@ const CartScreen = () => {
   const onChangeQty = (itemId, v) => {
     const next = String(v || "").replace(/[^0-9]/g, "");
     setQtyByItemId((prev) => ({ ...prev, [String(itemId)]: next }));
+  };
+
+  const handleUpdateItemQuantity = async (postId, itemId, currentQuantity) => {
+    const targetPostId = String(postId || "");
+    const targetItemId = String(itemId || "");
+    const nextQuantity = Number.parseInt(qtyByItemId[targetItemId] ?? String(currentQuantity ?? ""), 10);
+
+    if (!targetPostId) {
+      setError("Failed to update this cart item.");
+      return;
+    }
+
+    if (!Number.isFinite(nextQuantity) || nextQuantity < 1) {
+      setError("Quantity must be at least 1.");
+      return;
+    }
+
+    if (nextQuantity === Number(currentQuantity || 0)) {
+      return;
+    }
+
+    try {
+      setUpdatingItemId(targetItemId);
+      setError("");
+
+      const response = await cart.updateQuantity(targetPostId, { quantity: nextQuantity });
+
+      if (response === undefined || response?.error || response?.errors || response?.success === false) {
+        throw new Error(response?.message || "Failed to update cart item");
+      }
+
+      await fetchCart({ isRefresh: true });
+    } catch (e) {
+      setError(e?.message || "Failed to update cart item");
+    } finally {
+      setUpdatingItemId("");
+    }
   };
 
   const handleRemoveItem = async (postId) => {
@@ -173,7 +211,16 @@ const CartScreen = () => {
             const itemTotal = price * quantity;
             const itemId = String(item?.id);
             const postId = String(post?.id || "");
+            const nextQtyValue = qtyByItemId[itemId] ?? String(quantity);
+            const parsedNextQty = Number.parseInt(nextQtyValue, 10);
+            const isUpdating = updatingItemId === itemId;
             const isRemoving = removingItemId === postId;
+            const isUpdateDisabled =
+              isUpdating ||
+              !postId ||
+              !Number.isFinite(parsedNextQty) ||
+              parsedNextQty < 1 ||
+              parsedNextQty === quantity;
 
             return (
               <TouchableOpacity
@@ -217,14 +264,19 @@ const CartScreen = () => {
                     <Text style={styles.qtyLabel}>Qty</Text>
 
                     <TextInput
-                      value={qtyByItemId[itemId] ?? String(quantity)}
+                      value={nextQtyValue}
                       onChangeText={(v) => onChangeQty(itemId, v)}
                       keyboardType="numeric"
                       style={styles.qtyInput}
+                      editable={!isUpdating}
                     />
 
-                    <TouchableOpacity style={styles.updateBtn}>
-                      <Text>Update</Text>
+                    <TouchableOpacity
+                      style={[styles.updateBtn, isUpdateDisabled && styles.updateBtnDisabled]}
+                      onPress={() => handleUpdateItemQuantity(postId, itemId, quantity)}
+                      disabled={isUpdateDisabled}
+                    >
+                      <Text>{isUpdating ? "Updating..." : "Update"}</Text>
                     </TouchableOpacity>
                   </View>
 
@@ -254,7 +306,7 @@ const CartScreen = () => {
             <Text style={styles.totalValue}>{formatMoney(totalAmount)}</Text>
           </View>
 
-          <TouchableOpacity style={styles.checkoutBtn}>
+          <TouchableOpacity style={styles.checkoutBtn} onPress={() => navigation.navigate("checkoutScreen")}>
             <Text style={styles.checkoutText}>Proceed to Checkout</Text>
           </TouchableOpacity>
         </View>
@@ -414,6 +466,9 @@ const styles = StyleSheet.create({
     paddingHorizontal: 12,
     paddingVertical: 6,
     borderRadius: 20,
+  },
+  updateBtnDisabled: {
+    opacity: 0.6,
   },
 
   itemTotalText: {

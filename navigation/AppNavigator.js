@@ -13,6 +13,7 @@ import { createStackNavigator } from '@react-navigation/stack';
 import FeedScreen from '../screens/FeedScreen';
 import WishListScreen from '../screens/WishListScreen';
 import CartScreen from '../screens/CartScreen';
+import CheckoutScreen from '../screens/CheckoutScreen';
 import UserProfileScreen from '../screens/UserProfileScreen';
 import ProductDetailScreen from '../screens/ProductDetailScreen';
 import StoreDetailScreen from '../screens/StoreDetailScreen';
@@ -132,6 +133,7 @@ const AppNavigator = () => {
       <Stack.Navigator screenOptions={{ headerShown: false }}>
         <Stack.Screen name="Main" component={MainTabs} />
         <Stack.Screen name="orderScreen" component={OrdersScreen} />
+        <Stack.Screen name="checkoutScreen" component={CheckoutScreen} />
         {/* <Stack.Screen name="orderDetailsScreen" component={OrderDetailScreen} /> */}
 
         {/* <Stack.Screen name="shopProfile" component={ShopProfileScreen} />

@@ -1,6 +1,8 @@
 import React, { useEffect, useState } from "react";
 import {
   ActivityIndicator,
+  Image,
+  TouchableOpacity,
   View,
   Text,
   ScrollView,
@@ -14,6 +16,36 @@ import Header from "../components/Header";
 import { useNavigation } from "@react-navigation/native";
 import { FontAwesome5 } from "@expo/vector-icons";
 import { markets, posts, shops } from "../services/api";
+
+const FALLBACK_TOP_MARKETS = [
+  { id: "market-1", name: "Noida", dropCount: 4 },
+  { id: "market-2", name: "Mohali", dropCount: 2 },
+  { id: "market-3", name: "Delhi", dropCount: 1 },
+];
+
+const RECENTLY_VIEWED_ITEMS = [
+  {
+    id: "recent-1",
+    title: "Jeans1",
+    price: "INR 2499",
+    image:
+      "https://images.unsplash.com/photo-1612423284934-2850a4ea6b0f?auto=format&fit=crop&w=300&q=80",
+  },
+  {
+    id: "recent-2",
+    title: "Saree 2",
+    price: "INR 2099",
+    image:
+      "https://images.unsplash.com/photo-1610030469668-4cb352e7ed3f?auto=format&fit=crop&w=300&q=80",
+  },
+  {
+    id: "recent-3",
+    title: "Jeans",
+    price: "INR 1500",
+    image:
+      "https://images.unsplash.com/photo-1541099649105-f69ad21f3246?auto=format&fit=crop&w=300&q=80",
+  },
+];
 
 export default function FeedScreen() {
   const navigation = useNavigation();
@@ -101,6 +133,8 @@ export default function FeedScreen() {
     }
   };
 
+  const topMarkets = (marketsData.length ? marketsData : FALLBACK_TOP_MARKETS).slice(0, 3);
+
   return (
     <SafeAreaView style={styles.container}>
       <ScrollView showsVerticalScrollIndicator={false} keyboardShouldPersistTaps="handled">
@@ -135,7 +169,56 @@ export default function FeedScreen() {
           </View>
         </View>
 
-        {/* Trending */}
+        <View style={styles.topMarketsCard}>
+          <Text style={styles.topMarketsTitle}>Top markets</Text>
+
+          {topMarkets.map((market, index) => {
+            const marketName = market?.city || market?.name || market?.market_name || `Market ${index + 1}`;
+            const dropCount = Number(
+              market?.drop_count ??
+              market?.drops_count ??
+              market?.dropCount ??
+              market?.post_count ??
+              market?.listing_count ??
+              market?.count ??
+              0
+            );
+
+            return (
+              <View key={String(market?.id || marketName || index)} style={styles.topMarketsRow}>
+                <View style={styles.topMarketsLeft}>
+                  <FontAwesome5 name="map-marker-alt" size={18} color="#475467" />
+                  <Text style={styles.topMarketsName}>{marketName}</Text>
+                </View>
+
+                <Text style={styles.topMarketsCount}>{`${dropCount} ${dropCount === 1 ? "drop" : "drops"}`}</Text>
+              </View>
+            );
+          })}
+        </View>
+
+        <View style={styles.recentlyViewedCard}>
+          <View style={styles.recentlyViewedHeader}>
+            <Text style={styles.recentlyViewedTitle}>Recently viewed</Text>
+            <TouchableOpacity onPress={fetchData}>
+              <Text style={styles.recentlyViewedRefresh}>Refresh</Text>
+            </TouchableOpacity>
+          </View>
+
+          {RECENTLY_VIEWED_ITEMS.map((item) => (
+            <View key={item.id} style={styles.recentlyViewedRow}>
+              <Image source={{ uri: item.image }} style={styles.recentlyViewedImage} />
+
+              <View style={styles.recentlyViewedContent}>
+                <Text style={styles.recentlyViewedName}>{item.title}</Text>
+                <Text style={styles.recentlyViewedPrice}>{item.price}</Text>
+              </View>
+
+              <FontAwesome5 name="chevron-right" size={18} color="#98A2B3" />
+            </View>
+          ))}
+        </View>
+
         <Text style={styles.sectionTitle}>Trending stores</Text>
         <ScrollView horizontal showsHorizontalScrollIndicator={false}>
           {stores.map((store) => (
@@ -227,6 +310,126 @@ const styles = StyleSheet.create({
   statLabel: {
     color: "#475467",
     fontSize: 14,
+    fontWeight: "500",
+  },
+
+  topMarketsCard: {
+    backgroundColor: "#F8F4EA",
+    marginHorizontal: 16,
+    marginTop: 8,
+    marginBottom: 12,
+    borderRadius: 34,
+    borderWidth: 1,
+    borderColor: "#D8DEE8",
+    paddingHorizontal: 14,
+    paddingTop: 18,
+    paddingBottom: 20,
+    shadowColor: "#000",
+    shadowOffset: { width: 0, height: 10 },
+    shadowOpacity: 0.08,
+    shadowRadius: 20,
+    elevation: 4,
+  },
+  topMarketsTitle: {
+    fontSize: 18,
+    fontWeight: "500",
+    color: "#475467",
+    paddingHorizontal: 10,
+    marginBottom: 12,
+  },
+  topMarketsRow: {
+    backgroundColor: "#FFFFFF",
+    borderRadius: 30,
+    borderWidth: 1,
+    borderColor: "#D8DEE8",
+    paddingHorizontal: 20,
+    paddingVertical: 20,
+    marginTop: 10,
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
+  },
+  topMarketsLeft: {
+    flexDirection: "row",
+    alignItems: "center",
+    flex: 1,
+  },
+  topMarketsName: {
+    marginLeft: 14,
+    fontSize: 14,
+    fontWeight: "700",
+    color: "#101828",
+  },
+  topMarketsCount: {
+    fontSize: 14,
+    fontWeight: "500",
+    color: "#667085",
+  },
+
+  recentlyViewedCard: {
+    backgroundColor: "#F8F4EA",
+    marginHorizontal: 16,
+    marginTop: 8,
+    marginBottom: 12,
+    borderRadius: 34,
+    borderWidth: 1,
+    borderColor: "#D8DEE8",
+    paddingHorizontal: 14,
+    paddingTop: 18,
+    paddingBottom: 20,
+    shadowColor: "#000",
+    shadowOffset: { width: 0, height: 10 },
+    shadowOpacity: 0.08,
+    shadowRadius: 20,
+    elevation: 4,
+  },
+  recentlyViewedHeader: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
+    paddingHorizontal: 10,
+    marginBottom: 12,
+  },
+  recentlyViewedTitle: {
+    fontSize: 18,
+    fontWeight: "500",
+    color: "#475467",
+  },
+  recentlyViewedRefresh: {
+    fontSize: 16,
+    fontWeight: "500",
+    color: "#667085",
+  },
+  recentlyViewedRow: {
+    backgroundColor: "#FFFFFF",
+    borderRadius: 30,
+    borderWidth: 1,
+    borderColor: "#D8DEE8",
+    paddingHorizontal: 16,
+    paddingVertical: 18,
+    marginTop: 10,
+    flexDirection: "row",
+    alignItems: "center",
+  },
+  recentlyViewedImage: {
+    width: 56,
+    height: 56,
+    borderRadius: 12,
+  },
+  recentlyViewedContent: {
+    flex: 1,
+    marginLeft: 16,
+    marginRight: 12,
+  },
+  recentlyViewedName: {
+    fontSize: 14,
+    fontWeight: "700",
+    color: "#101828",
+  },
+  recentlyViewedPrice: {
+    marginTop: 6,
+    fontSize: 14,
+    color: "#475467",
     fontWeight: "500",
   },
 
