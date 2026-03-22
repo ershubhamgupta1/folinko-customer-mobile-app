@@ -15,6 +15,7 @@ import DiscoveryCard from "../components/DiscoveryCard";
 import Header from "../components/Header";
 import { useNavigation } from "@react-navigation/native";
 import { FontAwesome5 } from "@expo/vector-icons";
+import { useAuth } from "../contexts/AuthContext";
 import { markets, posts, shops } from "../services/api";
 
 const FALLBACK_TOP_MARKETS = [
@@ -49,6 +50,7 @@ const RECENTLY_VIEWED_ITEMS = [
 
 export default function FeedScreen() {
   const navigation = useNavigation();
+  const { isAuthenticated } = useAuth();
   const [stores, setStores] = useState([]);
   const [marketsData, setMarketsData] = useState([]);
   const [loadingStores, setLoadingStores] = useState(true);
@@ -142,6 +144,13 @@ export default function FeedScreen() {
           title="Feed"
           onNotificationPress={() => console.log("Notification pressed")}
           onProfilePress={() => navigation.navigate("userProfile")}
+          showIcons={isAuthenticated}
+          rightComponent={!isAuthenticated ? (
+            <TouchableOpacity style={styles.loginButton} onPress={() => navigation.navigate("Login")}>
+              <FontAwesome5 name="sign-in-alt" size={14} color="#111827" />
+              <Text style={styles.loginButtonText}>Login</Text>
+            </TouchableOpacity>
+          ) : null}
         />
         {/* Header */}
         <HeaderSearch
@@ -283,6 +292,22 @@ export default function FeedScreen() {
 
 const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: "#F7F7F7" },
+  loginButton: {
+    flexDirection: "row",
+    alignItems: "center",
+    backgroundColor: "#FFFFFF",
+    borderWidth: 1,
+    borderColor: "#D0D5DD",
+    borderRadius: 999,
+    paddingHorizontal: 14,
+    paddingVertical: 10,
+  },
+  loginButtonText: {
+    marginLeft: 8,
+    fontSize: 12,
+    fontWeight: "600",
+    color: "#111827",
+  },
 
   statsContainer: {
     flexDirection: "row",

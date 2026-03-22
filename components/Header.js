@@ -61,15 +61,17 @@ const Header = ({
         return (
           <View style={styles.defaultHeaderContent}>
             <Text style={styles.logo}>{title || 'E-KOM'}</Text>
-            {showIcons && (
-              <View style={styles.headerIcons}>
-                <TouchableOpacity style={styles.iconButton} onPress={onNotificationPress}>
-                  <FontAwesome5 name="bell" size={18} color="#000" />
-                </TouchableOpacity>
-                <TouchableOpacity style={styles.iconButton} onPress={onProfilePress}>
-                  <FontAwesome5 name="user" size={18} color="#000" />
-                </TouchableOpacity>
-              </View>
+            {rightComponent || (
+              showIcons && (
+                <View style={styles.headerIcons}>
+                  <TouchableOpacity style={styles.iconButton} onPress={onNotificationPress}>
+                    <FontAwesome5 name="bell" size={18} color="#000" />
+                  </TouchableOpacity>
+                  <TouchableOpacity style={styles.iconButton} onPress={onProfilePress}>
+                    <FontAwesome5 name="user" size={18} color="#000" />
+                  </TouchableOpacity>
+                </View>
+              )
             )}
           </View>
         );
