@@ -1,8 +1,10 @@
 import { useEffect, useMemo, useState } from "react";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import {
+  Alert,
   ActivityIndicator,
   Image,
+  Linking,
   ScrollView,
   StyleSheet,
   Text,
@@ -13,7 +15,7 @@ import { SafeAreaView } from "react-native-safe-area-context";
 import { FontAwesome5 } from "@expo/vector-icons";
 import { useNavigation, useRoute } from "@react-navigation/native";
 import { useAuth } from "../contexts/AuthContext";
-import { cart, posts, wishlist } from "../services/api";
+import { cart, posts, reviews, wishlist } from "../services/api";
 
 const FALLBACK_IMAGE =
   "https://images.unsplash.com/photo-1541099649105-f69ad21f3246?auto=format&fit=crop&w=900&q=80";
@@ -21,7 +23,162 @@ const FALLBACK_IMAGE =
 const RECENTLY_VIEWED_STORAGE_KEY = "@recently_viewed_post_ids";
 const MAX_RECENTLY_VIEWED = 6;
 
-const SIZE_OPTIONS = ["S", "M", "L", "XL"];
+const SIZE_OPTIONS = ["M", "L", "XL", "XXL"];
+
+const normalizeSizeValue = (value) => String(value || "").trim().toUpperCase();
+const normalizeColorValue = (value) => String(value || "").trim();
+const formatColorLabel = (value) =>
+  normalizeColorValue(value)
+    .split(/\s+/)
+    .filter(Boolean)
+    .map((item) => item.charAt(0).toUpperCase() + item.slice(1).toLowerCase())
+    .join(" ");
+
+const normalizeExternalUrl = (value) => {
+  const normalizedValue = String(value || "").trim();
+
+  if (!normalizedValue) {
+    return "";
+  }
+
+  if (/^https?:\/\//i.test(normalizedValue)) {
+    return normalizedValue;
+  }
+
+  return `https://${normalizedValue.replace(/^\/+/, "")}`;
+};
+
+const extractSizeOptions = (post) => {
+  const nextSizes = [];
+
+  const appendSize = (value) => {
+    if (!value) {
+      return;
+    }
+
+    if (Array.isArray(value)) {
+      value.forEach(appendSize);
+      return;
+    }
+
+    if (typeof value === "object") {
+      appendSize(value?.size || value?.label || value?.name || value?.value);
+      return;
+    }
+
+    String(value)
+      .split(/[,/|]/)
+      .map((item) => normalizeSizeValue(item))
+      .filter(Boolean)
+      .forEach((item) => {
+        if (!nextSizes.includes(item)) {
+          nextSizes.push(item);
+        }
+      });
+  };
+
+  appendSize(post?.attributes?.sizes);
+  appendSize(post?.sizes);
+  appendSize(post?.attributes?.size);
+  appendSize(post?.size);
+  appendSize(post?.variants);
+  appendSize(post?.attributes?.variants);
+
+  return nextSizes.length ? nextSizes : SIZE_OPTIONS;
+};
+
+const extractColorOptions = (post) => {
+  const nextColors = [];
+
+  const appendColor = (value) => {
+    if (!value) {
+      return;
+    }
+
+    if (Array.isArray(value)) {
+      value.forEach(appendColor);
+      return;
+    }
+
+    if (typeof value === "object") {
+      appendColor(value?.color || value?.label || value?.name || value?.value);
+      return;
+    }
+
+    String(value)
+      .split(/[,/|]/)
+      .map((item) => formatColorLabel(item))
+      .filter(Boolean)
+      .forEach((item) => {
+        if (!nextColors.includes(item)) {
+          nextColors.push(item);
+        }
+      });
+  };
+
+  appendColor(post?.attributes?.colors);
+  appendColor(post?.colors);
+  appendColor(post?.attributes?.color);
+  appendColor(post?.color);
+  appendColor(post?.variants);
+  appendColor(post?.attributes?.variants);
+
+  return nextColors;
+};
+
+const getReviewRating = (review) => {
+  const rating = Number(review?.rating ?? review?.score ?? review?.stars ?? review?.star_rating ?? 0);
+
+  if (!Number.isFinite(rating)) {
+    return 0;
+  }
+
+  return Math.max(0, Math.min(5, rating));
+};
+
+const normalizeReviewItem = (review, index) => ({
+  id: String(review?.id || review?.review_id || `review-${index}`),
+  title: review?.title || review?.headline || review?.subject || review?.product_title || "Review",
+  body: review?.body || review?.comment || review?.review || review?.text || review?.message || "",
+  rating: getReviewRating(review),
+  isMine: Boolean(review?.is_mine || review?.mine || review?.owned_by_me || review?.my_review),
+});
+
+const extractReviewItems = (response) => {
+  const source = Array.isArray(response)
+    ? response
+    : Array.isArray(response?.reviews)
+      ? response.reviews
+      : Array.isArray(response?.items)
+        ? response.items
+        : Array.isArray(response?.data)
+          ? response.data
+          : [];
+
+  return source.map((item, index) => normalizeReviewItem(item, index)).filter((item) => item.id);
+};
+
+const buildReviewSummary = (response, items) => {
+  const apiAverage = Number(response?.average_rating ?? response?.avg_rating ?? response?.rating_average ?? response?.average);
+  const derivedAverage = items.length
+    ? items.reduce((sum, item) => sum + item.rating, 0) / items.length
+    : 0;
+  const average = Number.isFinite(apiAverage) && apiAverage > 0 ? apiAverage : derivedAverage;
+  const apiCount = Number(response?.review_count ?? response?.count ?? response?.total);
+  const count = Number.isFinite(apiCount) && apiCount > 0 ? apiCount : items.length;
+  const hasReviewed = Boolean(
+    response?.has_reviewed ||
+      response?.already_reviewed ||
+      response?.my_review ||
+      items.some((item) => item.isMine)
+  );
+
+  return {
+    average,
+    count,
+    hasReviewed,
+  };
+};
 
 const formatMoney = (amount) => {
   const numericAmount = Number(amount || 0);
@@ -36,11 +193,17 @@ export default function ProductDetailScreen() {
   const [productData, setProductData] = useState(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
-  const [selectedSize, setSelectedSize] = useState("Select");
-  const [showSizeOptions, setShowSizeOptions] = useState(false);
+  const [selectedSize, setSelectedSize] = useState("");
+  const [selectedColor, setSelectedColor] = useState("");
+  const [showColorOptions, setShowColorOptions] = useState(false);
+  const [postReviews, setPostReviews] = useState([]);
+  const [reviewsSummary, setReviewsSummary] = useState({ average: 0, count: 0, hasReviewed: false });
+  const [loadingReviews, setLoadingReviews] = useState(false);
+  const [reviewsError, setReviewsError] = useState("");
   const [isSaved, setIsSaved] = useState(false);
   const [relatedProductsData, setRelatedProductsData] = useState([]);
   const [addingToCart, setAddingToCart] = useState(false);
+  const [buyingNow, setBuyingNow] = useState(false);
   const [cartFeedback, setCartFeedback] = useState({ type: "", message: "" });
   const [savingToWishlist, setSavingToWishlist] = useState(false);
   const [wishlistFeedback, setWishlistFeedback] = useState({ type: "", message: "" });
@@ -105,21 +268,74 @@ export default function ProductDetailScreen() {
     saveRecentlyViewedProductId();
   }, [productData?.id, productId]);
 
-  useEffect(() => {
-    const apiSize = productData?.attributes?.size;
-    if (apiSize) {
-      setSelectedSize(apiSize);
-    }
-  }, [productData?.attributes?.size]);
-
   const sizeOptions = useMemo(() => {
-    const apiSize = productData?.attributes?.size;
-    if (!apiSize || SIZE_OPTIONS.includes(apiSize)) {
-      return SIZE_OPTIONS;
+    return extractSizeOptions(productData);
+  }, [productData]);
+
+  const colorOptions = useMemo(() => {
+    return extractColorOptions(productData);
+  }, [productData]);
+
+  useEffect(() => {
+    if (!sizeOptions.length) {
+      setSelectedSize("");
+      return;
     }
 
-    return [apiSize, ...SIZE_OPTIONS];
-  }, [productData?.attributes?.size]);
+    setSelectedSize((currentValue) => {
+      if (sizeOptions.includes(normalizeSizeValue(currentValue))) {
+        return normalizeSizeValue(currentValue);
+      }
+
+      return "";
+    });
+  }, [sizeOptions]);
+
+  useEffect(() => {
+    if (!colorOptions.length) {
+      setSelectedColor("");
+      setShowColorOptions(false);
+      return;
+    }
+
+    setSelectedColor((currentValue) => {
+      if (colorOptions.includes(formatColorLabel(currentValue))) {
+        return formatColorLabel(currentValue);
+      }
+
+      return "";
+    });
+  }, [colorOptions]);
+
+  useEffect(() => {
+    const fetchPostReviews = async () => {
+      if (!productId) {
+        setPostReviews([]);
+        setReviewsSummary({ average: 0, count: 0, hasReviewed: false });
+        setReviewsError("");
+        return;
+      }
+
+      try {
+        setLoadingReviews(true);
+        setReviewsError("");
+
+        const response = await reviews.listForPost(productId);
+        const nextReviews = extractReviewItems(response);
+
+        setPostReviews(nextReviews);
+        setReviewsSummary(buildReviewSummary(response, nextReviews));
+      } catch (e) {
+        setPostReviews([]);
+        setReviewsSummary({ average: 0, count: 0, hasReviewed: false });
+        setReviewsError(e?.message || "Failed to load reviews.");
+      } finally {
+        setLoadingReviews(false);
+      }
+    };
+
+    fetchPostReviews();
+  }, [productId]);
 
   const normalizedProduct = useMemo(() => {
     const post = productData || {};
@@ -160,6 +376,7 @@ export default function ProductDetailScreen() {
       shares: Number(post?.share_count || 0),
       imagesCount,
       linkLabel: "Open original",
+      socialUrl: normalizeExternalUrl(post?.social_url || post?.attributes?.social_url || shop?.social_url || ""),
       verificationStatus: shop?.verification_status || trustMeterData?.status || "UNVERIFIED",
       trustLabel: trustMeterData?.label || "New",
     };
@@ -192,6 +409,28 @@ export default function ProductDetailScreen() {
     navigation.replace("productDetail", { productId: nextProductId });
   };
 
+  const handleOpenOriginal = async () => {
+    try {
+      const targetUrl = normalizedProduct.socialUrl;
+
+      if (!targetUrl) {
+        Alert.alert("Link unavailable", "Original post link is not available for this product.");
+        return;
+      }
+
+      const canOpen = await Linking.canOpenURL(targetUrl);
+
+      if (!canOpen) {
+        Alert.alert("Invalid link", "Could not open the original post link.");
+        return;
+      }
+
+      await Linking.openURL(targetUrl);
+    } catch (e) {
+      Alert.alert("Unable to open link", "Could not open the original post link.");
+    }
+  };
+
   const handleAddToCart = async () => {
     const targetPostId = productData?.id || productId;
 
@@ -215,6 +454,42 @@ export default function ProductDetailScreen() {
       setCartFeedback({ type: "error", message: e?.message || "Failed to add product to cart." });
     } finally {
       setAddingToCart(false);
+    }
+  };
+
+  const handleBuyNow = async () => {
+    const targetPostId = productData?.id || productId;
+
+    if (!targetPostId) {
+      setCartFeedback({ type: "error", message: "Product not available for checkout." });
+      return;
+    }
+
+    if (!selectedSize) {
+      setCartFeedback({ type: "error", message: "Please select size before buying now." });
+      return;
+    }
+
+    if (colorOptions.length && !selectedColor) {
+      setCartFeedback({ type: "error", message: "Please select color before buying now." });
+      return;
+    }
+
+    try {
+      setBuyingNow(true);
+      setCartFeedback({ type: "", message: "" });
+
+      const response = await cart.add(targetPostId, { quantity: 1 });
+
+      if (response === undefined || response?.error || response?.errors || response?.success === false) {
+        throw new Error(response?.message || "Failed to continue to checkout.");
+      }
+
+      navigation.navigate("checkoutScreen");
+    } catch (e) {
+      setCartFeedback({ type: "error", message: e?.message || "Failed to continue to checkout." });
+    } finally {
+      setBuyingNow(false);
     }
   };
 
@@ -285,7 +560,7 @@ export default function ProductDetailScreen() {
             <FontAwesome5 name="arrow-left" size={12} color="#111827" />
             <Text style={styles.backText}>Back</Text>
           </TouchableOpacity>
-          <Text style={styles.headerTitle}>Product details</Text>
+          <Text style={styles.headerTitle} numberOfLines={1}>{normalizedProduct.title}</Text>
           <View style={styles.headerSpacer} />
         </View>
 
@@ -312,39 +587,64 @@ export default function ProductDetailScreen() {
             <View style={styles.divider} />
 
             <Text style={styles.fieldLabel}>Size</Text>
-            <TouchableOpacity
-              style={styles.selector}
-              onPress={() => setShowSizeOptions((prev) => !prev)}
-            >
-              <Text style={styles.selectorText}>{selectedSize}</Text>
-              <FontAwesome5
-                name={showSizeOptions ? "chevron-up" : "chevron-down"}
-                size={12}
-                color="#6B7280"
-              />
-            </TouchableOpacity>
+            <View style={styles.sizeChipWrap}>
+              {sizeOptions.map((size) => {
+                const isSelected = selectedSize === size;
 
-            {showSizeOptions && (
-              <View style={styles.sizeOptions}>
-                {sizeOptions.map((size) => (
+                return (
                   <TouchableOpacity
                     key={size}
-                    style={styles.sizeOption}
+                    style={[styles.sizeChip, isSelected && styles.sizeChipActive]}
                     onPress={() => {
                       setSelectedSize(size);
-                      setShowSizeOptions(false);
+                      if (cartFeedback.message) {
+                        setCartFeedback({ type: "", message: "" });
+                      }
                     }}
                   >
-                    <Text style={styles.sizeOptionText}>{size}</Text>
+                    <Text style={[styles.sizeChipText, isSelected && styles.sizeChipTextActive]}>{size}</Text>
                   </TouchableOpacity>
-                ))}
-              </View>
-            )}
+                );
+              })}
+            </View>
 
-            {!!normalizedProduct.color && (
+            {!!colorOptions.length && (
               <View style={styles.colorRow}>
                 <Text style={styles.fieldLabel}>Color</Text>
-                <Text style={styles.colorValue}>{normalizedProduct.color}</Text>
+
+                <TouchableOpacity
+                  style={styles.colorSelector}
+                  onPress={() => setShowColorOptions((prev) => !prev)}
+                >
+                  <Text style={[styles.colorSelectorText, !selectedColor && styles.colorSelectorPlaceholderText]}>
+                    {selectedColor || "Select color"}
+                  </Text>
+                  <FontAwesome5
+                    name={showColorOptions ? "chevron-up" : "chevron-down"}
+                    size={12}
+                    color="#6B7280"
+                  />
+                </TouchableOpacity>
+
+                {showColorOptions ? (
+                  <View style={styles.colorOptions}>
+                    {colorOptions.map((color) => (
+                      <TouchableOpacity
+                        key={color}
+                        style={styles.colorOption}
+                        onPress={() => {
+                          setSelectedColor(color);
+                          setShowColorOptions(false);
+                          if (cartFeedback.message) {
+                            setCartFeedback({ type: "", message: "" });
+                          }
+                        }}
+                      >
+                        <Text style={styles.colorOptionText}>{color}</Text>
+                      </TouchableOpacity>
+                    ))}
+                  </View>
+                ) : null}
               </View>
             )}
 
@@ -358,9 +658,13 @@ export default function ProductDetailScreen() {
                 <Text style={styles.primaryButtonText}>{addingToCart ? "Adding..." : "Add to cart"}</Text>
               </TouchableOpacity>
 
-              <TouchableOpacity style={styles.buyButton}>
+              <TouchableOpacity
+                style={[styles.buyButton, buyingNow && styles.buttonDisabled]}
+                onPress={handleBuyNow}
+                disabled={buyingNow}
+              >
                 <FontAwesome5 name="bolt" size={12} color="#fff" />
-                <Text style={styles.buyButtonText}>Buy now</Text>
+                <Text style={styles.buyButtonText}>{buyingNow ? "Redirecting..." : "Buy now"}</Text>
               </TouchableOpacity>
 
               <TouchableOpacity
@@ -400,7 +704,7 @@ export default function ProductDetailScreen() {
               </Text>
             )}
 
-            <TouchableOpacity style={styles.linkButton}>
+            <TouchableOpacity style={styles.linkButton} onPress={handleOpenOriginal}>
               <FontAwesome5 name="external-link-alt" size={11} color="#111827" />
               <Text style={styles.linkButtonText}>{normalizedProduct.linkLabel}</Text>
             </TouchableOpacity>
@@ -438,13 +742,58 @@ export default function ProductDetailScreen() {
           </View>
         </View>
 
-        <View style={styles.infoCard}>
-          <Text style={styles.infoLabel}>Average & reviews</Text>
-          <Text style={styles.reviewValue}>0.0 / 5 · {normalizedProduct.reviewCount} reviews</Text>
-          <Text style={styles.stars}>☆ ☆ ☆ ☆ ☆</Text>
-          <Text style={styles.infoMeta}>No reviews yet. Be the first to review.</Text>
+        <View style={styles.reviewSectionCard}>
+          <Text style={styles.reviewSectionTitle}>Ratings & reviews</Text>
+          <Text style={styles.reviewSummaryText}>{`${reviewsSummary.average.toFixed(1)} / 5 · ${reviewsSummary.count} review${reviewsSummary.count === 1 ? "" : "s"}`}</Text>
+
+          <View style={styles.reviewStarsRow}>
+            {Array.from({ length: 5 }).map((_, index) => (
+              <FontAwesome5
+                key={`summary-star-${index}`}
+                name="star"
+                solid
+                size={18}
+                color={index < Math.round(reviewsSummary.average) ? "#FDB022" : "#E4E7EC"}
+                style={styles.reviewStarIcon}
+              />
+            ))}
+          </View>
+
+          {loadingReviews ? <Text style={styles.reviewHint}>Loading reviews...</Text> : null}
+
+          {!loadingReviews && postReviews.map((review) => (
+            <View key={review.id} style={styles.reviewItemCard}>
+              <View style={styles.reviewItemHeader}>
+                <Text style={styles.reviewItemTitle} numberOfLines={1}>{review.title}</Text>
+
+                <View style={styles.reviewItemStars}>
+                  {Array.from({ length: 5 }).map((_, index) => (
+                    <FontAwesome5
+                      key={`${review.id}-star-${index}`}
+                      name="star"
+                      solid
+                      size={14}
+                      color={index < Math.round(review.rating) ? "#FDB022" : "#E4E7EC"}
+                      style={styles.reviewItemStarIcon}
+                    />
+                  ))}
+                </View>
+              </View>
+
+              {!!review.body ? <Text style={styles.reviewItemBody}>{review.body}</Text> : null}
+            </View>
+          ))}
+
+          {!loadingReviews && !postReviews.length && !reviewsError ? (
+            <Text style={styles.reviewHint}>No reviews yet. Be the first to review.</Text>
+          ) : null}
+
+          {!!reviewsError ? <Text style={[styles.reviewHint, styles.actionFeedbackErrorText]}>{reviewsError}</Text> : null}
+
           <Text style={styles.reviewHint}>
-            Only customers who purchased this product can leave a review.
+            {reviewsSummary.hasReviewed
+              ? "You have already reviewed this product."
+              : "Only customers who purchased this product can leave a review."}
           </Text>
         </View>
 
@@ -692,15 +1041,40 @@ const styles = StyleSheet.create({
     color: "#6B7280",
     marginBottom: 6,
   },
-  colorRow: {
-    marginTop: 10,
+  sizeChipWrap: {
+    flexDirection: "row",
+    flexWrap: "wrap",
+    marginTop: 4,
+    marginBottom: 4,
   },
-  colorValue: {
-    fontSize: 14,
+  sizeChip: {
+    width: 36,
+    height: 36,
+    borderRadius: 37,
+    borderWidth: 1,
+    borderColor: "#D9DEE6",
+    backgroundColor: "#FFFFFF",
+    alignItems: "center",
+    justifyContent: "center",
+    marginRight: 14,
+    // marginBottom: 14,
+  },
+  sizeChipActive: {
+    borderColor: "#111827",
+    backgroundColor: "#F8FAFC",
+  },
+  sizeChipText: {
+    fontSize: 12,
+    fontWeight: "700",
     color: "#111827",
-    fontWeight: "600",
   },
-  selector: {
+  sizeChipTextActive: {
+    color: "#111827",
+  },
+  colorRow: {
+    marginTop: 6,
+  },
+  colorSelector: {
     flexDirection: "row",
     alignItems: "center",
     justifyContent: "space-between",
@@ -711,25 +1085,30 @@ const styles = StyleSheet.create({
     paddingHorizontal: 12,
     paddingVertical: 10,
   },
-  selectorText: {
+  colorSelectorText: {
     fontSize: 14,
     color: "#111827",
+    fontWeight: "600",
   },
-  sizeOptions: {
+  colorSelectorPlaceholderText: {
+    color: "#6B7280",
+    fontWeight: "500",
+  },
+  colorOptions: {
     marginTop: 8,
     borderRadius: 12,
     borderWidth: 1,
     borderColor: "#E5E7EB",
     overflow: "hidden",
+    backgroundColor: "#FFFFFF",
   },
-  sizeOption: {
+  colorOption: {
     paddingHorizontal: 12,
     paddingVertical: 10,
-    backgroundColor: "#FFFFFF",
     borderBottomWidth: 1,
     borderBottomColor: "#F3F4F6",
   },
-  sizeOptionText: {
+  colorOptionText: {
     fontSize: 14,
     color: "#111827",
   },
@@ -885,16 +1264,67 @@ const styles = StyleSheet.create({
     fontSize: 11,
     color: "#111827",
   },
-  reviewValue: {
+  reviewSectionCard: {
+    backgroundColor: "#FFFFFF",
+    borderRadius: 28,
+    borderWidth: 1,
+    borderColor: "#D9DEE6",
+    paddingHorizontal: 18,
+    paddingVertical: 18,
+    marginBottom: 10,
+  },
+  reviewSectionTitle: {
+    fontSize: 12,
+    color: "#475467",
+    fontWeight: "500",
+  },
+  reviewSummaryText: {
+    marginTop: 8,
     fontSize: 15,
     fontWeight: "700",
     color: "#111827",
   },
-  stars: {
-    color: "#D1D5DB",
-    marginTop: 6,
-    fontSize: 17,
-    letterSpacing: 1,
+  reviewStarsRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    marginTop: 12,
+  },
+  reviewStarIcon: {
+    marginRight: 10,
+  },
+  reviewItemCard: {
+    marginTop: 18,
+    backgroundColor: "#FFFFFF",
+    borderRadius: 26,
+    borderWidth: 1,
+    borderColor: "#D9DEE6",
+    paddingHorizontal: 18,
+    paddingVertical: 18,
+  },
+  reviewItemHeader: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
+    gap: 10,
+  },
+  reviewItemTitle: {
+    flex: 1,
+    fontSize: 14,
+    fontWeight: "700",
+    color: "#111827",
+  },
+  reviewItemStars: {
+    flexDirection: "row",
+    alignItems: "center",
+  },
+  reviewItemStarIcon: {
+    marginLeft: 6,
+  },
+  reviewItemBody: {
+    marginTop: 14,
+    fontSize: 14,
+    lineHeight: 20,
+    color: "#475467",
   },
   reviewHint: {
     fontSize: 11,
