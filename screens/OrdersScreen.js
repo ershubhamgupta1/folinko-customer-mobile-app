@@ -125,7 +125,12 @@ const OrderScreen = () => {
           const seller = firstItem?.shop_name || firstItem?.shop?.name || firstItem?.seller_name || "";
 
           return (
-            <View key={String(order?.id)} style={styles.card}>
+            <TouchableOpacity
+              key={String(order?.id)}
+              style={styles.card}
+              activeOpacity={0.9}
+              onPress={() => navigation.navigate("orderDetail", { orderId: order?.id, order })}
+            >
               <View style={styles.rowBetween}>
                 <View>
                   <Text style={styles.orderId}>#{order?.id}</Text>
@@ -176,13 +181,7 @@ const OrderScreen = () => {
                 </View>
               </View>
 
-              <TouchableOpacity
-                style={styles.viewBtn}
-                onPress={() => navigation.navigate("orderDetail", { orderId: order?.id, order })}
-              >
-                <Text style={styles.viewText}>View</Text>
-              </TouchableOpacity>
-            </View>
+            </TouchableOpacity>
           );
         })}
       </ScrollView>
@@ -378,18 +377,6 @@ const styles = StyleSheet.create({
   totalValue: {
     fontSize: 16,
     fontWeight: "bold",
-  },
-
-  viewBtn: {
-    marginTop: 16,
-    borderWidth: 1,
-    borderRadius: 20,
-    paddingVertical: 10,
-    alignItems: "center",
-  },
-
-  viewText: {
-    fontWeight: "500",
   },
 });
 export default OrderScreen;

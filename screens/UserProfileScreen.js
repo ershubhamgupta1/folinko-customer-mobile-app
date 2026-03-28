@@ -10,9 +10,10 @@ import {
   View,
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
-import { FontAwesome5 } from "@expo/vector-icons";
 import { useNavigation } from "@react-navigation/native";
+import { FontAwesome5 } from "@expo/vector-icons";
 import { useAuth } from "../contexts/AuthContext";
+import Header from "../components/Header";
 import { cart, customerAuth, orders, wishlist } from "../services/api";
 
 const FALLBACK_ORDER_IMAGE =
@@ -193,6 +194,7 @@ const UserProfileScreen = () => {
             </View>
 
             <TouchableOpacity style={styles.backButton} onPress={handleBack}>
+              <FontAwesome5 name="arrow-left" size={12} color="#111827" />
               <Text style={styles.backButtonText}>Back</Text>
             </TouchableOpacity>
           </View>
@@ -423,17 +425,20 @@ const styles = StyleSheet.create({
     color: "#6B7280",
   },
   backButton: {
+    flexDirection: "row",
+    alignItems: "center",
     backgroundColor: "#FFFFFF",
     borderRadius: 999,
     borderWidth: 1,
     borderColor: "#E5E7EB",
     paddingHorizontal: 14,
-    paddingVertical: 9,
+    paddingVertical: 8,
+    gap: 6,
   },
   backButtonText: {
-    fontSize: 12,
+    fontSize: 11,
     fontWeight: "600",
-    color: "#374151",
+    color: "#111827",
   },
   stateCard: {
     backgroundColor: "#FFFFFF",

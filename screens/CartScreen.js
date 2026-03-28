@@ -229,58 +229,79 @@ const CartScreen = () => {
                 style={styles.productCard}
                 onPress={() => openProductDetail(post?.id)}
               >
-                <Image source={{ uri: imageUrl }} style={styles.image} />
+                <View style={styles.productMediaColumn}>
+                  <Image source={{ uri: imageUrl }} style={styles.image} />
+                  <View style={styles.qtyColumn}>
+                    <View style={styles.qtyInlineRow}>
+                      <Text style={styles.qtyLabel}>Qty</Text>
 
-                <View style={styles.productContent}>
-                  <View style={styles.rowBetween}>
-                    <Text style={styles.productName} numberOfLines={1}>{title}</Text>
-                    <TouchableOpacity style={styles.viewBtn} onPress={() => openProductDetail(post?.id)}>
-                      <Text>View</Text>
-                    </TouchableOpacity>
-                  </View>
-
-                  {!!seller && <Text style={styles.seller} numberOfLines={1}>{seller}</Text>}
-
-                  <View style={styles.trustBox}>
-                    <Text>🛡 Trust</Text>
-                    <View style={styles.progressBar}>
-                      <View style={styles.progressFill} />
+                      <TextInput
+                        value={nextQtyValue}
+                        onChangeText={(v) => onChangeQty(itemId, v)}
+                        keyboardType="numeric"
+                        style={styles.qtyInput}
+                        editable={!isUpdating}
+                      />
                     </View>
-                  </View>
-
-                  <Text style={styles.price}>{formatMoney(price)}</Text>
-
-                  <View style={styles.removeRow}>
-                    <TouchableOpacity
-                      style={[styles.removeBtn, isRemoving && styles.removeBtnDisabled]}
-                      onPress={() => handleRemoveItem(postId)}
-                      disabled={isRemoving}
-                    >
-                      <Text style={{ fontSize: 12 }}>{isRemoving ? "Removing..." : "Remove"}</Text>
-                    </TouchableOpacity>
-                  </View>
-
-                  <View style={styles.qtyRow}>
-                    <Text style={styles.qtyLabel}>Qty</Text>
-
-                    <TextInput
-                      value={nextQtyValue}
-                      onChangeText={(v) => onChangeQty(itemId, v)}
-                      keyboardType="numeric"
-                      style={styles.qtyInput}
-                      editable={!isUpdating}
-                    />
 
                     <TouchableOpacity
                       style={[styles.updateBtn, isUpdateDisabled && styles.updateBtnDisabled]}
                       onPress={() => handleUpdateItemQuantity(postId, itemId, quantity)}
                       disabled={isUpdateDisabled}
                     >
-                      <Text style={{ fontSize: 12 }}>{isUpdating ? "Updating..." : "Update"}</Text>
+                      <Text style={styles.updateBtnText}>{isUpdating ? "Updating..." : "Update"}</Text>
                     </TouchableOpacity>
                   </View>
+                </View>
 
-                  <Text style={styles.itemTotalText}>{`Item total: ${itemTotal}`}</Text>
+                <View style={styles.productContent}>
+                  <View style={styles.productTopSection}>
+                    <View style={styles.rowBetween}>
+                      <Text style={styles.productName} numberOfLines={1}>{title}</Text>
+                      {/* <TouchableOpacity style={styles.viewBtn} onPress={() => openProductDetail(post?.id)}>
+                        <Text style={styles.viewBtnText}>View</Text>
+                      </TouchableOpacity> */}
+                    </View>
+
+                    {!!seller && <Text style={styles.seller} numberOfLines={1}>{seller}</Text>}
+
+                    <View style={styles.trustBox}>
+                      <Text style={styles.trustText}>🛡 Trust</Text>
+                      <View style={styles.progressBar}>
+                        <View style={styles.progressFill} />
+                      </View>
+                    </View>
+                  <TouchableOpacity
+                    style={[styles.removeBtn, isRemoving && styles.removeBtnDisabled]}
+                    onPress={() => handleRemoveItem(postId)}
+                    disabled={isRemoving}
+                  >
+                    <Text style={styles.removeBtnText}>{isRemoving ? "Removing..." : "Remove"}</Text>
+                  </TouchableOpacity>
+
+
+                  </View>
+
+                  <View style={styles.itemSummaryCard}>
+                    <View style={styles.itemSummaryRow}>
+                      <Text style={styles.itemSummaryLabel}>Price</Text>
+                      <Text style={styles.itemSummaryPrice}>{formatMoney(price)}</Text>
+                    </View>
+
+                    {/* <View style={styles.itemSummaryDivider} /> */}
+
+                    {/* <View style={styles.itemSummaryRow}>
+                      <Text style={styles.itemSummaryLabel}>Qty</Text>
+                      <Text style={styles.itemSummaryValue}>{quantity}</Text>
+                    </View> */}
+
+                    <View style={styles.itemSummaryDivider} />
+
+                    <View style={styles.itemSummaryRow}>
+                      <Text style={styles.itemSummaryLabel}>Item total</Text>
+                      <Text style={styles.itemSummaryValue}>{formatMoney(itemTotal)}</Text>
+                    </View>
+                  </View>
                 </View>
               </TouchableOpacity>
             );
@@ -335,6 +356,8 @@ const styles = StyleSheet.create({
 
   smallLabel: {
     color: "#888",
+    marginBottom: 8,
+    fontSize: 16
   },
 
   title: {
@@ -358,20 +381,44 @@ const styles = StyleSheet.create({
   productCard: {
     flexDirection: "row",
     marginTop: 16,
-    backgroundColor: "#f9f9f9",
-    borderRadius: 16,
-    padding: 12,
+    backgroundColor: "#FFFFFF",
+    borderRadius: 22,
+    padding: 14,
+    alignItems: "flex-start",
+    borderWidth: 1,
+    borderColor: "#EAECF0",
+    shadowColor: "#101828",
+    shadowOffset: { width: 0, height: 10 },
+    shadowOpacity: 0.06,
+    shadowRadius: 18,
+    elevation: 3,
+  },
+
+  productMediaColumn: {
+    width: 112,
+    alignItems: "stretch",
   },
 
   image: {
-    width: 90,
-    height: 110,
-    borderRadius: 12,
+    width: 112,
+    height: 126,
+    borderRadius: 18,
+    backgroundColor: "#F4F4F5",
+    borderWidth: 1,
+    borderColor: "#E5E7EB",
   },
 
   productContent: {
     flex: 1,
-    marginLeft: 12,
+    marginLeft: 14,
+    minHeight: 224,
+    justifyContent: "flex-start",
+  },
+
+  productTopSection: {
+    paddingTop: 4,
+    minHeight: 126,
+    paddingBottom: 10,
   },
 
   rowBetween: {
@@ -381,27 +428,48 @@ const styles = StyleSheet.create({
   },
 
   productName: {
-    fontSize: 14,
-    fontWeight: "600",
+    fontSize: 16,
+    lineHeight: 22,
+    fontWeight: "700",
+    color: "#101828",
+    flex: 1,
+    marginRight: 8,
   },
 
   seller: {
-    color: "#666",
-    marginTop: 4,
+    color: "#667085",
+    marginTop: 6,
+    fontSize: 13,
+    fontWeight: "500",
   },
 
   trustBox: {
     flexDirection: "row",
     alignItems: "center",
-    marginTop: 6,
+    marginTop: 10,
+    alignSelf: "flex-start",
+    backgroundColor: "#F8FAFC",
+    borderRadius: 999,
+    borderWidth: 1,
+    borderColor: "#E2E8F0",
+    paddingHorizontal: 10,
+    paddingVertical: 7,
+  },
+
+  trustText: {
+    fontSize: 12,
+    color: "#111827",
+    fontWeight: "500",
   },
 
   progressBar: {
-    width: 100,
+    flex: 1,
     height: 6,
-    backgroundColor: "#ddd",
+    backgroundColor: "#D0D5DD",
     borderRadius: 10,
     marginLeft: 8,
+    width: 88,
+    maxWidth: 88,
   },
 
   progressFill: {
@@ -411,71 +479,135 @@ const styles = StyleSheet.create({
     borderRadius: 10,
   },
 
-  price: {
-    fontSize: 14,
-    fontWeight: "bold",
-    marginTop: 6,
-  },
-
   viewBtn: {
     borderWidth: 1,
-    paddingHorizontal: 12,
-    paddingVertical: 6,
-    borderRadius: 20,
+    borderColor: "#D0D5DD",
+    backgroundColor: "#FFFFFF",
+    paddingHorizontal: 14,
+    paddingVertical: 8,
+    borderRadius: 999,
+  },
+
+  viewBtnText: {
+    fontSize: 12,
+    fontWeight: "600",
+    color: "#111827",
   },
 
   removeBtn: {
     borderWidth: 1,
-    paddingHorizontal: 12,
-    paddingVertical: 6,
-    borderRadius: 20,
-    alignSelf: "flex-start",
-    fontSize:22
+    borderColor: "#FED7AA",
+    backgroundColor: "#FFF7ED",
+    // paddingHorizontal: 12,
+    paddingVertical: 8,
+    borderRadius: 999,
+    alignItems: "center",
+    marginTop: 10,
   },
   removeBtnDisabled: {
     opacity: 0.6,
   },
 
-  removeRow: {
+  removeBtnText: {
+    fontSize: 12,
+    color: "#C2410C",
+    fontWeight: "600",
+  },
+
+  qtyColumn: {
+    marginTop: 10,
+    backgroundColor: "#FFFFFF",
+    borderWidth: 1,
+    borderColor: "#EAECF0",
+    borderRadius: 16,
+    paddingHorizontal: 10,
+    paddingVertical: 10,
+  },
+
+  qtyInlineRow: {
     flexDirection: "row",
     alignItems: "center",
     justifyContent: "space-between",
-    marginTop: 10,
-  },
-
-  qtyRow: {
-    flexDirection: "row",
-    alignItems: "center",
-    marginTop: 12,
   },
 
   qtyLabel: {
-    color: "#333",
+    color: "#475467",
+    fontSize: 12,
+    marginRight: 8,
+    fontWeight: "600",
   },
 
   qtyInput: {
     borderWidth: 1,
-    width: 50,
+    width: 54,
     textAlign: "center",
     borderRadius: 10,
+    borderColor: "#D0D5DD",
+    backgroundColor: "#F9FAFB",
     padding: 6,
-    marginHorizontal: 8,
-    fontSize: 12
+    fontSize: 12,
   },
 
   updateBtn: {
     borderWidth: 1,
+    borderColor: "#111827",
+    backgroundColor: "#111827",
     paddingHorizontal: 12,
-    paddingVertical: 6,
-    borderRadius: 20,
+    paddingVertical: 8,
+    borderRadius: 999,
+    alignItems: "center",
+    marginTop: 10,
   },
   updateBtnDisabled: {
     opacity: 0.6,
   },
 
-  itemTotalText: {
-    color: "#666",
-    marginTop: 12,
+  updateBtnText: {
+    fontSize: 12,
+    color: "#FFFFFF",
+    fontWeight: "600",
+  },
+
+  itemSummaryCard: {
+    backgroundColor: "#FFFCF5",
+    borderRadius: 18,
+    borderWidth: 1,
+    borderColor: "#F3E8D6",
+    paddingHorizontal: 14,
+    paddingVertical: 14,
+    flex: 1,
+    justifyContent: "center",
+  },
+
+  itemSummaryRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
+  },
+
+  itemSummaryDivider: {
+    height: 1,
+    backgroundColor: "#F1E4CC",
+    marginTop: 10,
+    marginBottom: 10,
+  },
+
+  itemSummaryLabel: {
+    color: "#667085",
+    fontSize: 11,
+    fontWeight: "500",
+  },
+
+  itemSummaryValue: {
+    color: "#111827",
+    fontSize: 12,
+    fontWeight: "600",
+  },
+
+  itemSummaryPrice: {
+    color: "#B54708",
+    fontSize: 12,
+    fontWeight: "700",
   },
 
   summaryCard: {
@@ -523,7 +655,7 @@ const styles = StyleSheet.create({
 
   summaryValue: {
     fontWeight: "600",
-    fontSize: 16,
+    fontSize: 14,
   },
 
   totalText: {
