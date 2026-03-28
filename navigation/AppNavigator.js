@@ -115,9 +115,8 @@ const MainTabs = () => {
   );
 };
 
-
 const AppNavigator = () => {
-    const { isAuthenticated, initializing } = useAuth();
+  const { isAuthenticated, initializing } = useAuth();
 
   if (initializing) {
     return (
@@ -126,31 +125,30 @@ const AppNavigator = () => {
       </View>
     );
   }
-  if (!isAuthenticated) {
-    return (
-      <Stack.Navigator key="guest-stack" initialRouteName="feedScreen" screenOptions={{ headerShown: false }}>
-        <Stack.Screen name="feedScreen" component={FeedScreen} />
-        <Stack.Screen name="productDetail" component={ProductDetailScreen} />
-        <Stack.Screen name="storeDetail" component={StoreDetailScreen} />
-        <Stack.Screen name="Login" component={LoginScreen} />
-      </Stack.Navigator>
-    );
-  }
-  return (
-    // <NavigationContainer>
-      <Stack.Navigator key="auth-stack" initialRouteName="Main" screenOptions={{ headerShown: false }}>
-        <Stack.Screen name="Main" component={MainTabs} />
-        <Stack.Screen name="orderScreen" component={OrdersScreen} />
-        <Stack.Screen name="orderDetail" component={OrderDetailScreen} />
-        <Stack.Screen name="checkoutScreen" component={CheckoutScreen} />
-        <Stack.Screen name="userProfile" component={UserProfileScreen} />
-        {/* <Stack.Screen name="addPost" component={AddProductScreen} /> */}
-        <Stack.Screen name="feedScreen" component={FeedScreen} />
-        <Stack.Screen name="productDetail" component={ProductDetailScreen} />
-        <Stack.Screen name="storeDetail" component={StoreDetailScreen} />
 
-      </Stack.Navigator>
-    // </NavigationContainer>
+  return (
+    <Stack.Navigator screenOptions={{ headerShown: false }}>
+      {isAuthenticated ? (
+        <Stack.Group navigationKey="auth-stack">
+          <Stack.Screen name="Main" component={MainTabs} />
+          <Stack.Screen name="orderScreen" component={OrdersScreen} />
+          <Stack.Screen name="orderDetail" component={OrderDetailScreen} />
+          <Stack.Screen name="checkoutScreen" component={CheckoutScreen} />
+          <Stack.Screen name="userProfile" component={UserProfileScreen} />
+          <Stack.Screen name="feedScreen" component={FeedScreen} />
+          <Stack.Screen name="productDetail" component={ProductDetailScreen} />
+          <Stack.Screen name="storeDetail" component={StoreDetailScreen} />
+          <Stack.Screen name="Login" component={LoginScreen} />
+        </Stack.Group>
+      ) : (
+        <Stack.Group navigationKey="guest-stack">
+          <Stack.Screen name="feedScreen" component={FeedScreen} />
+          <Stack.Screen name="productDetail" component={ProductDetailScreen} />
+          <Stack.Screen name="storeDetail" component={StoreDetailScreen} />
+          <Stack.Screen name="Login" component={LoginScreen} />
+        </Stack.Group>
+      )}
+    </Stack.Navigator>
   );
 };
 

@@ -29,10 +29,6 @@ const LoginScreen = ({ navigation }) => {
     try {
       if (isLogin) {
         await login(email, password);
-        navigation.reset({
-          index: 0,
-          routes: [{ name: 'feedScreen' }],
-        });
       } else {
         await register(email, password);
         Alert.alert('Success', 'Registration successful! Please login.');

@@ -129,11 +129,22 @@ const getCreatedPaymentMethodId = (response) => {
   );
 };
 
+const getCreatedAddressId = (response) => {
+  return (
+    response?.address?.id ||
+    response?.data?.address?.id ||
+    response?.data?.id ||
+    response?.id ||
+    ""
+  );
+};
+
 export default function CheckoutScreen() {
   const navigation = useNavigation();
   const insets = useSafeAreaInsets();
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
+  const [savingAddress, setSavingAddress] = useState(false);
   const [placingOrder, setPlacingOrder] = useState(false);
   const [savingCard, setSavingCard] = useState(false);
   const [savingUpi, setSavingUpi] = useState(false);
@@ -144,12 +155,26 @@ export default function CheckoutScreen() {
   const [paymentMethodItems, setPaymentMethodItems] = useState([]);
   const [selectedAddressId, setSelectedAddressId] = useState("");
   const [selectedPaymentMethodId, setSelectedPaymentMethodId] = useState("");
+  const [showAddAddressForm, setShowAddAddressForm] = useState(false);
   const [showAddCardForm, setShowAddCardForm] = useState(false);
   const [showAddUpiForm, setShowAddUpiForm] = useState(false);
+  const [addressFormError, setAddressFormError] = useState("");
+  const [addressFormSuccess, setAddressFormSuccess] = useState("");
   const [cardFormError, setCardFormError] = useState("");
   const [cardFormSuccess, setCardFormSuccess] = useState("");
   const [upiFormError, setUpiFormError] = useState("");
   const [upiFormSuccess, setUpiFormSuccess] = useState("");
+  const [addressForm, setAddressForm] = useState({
+    label: "",
+    fullName: "",
+    phone: "",
+    postalCode: "",
+    line1: "",
+    line2: "",
+    city: "",
+    state: "",
+    country: "India",
+  });
   const [cardForm, setCardForm] = useState({
     holderName: "",
     cardNumber: "",
@@ -161,7 +186,7 @@ export default function CheckoutScreen() {
     upiId: "",
   });
 
-  const fetchCheckoutData = useCallback(async ({ isRefresh, preferredPaymentMethodId } = {}) => {
+  const fetchCheckoutData = useCallback(async ({ isRefresh, preferredAddressId, preferredPaymentMethodId } = {}) => {
     if (!isRefresh) {
       setLoading(true);
     }
@@ -196,6 +221,13 @@ export default function CheckoutScreen() {
       setAddressItems(nextAddresses);
       setPaymentMethodItems(nextPaymentMethods);
       setSelectedAddressId((current) => {
+        if (
+          preferredAddressId &&
+          nextAddresses.some((item) => String(item?.id) === String(preferredAddressId))
+        ) {
+          return String(preferredAddressId);
+        }
+
         if (current && nextAddresses.some((item) => String(item?.id) === String(current))) {
           return current;
         }
@@ -236,6 +268,37 @@ export default function CheckoutScreen() {
     setRefreshing(true);
     fetchCheckoutData({ isRefresh: true });
   }, [fetchCheckoutData]);
+
+  const handleAddressFieldChange = (field, value) => {
+    let nextValue = value;
+
+    if (field === "phone") {
+      nextValue = getDigits(value).slice(0, 15);
+    }
+
+    if (field === "postalCode") {
+      nextValue = getDigits(value).slice(0, 10);
+    }
+
+    setAddressForm((current) => ({
+      ...current,
+      [field]: nextValue,
+    }));
+
+    if (addressFormError) {
+      setAddressFormError("");
+    }
+
+    if (addressFormSuccess) {
+      setAddressFormSuccess("");
+    }
+  };
+
+  const handleToggleAddAddressForm = () => {
+    setShowAddAddressForm((current) => !current);
+    setAddressFormError("");
+    setAddressFormSuccess("");
+  };
 
   const handleCardFieldChange = (field, value) => {
     let nextValue = value;
@@ -302,6 +365,112 @@ export default function CheckoutScreen() {
     }
 
     navigation.navigate("Main", { screen: "cart" });
+  };
+
+  const handleAddAddress = async () => {
+    const label = addressForm.label.trim();
+    const fullName = addressForm.fullName.trim();
+    const phone = addressForm.phone.trim();
+    const postalCode = addressForm.postalCode.trim();
+    const line1 = addressForm.line1.trim();
+    const line2 = addressForm.line2.trim();
+    const city = addressForm.city.trim();
+    const state = addressForm.state.trim();
+    const country = addressForm.country.trim() || "India";
+
+    if (!label) {
+      setAddressFormError("Enter an address label.");
+      return;
+    }
+
+    if (!fullName) {
+      setAddressFormError("Enter the full name.");
+      return;
+    }
+
+    if (phone.length < 10) {
+      setAddressFormError("Enter a valid phone number.");
+      return;
+    }
+
+    if (!postalCode) {
+      setAddressFormError("Enter the PIN / postal code.");
+      return;
+    }
+
+    if (!line1) {
+      setAddressFormError("Enter address line 1.");
+      return;
+    }
+
+    if (!city) {
+      setAddressFormError("Enter the city.");
+      return;
+    }
+
+    if (!state) {
+      setAddressFormError("Enter the state.");
+      return;
+    }
+
+    try {
+      setSavingAddress(true);
+      setAddressFormError("");
+      setAddressFormSuccess("");
+
+      const response = await addresses.create({
+        label,
+        type: label,
+        tag: label,
+        name: fullName,
+        full_name: fullName,
+        recipient_name: fullName,
+        phone,
+        phone_number: phone,
+        mobile: phone,
+        postal_code: postalCode,
+        pincode: postalCode,
+        zip: postalCode,
+        line1,
+        address_line1: line1,
+        street: line1,
+        line2,
+        address_line2: line2,
+        landmark: line2,
+        city,
+        state,
+        country,
+      });
+
+      if (isFailedResponse(response)) {
+        throw new Error(response?.message || "Failed to add address");
+      }
+
+      const createdAddressId = getCreatedAddressId(response);
+
+      await fetchCheckoutData({
+        isRefresh: true,
+        preferredAddressId: createdAddressId,
+      });
+
+      setAddressForm({
+        label: "",
+        fullName: "",
+        phone: "",
+        postalCode: "",
+        line1: "",
+        line2: "",
+        city: "",
+        state: "",
+        country: "India",
+      });
+      setShowAddAddressForm(false);
+      setAddressFormSuccess("Address added successfully.");
+    } catch (e) {
+      setAddressFormError(e?.message || "Failed to add address");
+    } finally {
+      setSavingAddress(false);
+    }
   };
 
   const deliveryAmount = useMemo(() => {
@@ -560,10 +729,122 @@ export default function CheckoutScreen() {
                   })
                 )}
 
-                <TouchableOpacity style={styles.addRowBtn}>
-                  <Text style={styles.addRowText}>Add a new address</Text>
-                  <FontAwesome5 name="chevron-down" size={12} color="#98A2B3" />
+                <TouchableOpacity style={styles.addRowBtn} onPress={handleToggleAddAddressForm}>
+                  <Text style={styles.addRowText}>{showAddAddressForm ? "Hide address form" : "Add a new address"}</Text>
+                  <FontAwesome5
+                    name={showAddAddressForm ? "chevron-up" : "chevron-down"}
+                    size={12}
+                    color="#98A2B3"
+                  />
                 </TouchableOpacity>
+
+                {showAddAddressForm ? (
+                  <View style={styles.formCard}>
+                    <TextInput
+                      style={styles.dropdownLikeInput}
+                      placeholder="Add a new address"
+                      placeholderTextColor="#98A2B3"
+                      value="Add a new address"
+                      editable={false}
+                    />
+
+                    <View style={styles.formRow}>
+                      <TextInput
+                        style={[styles.formInput, styles.formHalfInput]}
+                        placeholder="Label (Home/Office)"
+                        placeholderTextColor="#98A2B3"
+                        value={addressForm.label}
+                        onChangeText={(value) => handleAddressFieldChange("label", value)}
+                      />
+                      <TextInput
+                        style={[styles.formInput, styles.formHalfInput]}
+                        placeholder="Full name"
+                        placeholderTextColor="#98A2B3"
+                        value={addressForm.fullName}
+                        onChangeText={(value) => handleAddressFieldChange("fullName", value)}
+                        autoCapitalize="words"
+                      />
+                    </View>
+
+                    <View style={styles.formRow}>
+                      <TextInput
+                        style={[styles.formInput, styles.formHalfInput]}
+                        placeholder="Phone"
+                        placeholderTextColor="#98A2B3"
+                        value={addressForm.phone}
+                        onChangeText={(value) => handleAddressFieldChange("phone", value)}
+                        keyboardType="phone-pad"
+                      />
+                      <TextInput
+                        style={[styles.formInput, styles.formHalfInput]}
+                        placeholder="PIN / Postal code"
+                        placeholderTextColor="#98A2B3"
+                        value={addressForm.postalCode}
+                        onChangeText={(value) => handleAddressFieldChange("postalCode", value)}
+                        keyboardType="number-pad"
+                      />
+                    </View>
+
+                    <TextInput
+                      style={styles.formInput}
+                      placeholder="Address line 1"
+                      placeholderTextColor="#98A2B3"
+                      value={addressForm.line1}
+                      onChangeText={(value) => handleAddressFieldChange("line1", value)}
+                    />
+
+                    <TextInput
+                      style={styles.formInput}
+                      placeholder="Address line 2 (optional)"
+                      placeholderTextColor="#98A2B3"
+                      value={addressForm.line2}
+                      onChangeText={(value) => handleAddressFieldChange("line2", value)}
+                    />
+
+                    <View style={styles.formRow}>
+                      <TextInput
+                        style={[styles.formInput, styles.formHalfInput]}
+                        placeholder="City"
+                        placeholderTextColor="#98A2B3"
+                        value={addressForm.city}
+                        onChangeText={(value) => handleAddressFieldChange("city", value)}
+                        autoCapitalize="words"
+                      />
+                      <TextInput
+                        style={[styles.formInput, styles.formHalfInput]}
+                        placeholder="State"
+                        placeholderTextColor="#98A2B3"
+                        value={addressForm.state}
+                        onChangeText={(value) => handleAddressFieldChange("state", value)}
+                        autoCapitalize="words"
+                      />
+                    </View>
+
+                    <TextInput
+                      style={styles.formInput}
+                      placeholder="Country (default India)"
+                      placeholderTextColor="#98A2B3"
+                      value={addressForm.country}
+                      onChangeText={(value) => handleAddressFieldChange("country", value)}
+                      autoCapitalize="words"
+                    />
+
+                    {!!addressFormError ? <Text style={styles.formErrorText}>{addressFormError}</Text> : null}
+                    {!!addressFormSuccess ? <Text style={styles.formSuccessText}>{addressFormSuccess}</Text> : null}
+
+                    <TouchableOpacity
+                      style={[styles.addCardButton, savingAddress && styles.placeOrderBtnDisabled]}
+                      onPress={handleAddAddress}
+                      disabled={savingAddress}
+                    >
+                      <Text style={styles.addCardButtonText}>{savingAddress ? "Saving address..." : "Save address"}</Text>
+                    </TouchableOpacity>
+                  </View>
+                ) : null}
+
+                {!showAddAddressForm && !!addressFormSuccess ? (
+                  <Text style={styles.formSuccessText}>{addressFormSuccess}</Text>
+                ) : null}
               </View>
 
               <View style={styles.sectionCard}>
@@ -1093,7 +1374,14 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     gap: 10,
   },
+  formRow: {
+    flexDirection: "row",
+    gap: 10,
+  },
   expiryInput: {
+    flex: 1,
+  },
+  formHalfInput: {
     flex: 1,
   },
   formErrorText: {

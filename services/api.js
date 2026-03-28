@@ -186,9 +186,25 @@ export const customerAuth = {
       skipAuthRedirectOnUnauthorized: true,
     });
 
-    if (response?.access_token) {
-      await setAuthToken(response.access_token);
-      return response;
+    const responseData = response?.data && typeof response.data === 'object' ? response.data : null;
+    const accessToken =
+      response?.access_token ||
+      response?.token ||
+      response?.auth_token ||
+      responseData?.access_token ||
+      responseData?.token ||
+      responseData?.auth_token ||
+      '';
+    const user = response?.user || responseData?.user || responseData?.customer || response?.customer || null;
+
+    if (accessToken) {
+      await setAuthToken(accessToken);
+      return {
+        ...response,
+        ...(responseData || {}),
+        access_token: accessToken,
+        user,
+      };
     }
 
     if (response === undefined) {

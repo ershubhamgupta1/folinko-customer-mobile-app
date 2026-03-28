@@ -9,7 +9,7 @@ import {
   TouchableOpacity,
   View,
 } from "react-native";
-import { SafeAreaView } from "react-native-safe-area-context";
+import { SafeAreaView, useSafeAreaInsets } from "react-native-safe-area-context";
 import { useNavigation } from "@react-navigation/native";
 import { FontAwesome5 } from "@expo/vector-icons";
 import { useAuth } from "../contexts/AuthContext";
@@ -74,6 +74,7 @@ const getStatusColors = (status) => {
 };
 
 const UserProfileScreen = () => {
+  const insets = useSafeAreaInsets();
   const navigation = useNavigation();
   const { logout, user: authUser } = useAuth();
   const [loading, setLoading] = useState(true);
@@ -177,10 +178,10 @@ const UserProfileScreen = () => {
   };
 
   return (
-    <SafeAreaView style={styles.safeArea} edges={["top"]}>
+    <SafeAreaView style={styles.safeArea}>
       <ScrollView
         showsVerticalScrollIndicator={false}
-        contentContainerStyle={styles.contentContainer}
+        contentContainerStyle={[styles.contentContainer, { paddingBottom: insets.bottom + 32 }]}
         refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} />}
       >
 

@@ -57,8 +57,16 @@ export const AuthProvider = ({ children }) => {
       setLoading(true);
       const response = await businessAuth.login(email, password);
       console.log('response========', response);
-      setUser(response?.user || response);
-      setIsAuthenticated(Boolean(response?.access_token || response?.user));
+
+      const nextUser =
+        response?.user ||
+        response?.data?.user ||
+        response?.customer ||
+        response?.data?.customer ||
+        response;
+
+      setUser(nextUser || null);
+      setIsAuthenticated(true);
       return response;
     } catch (error) {
       throw error;
