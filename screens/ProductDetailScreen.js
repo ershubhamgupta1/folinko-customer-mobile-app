@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useState } from "react";
+import AsyncStorage from "@react-native-async-storage/async-storage";
 import {
   ActivityIndicator,
   Image,
@@ -16,6 +17,9 @@ import { cart, posts, wishlist } from "../services/api";
 
 const FALLBACK_IMAGE =
   "https://images.unsplash.com/photo-1541099649105-f69ad21f3246?auto=format&fit=crop&w=900&q=80";
+
+const RECENTLY_VIEWED_STORAGE_KEY = "@recently_viewed_post_ids";
+const MAX_RECENTLY_VIEWED = 6;
 
 const SIZE_OPTIONS = ["S", "M", "L", "XL"];
 
@@ -72,6 +76,34 @@ export default function ProductDetailScreen() {
 
     fetchProduct();
   }, [productId]);
+
+  useEffect(() => {
+    const saveRecentlyViewedProductId = async () => {
+      const normalizedProductId = String(productData?.id || productId || "").trim();
+
+      if (!normalizedProductId) {
+        return;
+      }
+
+      try {
+        const storedValue = await AsyncStorage.getItem(RECENTLY_VIEWED_STORAGE_KEY);
+        const parsedIds = JSON.parse(storedValue || "[]");
+        const currentIds = Array.isArray(parsedIds)
+          ? parsedIds.map((item) => String(item || "").trim()).filter(Boolean)
+          : [];
+        const nextIds = [normalizedProductId, ...currentIds.filter((item) => item !== normalizedProductId)].slice(
+          0,
+          MAX_RECENTLY_VIEWED
+        );
+
+        await AsyncStorage.setItem(RECENTLY_VIEWED_STORAGE_KEY, JSON.stringify(nextIds));
+      } catch (e) {
+        console.error("Failed to save recently viewed item:", e);
+      }
+    };
+
+    saveRecentlyViewedProductId();
+  }, [productData?.id, productId]);
 
   useEffect(() => {
     const apiSize = productData?.attributes?.size;
@@ -214,7 +246,7 @@ export default function ProductDetailScreen() {
   };
 
   const handleBackToFeed = () => {
-    navigation.navigate("Main", { screen: "Feed" });
+   navigation.navigate("feedScreen", {  });
   };
 
   if (loading) {

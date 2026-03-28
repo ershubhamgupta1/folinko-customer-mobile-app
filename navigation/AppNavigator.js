@@ -129,7 +129,7 @@ const AppNavigator = () => {
   if (!isAuthenticated) {
     return (
       <Stack.Navigator screenOptions={{ headerShown: false }}>
-        <Stack.Screen name="publicFeed" component={FeedScreen} />
+        <Stack.Screen name="feedScreen" component={FeedScreen} />
         <Stack.Screen name="productDetail" component={ProductDetailScreen} />
         <Stack.Screen name="storeDetail" component={StoreDetailScreen} />
         <Stack.Screen name="Login" component={LoginScreen} />

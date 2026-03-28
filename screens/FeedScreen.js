@@ -1,4 +1,5 @@
-import React, { useEffect, useState } from "react";
+import React, { useCallback, useEffect, useState } from "react";
+import AsyncStorage from "@react-native-async-storage/async-storage";
 import {
   ActivityIndicator,
   Image,
@@ -19,40 +20,39 @@ import { useAuth } from "../contexts/AuthContext";
 import { markets, posts, shops } from "../services/api";
 
 const FALLBACK_TOP_MARKETS = [
-  { id: "market-1", name: "Noida", dropCount: 4 },
-  { id: "market-2", name: "Mohali", dropCount: 2 },
-  { id: "market-3", name: "Delhi", dropCount: 1 },
+  { id: "market-1", city: "Noida", post_count: 4 },
+  { id: "market-2", city: "Mohali", post_count: 2 },
+  { id: "market-3", city: "Delhi", post_count: 1 },
 ];
 
-const RECENTLY_VIEWED_ITEMS = [
-  {
-    id: "recent-1",
-    title: "Jeans1",
-    price: "INR 2499",
-    image:
-      "https://images.unsplash.com/photo-1612423284934-2850a4ea6b0f?auto=format&fit=crop&w=300&q=80",
-  },
-  {
-    id: "recent-2",
-    title: "Saree 2",
-    price: "INR 2099",
-    image:
-      "https://images.unsplash.com/photo-1610030469668-4cb352e7ed3f?auto=format&fit=crop&w=300&q=80",
-  },
-  {
-    id: "recent-3",
-    title: "Jeans",
-    price: "INR 1500",
-    image:
-      "https://images.unsplash.com/photo-1541099649105-f69ad21f3246?auto=format&fit=crop&w=300&q=80",
-  },
-];
+const RECENTLY_VIEWED_STORAGE_KEY = "@recently_viewed_post_ids";
+const RECENT_SEARCH_TERMS_STORAGE_KEY = "@recent_search_terms";
+const FALLBACK_PRODUCT_IMAGE = "https://images.unsplash.com/photo-1603252109303-2751441dd157?auto=format&fit=crop&w=900&q=80";
+const MAX_RECENTLY_VIEWED = 6;
+const MAX_RECENT_SEARCH_TERMS = 6;
+const DEFAULT_RECENT_SEARCH_TERMS = ["saree", "jeans"];
+
+const formatMoney = (amount) => {
+  const numericAmount = Number(amount || 0);
+  return `INR ${numericAmount}`;
+};
+
+const normalizeRecentlyViewedItem = (post) => ({
+  id: String(post?.id || ""),
+  title: post?.title || "Item",
+  price: formatMoney(post?.price),
+  image: post?.cover_image_url || post?.images?.[0]?.url || FALLBACK_PRODUCT_IMAGE,
+});
 
 export default function FeedScreen() {
   const navigation = useNavigation();
   const { isAuthenticated } = useAuth();
   const [stores, setStores] = useState([]);
   const [marketsData, setMarketsData] = useState([]);
+  const [displayedStores, setDisplayedStores] = useState([]);
+  const [recentSearchTerms, setRecentSearchTerms] = useState(DEFAULT_RECENT_SEARCH_TERMS);
+  const [recentlyViewedItems, setRecentlyViewedItems] = useState([]);
+  const [activeStoreQuery, setActiveStoreQuery] = useState("");
   const [loadingStores, setLoadingStores] = useState(true);
   const [applyingFilters, setApplyingFilters] = useState(false);
   const [storesError, setStoresError] = useState("");
@@ -63,6 +63,104 @@ export default function FeedScreen() {
   useEffect(() => {
     fetchData();
   }, []);
+
+  const loadRecentlyViewedItems = useCallback(async () => {
+    try {
+      const storedValue = await AsyncStorage.getItem(RECENTLY_VIEWED_STORAGE_KEY);
+      const parsedIds = JSON.parse(storedValue || "[]");
+      const recentIds = Array.isArray(parsedIds)
+        ? parsedIds.map((item) => String(item || "").trim()).filter(Boolean).slice(0, MAX_RECENTLY_VIEWED)
+        : [];
+
+      if (!recentIds.length) {
+        setRecentlyViewedItems([]);
+        return;
+      }
+
+      const responses = await Promise.all(
+        recentIds.map((postId) => posts.getById(postId).catch(() => null))
+      );
+
+      const nextItems = responses
+        .map((response) => response?.post || response)
+        .filter((post) => post?.id)
+        .map(normalizeRecentlyViewedItem);
+
+      setRecentlyViewedItems(nextItems);
+    } catch (e) {
+      setRecentlyViewedItems([]);
+    }
+  }, []);
+
+  const loadRecentSearchTerms = useCallback(async () => {
+    try {
+      const storedValue = await AsyncStorage.getItem(RECENT_SEARCH_TERMS_STORAGE_KEY);
+      const parsedTerms = JSON.parse(storedValue || "[]");
+      const nextTerms = Array.isArray(parsedTerms)
+        ? parsedTerms.map((item) => String(item || "").trim()).filter(Boolean).slice(0, MAX_RECENT_SEARCH_TERMS)
+        : [];
+
+      setRecentSearchTerms(nextTerms.length ? nextTerms : DEFAULT_RECENT_SEARCH_TERMS);
+    } catch (e) {
+      setRecentSearchTerms(DEFAULT_RECENT_SEARCH_TERMS);
+    }
+  }, []);
+
+  const saveRecentlyViewedPostId = useCallback(
+    async (postId) => {
+      const normalizedPostId = String(postId || "").trim();
+
+      if (!normalizedPostId) {
+        return;
+      }
+
+      try {
+        const storedValue = await AsyncStorage.getItem(RECENTLY_VIEWED_STORAGE_KEY);
+        const parsedIds = JSON.parse(storedValue || "[]");
+        const currentIds = Array.isArray(parsedIds)
+          ? parsedIds.map((item) => String(item || "").trim()).filter(Boolean)
+          : [];
+        const nextIds = [normalizedPostId, ...currentIds.filter((item) => item !== normalizedPostId)].slice(
+          0,
+          MAX_RECENTLY_VIEWED
+        );
+
+        await AsyncStorage.setItem(RECENTLY_VIEWED_STORAGE_KEY, JSON.stringify(nextIds));
+        await loadRecentlyViewedItems();
+      } catch (e) {
+        console.error("Failed to save recently viewed item:", e);
+      }
+    },
+    [loadRecentlyViewedItems]
+  );
+
+  const saveRecentSearchTerm = useCallback(
+    async (term) => {
+      const normalizedTerm = String(term || "").trim().toLowerCase();
+
+      if (!normalizedTerm) {
+        return;
+      }
+
+      try {
+        const storedValue = await AsyncStorage.getItem(RECENT_SEARCH_TERMS_STORAGE_KEY);
+        const parsedTerms = JSON.parse(storedValue || "[]");
+        const currentTerms = Array.isArray(parsedTerms)
+          ? parsedTerms.map((item) => String(item || "").trim().toLowerCase()).filter(Boolean)
+          : DEFAULT_RECENT_SEARCH_TERMS;
+        const nextTerms = [normalizedTerm, ...currentTerms.filter((item) => item !== normalizedTerm)].slice(
+          0,
+          MAX_RECENT_SEARCH_TERMS
+        );
+
+        await AsyncStorage.setItem(RECENT_SEARCH_TERMS_STORAGE_KEY, JSON.stringify(nextTerms));
+        setRecentSearchTerms(nextTerms);
+      } catch (e) {
+        console.error("Failed to save recent search term:", e);
+      }
+    },
+    []
+  );
 
   const fetchData = async () => {
     try {
@@ -75,28 +173,38 @@ export default function FeedScreen() {
 
       const nextStores = Array.isArray(shopsData?.shops) ? shopsData.shops : [];
       const nextMarkets = Array.isArray(marketsRes?.markets) ? marketsRes.markets : [];
-      
       setStores(nextStores);
+      setDisplayedStores(nextStores);
       setMarketsData(nextMarkets);
     } catch (e) {
       console.error("Failed to load feed data:", e);
       setStoresError(e?.message || "Failed to load discovery stores");
       setStores([]);
+      setDisplayedStores([]);
       setMarketsData([]);
     } finally {
       setLoadingStores(false);
     }
   };
 
+  useEffect(() => {
+    loadRecentlyViewedItems();
+  }, [loadRecentlyViewedItems]);
+
+  useEffect(() => {
+    loadRecentSearchTerms();
+  }, [loadRecentSearchTerms]);
+
   const handleApplyDiscoveryFilters = async (params) => {
     try {
       setApplyingFilters(true);
       setStoresError("");
+      setActiveStoreQuery("");
       const shopsData = await shops.discover(params || {});
-      setStores(Array.isArray(shopsData?.shops) ? shopsData.shops : []);
+      setDisplayedStores(Array.isArray(shopsData?.shops) ? shopsData.shops : []);
     } catch (e) {
       console.error("Failed to apply discovery filters:", e);
-      setStores([]);
+      setDisplayedStores([]);
       setStoresError(e?.message || "Failed to apply discovery filters");
     } finally {
       setApplyingFilters(false);
@@ -127,6 +235,7 @@ export default function FeedScreen() {
         return;
       }
 
+      await saveRecentlyViewedPostId(postId);
       navigation.navigate("productDetail", { productId: postId });
     } catch (e) {
       setLookupError("No product found for this post URL.");
@@ -135,7 +244,33 @@ export default function FeedScreen() {
     }
   };
 
-  const topMarkets = (marketsData.length ? marketsData : FALLBACK_TOP_MARKETS).slice(0, 3);
+  const handleRecentSearchPress = useCallback(
+    async (term) => {
+      const normalizedTerm = String(term || "").trim();
+
+      if (!normalizedTerm) {
+        return;
+      }
+
+      try {
+        setLoadingStores(true);
+        setStoresError("");
+        setActiveStoreQuery(normalizedTerm);
+        await saveRecentSearchTerm(normalizedTerm);
+
+        const shopsData = await shops.discover({ q: normalizedTerm });
+        setDisplayedStores(Array.isArray(shopsData?.shops) ? shopsData.shops : []);
+      } catch (e) {
+        setDisplayedStores([]);
+        setStoresError(e?.message || `Failed to load stores for ${normalizedTerm}.`);
+      } finally {
+        setLoadingStores(false);
+      }
+    },
+    [saveRecentSearchTerm]
+  );
+
+  const topMarkets = (marketsData.length ? marketsData : FALLBACK_TOP_MARKETS).slice(0, 6);
 
   return (
     <SafeAreaView style={styles.container}>
@@ -182,16 +317,8 @@ export default function FeedScreen() {
           <Text style={styles.topMarketsTitle}>Top markets</Text>
 
           {topMarkets.map((market, index) => {
-            const marketName = market?.city || market?.name || market?.market_name || `Market ${index + 1}`;
-            const dropCount = Number(
-              market?.drop_count ??
-              market?.drops_count ??
-              market?.dropCount ??
-              market?.post_count ??
-              market?.listing_count ??
-              market?.count ??
-              0
-            );
+            const marketName = market?.city || `Market ${index + 1}`;
+            const dropCount = Number(market?.post_count || 0);
 
             return (
               <View key={String(market?.id || marketName || index)} style={styles.topMarketsRow}>
@@ -206,26 +333,57 @@ export default function FeedScreen() {
           })}
         </View>
 
+        <View style={styles.recentSearchCard}>
+          <Text style={styles.recentSearchTitle}>Recently searched</Text>
+
+          <View style={styles.recentSearchChipWrap}>
+            {recentSearchTerms.map((term) => {
+              const isActive = activeStoreQuery.toLowerCase() === String(term).toLowerCase();
+
+              return (
+                <TouchableOpacity
+                  key={term}
+                  style={[styles.recentSearchChip, isActive && styles.recentSearchChipActive]}
+                  onPress={() => handleRecentSearchPress(term)}
+                  disabled={loadingStores && isActive}
+                >
+                  <Text style={[styles.recentSearchChipText, isActive && styles.recentSearchChipTextActive]}>{term}</Text>
+                </TouchableOpacity>
+              );
+            })}
+          </View>
+        </View>
+
         <View style={styles.recentlyViewedCard}>
           <View style={styles.recentlyViewedHeader}>
             <Text style={styles.recentlyViewedTitle}>Recently viewed</Text>
-            <TouchableOpacity onPress={fetchData}>
+            <TouchableOpacity onPress={loadRecentlyViewedItems}>
               <Text style={styles.recentlyViewedRefresh}>Refresh</Text>
             </TouchableOpacity>
           </View>
 
-          {RECENTLY_VIEWED_ITEMS.map((item) => (
-            <View key={item.id} style={styles.recentlyViewedRow}>
-              <Image source={{ uri: item.image }} style={styles.recentlyViewedImage} />
-
-              <View style={styles.recentlyViewedContent}>
-                <Text style={styles.recentlyViewedName}>{item.title}</Text>
-                <Text style={styles.recentlyViewedPrice}>{item.price}</Text>
-              </View>
-
-              <FontAwesome5 name="chevron-right" size={18} color="#98A2B3" />
+          {recentlyViewedItems.length === 0 ? (
+            <View style={styles.recentEmptyState}>
+              <Text style={styles.recentEmptyStateText}>Search for a post to build your recently viewed list.</Text>
             </View>
-          ))}
+          ) : (
+            recentlyViewedItems.map((item) => (
+              <TouchableOpacity
+                key={item.id}
+                style={styles.recentlyViewedRow}
+                onPress={() => navigation.navigate("productDetail", { productId: item.id })}
+              >
+                <Image source={{ uri: item.image }} style={styles.recentlyViewedImage} />
+
+                <View style={styles.recentlyViewedContent}>
+                  <Text style={styles.recentlyViewedName}>{item.title}</Text>
+                  <Text style={styles.recentlyViewedPrice}>{item.price}</Text>
+                </View>
+
+                <FontAwesome5 name="chevron-right" size={18} color="#98A2B3" />
+              </TouchableOpacity>
+            ))
+          )}
         </View>
 
         <Text style={styles.sectionTitle}>Trending stores</Text>
@@ -251,13 +409,13 @@ export default function FeedScreen() {
           </View>
         ) : null}
 
-        {!loadingStores && !storesError && stores.length === 0 ? (
+        {!loadingStores && !storesError && displayedStores.length === 0 ? (
           <View style={styles.stateCard}>
             <Text style={styles.stateText}>No shops found for the selected filters.</Text>
           </View>
         ) : null}
 
-        {!loadingStores && !storesError && stores.map((store) => (
+        {!loadingStores && !storesError && displayedStores.map((store) => (
           <StoreCard key={store.id} store={store} />
         ))}
 
@@ -356,7 +514,7 @@ const styles = StyleSheet.create({
     elevation: 4,
   },
   topMarketsTitle: {
-    fontSize: 18,
+    fontSize: 16,
     fontWeight: "500",
     color: "#475467",
     paddingHorizontal: 10,
@@ -391,6 +549,56 @@ const styles = StyleSheet.create({
     color: "#667085",
   },
 
+  recentSearchCard: {
+    backgroundColor: "#F8F4EA",
+    marginHorizontal: 16,
+    marginTop: 0,
+    marginBottom: 12,
+    borderRadius: 34,
+    borderWidth: 1,
+    borderColor: "#D8DEE8",
+    paddingHorizontal: 20,
+    paddingTop: 18,
+    paddingBottom: 20,
+    shadowColor: "#000",
+    shadowOffset: { width: 0, height: 10 },
+    shadowOpacity: 0.08,
+    shadowRadius: 20,
+    elevation: 4,
+  },
+  recentSearchTitle: {
+    fontSize: 16,
+    fontWeight: "500",
+    color: "#475467",
+    marginBottom: 14,
+  },
+  recentSearchChipWrap: {
+    flexDirection: "row",
+    flexWrap: "wrap",
+  },
+  recentSearchChip: {
+    backgroundColor: "#FFFFFF",
+    borderRadius: 999,
+    borderWidth: 1,
+    borderColor: "#D8DEE8",
+    paddingHorizontal: 28,
+    paddingVertical: 14,
+    marginRight: 12,
+    marginBottom: 8,
+  },
+  recentSearchChipActive: {
+    backgroundColor: "#111827",
+    borderColor: "#111827",
+  },
+  recentSearchChipText: {
+    fontSize: 16,
+    fontWeight: "500",
+    color: "#111827",
+  },
+  recentSearchChipTextActive: {
+    color: "#FFFFFF",
+  },
+
   recentlyViewedCard: {
     backgroundColor: "#F8F4EA",
     marginHorizontal: 16,
@@ -416,7 +624,7 @@ const styles = StyleSheet.create({
     marginBottom: 12,
   },
   recentlyViewedTitle: {
-    fontSize: 18,
+    fontSize: 16,
     fontWeight: "500",
     color: "#475467",
   },
@@ -424,6 +632,20 @@ const styles = StyleSheet.create({
     fontSize: 16,
     fontWeight: "500",
     color: "#667085",
+  },
+  recentEmptyState: {
+    backgroundColor: "#FFFFFF",
+    borderRadius: 30,
+    borderWidth: 1,
+    borderColor: "#D8DEE8",
+    paddingHorizontal: 16,
+    paddingVertical: 18,
+    marginTop: 10,
+  },
+  recentEmptyStateText: {
+    fontSize: 13,
+    color: "#667085",
+    textAlign: "center",
   },
   recentlyViewedRow: {
     backgroundColor: "#FFFFFF",
