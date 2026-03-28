@@ -14,6 +14,7 @@ export const useAuth = () => {
 export const AuthProvider = ({ children }) => {
   const [user, setUser] = useState(null);
   const [loading, setLoading] = useState(true);
+  const [initializing, setInitializing] = useState(true);
   const [isAuthenticated, setIsAuthenticated] = useState(false);
 
   // Check authentication status on app start
@@ -47,6 +48,7 @@ export const AuthProvider = ({ children }) => {
       setIsAuthenticated(false);
     } finally {
       setLoading(false);
+      setInitializing(false);
     }
   };
 
@@ -54,8 +56,9 @@ export const AuthProvider = ({ children }) => {
     try {
       setLoading(true);
       const response = await businessAuth.login(email, password);
-      setUser(response.user || response);
-      setIsAuthenticated(true);
+      console.log('response========', response);
+      setUser(response?.user || response);
+      setIsAuthenticated(Boolean(response?.access_token || response?.user));
       return response;
     } catch (error) {
       throw error;
@@ -89,6 +92,7 @@ export const AuthProvider = ({ children }) => {
   const value = {
     user,
     loading,
+    initializing,
     isAuthenticated,
     login,
     register,

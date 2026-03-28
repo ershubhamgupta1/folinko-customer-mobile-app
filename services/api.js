@@ -97,11 +97,12 @@ export const removeAuthToken = async () => {
 
 // Generic API request function
 const apiRequest = async (endpoint, options = {}) => {
+  const { skipAuthRedirectOnUnauthorized = false, ...requestOptions } = options;
   const url = `${API_BASE}${endpoint}`;
   const token = await getAuthToken();
   const headers = {
     'Content-Type': 'application/json',
-    ...options.headers,
+    ...requestOptions.headers,
   };
 
   if (token) {
@@ -109,7 +110,7 @@ const apiRequest = async (endpoint, options = {}) => {
   }
 
   const config = {
-    ...options,
+    ...requestOptions,
     headers,
   };
 
@@ -120,13 +121,15 @@ const apiRequest = async (endpoint, options = {}) => {
       const errorData = await response.json().catch(() => ({}));
       
       // Handle authentication errors (401 Unauthorized)
-      if (response.status === 401) {
+      if (response.status === 401 && !skipAuthRedirectOnUnauthorized) {
         await removeAuthToken();
         // Navigate to LoginScreen
         safeRedirectToLogin();
         console.warn('Authentication expired - redirecting to login');
         return;
       }
+
+      return errorData;
       
       // throw new Error(errorData.message || `HTTP error! status: ${response.status}`);
     }
@@ -180,13 +183,43 @@ export const customerAuth = {
     const response = await apiRequest('/api/customer/auth/login', {
       method: 'POST',
       body: JSON.stringify({ email, password }),
+      skipAuthRedirectOnUnauthorized: true,
     });
 
     if (response?.access_token) {
       await setAuthToken(response.access_token);
+      return response;
     }
 
-    return response;
+    if (response === undefined) {
+      throw new Error('Unable to login right now. Please try again.');
+    }
+
+    const errorMessage =
+      response?.errors?.email?.[0] ||
+      response?.errors?.password?.[0] ||
+      response?.errors?.[0] ||
+      response?.detail ||
+      response?.error ||
+      response?.message ||
+      'Invalid username or password';
+
+    const normalizedErrorMessage = String(errorMessage).toLowerCase();
+
+    if (
+      !errorMessage ||
+      normalizedErrorMessage.includes('validation_error') ||
+      normalizedErrorMessage.includes('invalid') ||
+      normalizedErrorMessage.includes('incorrect') ||
+      normalizedErrorMessage.includes('credential') ||
+      normalizedErrorMessage.includes('password') ||
+      normalizedErrorMessage.includes('email') ||
+      normalizedErrorMessage.includes('user')
+    ) {
+      throw new Error('Invalid username or password');
+    }
+
+    throw new Error(errorMessage);
   },
 
   getMe: () => apiRequest('/api/customer/auth/me'),

@@ -117,9 +117,9 @@ const MainTabs = () => {
 
 
 const AppNavigator = () => {
-    const { isAuthenticated, loading } = useAuth();
+    const { isAuthenticated, initializing } = useAuth();
 
-  if (loading) {
+  if (initializing) {
     return (
       <View style={styles.loadingContainer}>
         <ActivityIndicator size="large" color="#000" />
@@ -128,7 +128,7 @@ const AppNavigator = () => {
   }
   if (!isAuthenticated) {
     return (
-      <Stack.Navigator screenOptions={{ headerShown: false }}>
+      <Stack.Navigator key="guest-stack" initialRouteName="feedScreen" screenOptions={{ headerShown: false }}>
         <Stack.Screen name="feedScreen" component={FeedScreen} />
         <Stack.Screen name="productDetail" component={ProductDetailScreen} />
         <Stack.Screen name="storeDetail" component={StoreDetailScreen} />
@@ -138,7 +138,7 @@ const AppNavigator = () => {
   }
   return (
     // <NavigationContainer>
-      <Stack.Navigator screenOptions={{ headerShown: false }}>
+      <Stack.Navigator key="auth-stack" initialRouteName="Main" screenOptions={{ headerShown: false }}>
         <Stack.Screen name="Main" component={MainTabs} />
         <Stack.Screen name="orderScreen" component={OrdersScreen} />
         <Stack.Screen name="orderDetail" component={OrderDetailScreen} />
@@ -148,8 +148,6 @@ const AppNavigator = () => {
         <Stack.Screen name="feedScreen" component={FeedScreen} />
         <Stack.Screen name="productDetail" component={ProductDetailScreen} />
         <Stack.Screen name="storeDetail" component={StoreDetailScreen} />
-
-        <Stack.Screen name="Login" component={LoginScreen} />
 
       </Stack.Navigator>
     // </NavigationContainer>

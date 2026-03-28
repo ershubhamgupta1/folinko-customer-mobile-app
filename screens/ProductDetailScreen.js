@@ -521,7 +521,12 @@ export default function ProductDetailScreen() {
   };
 
   const handleBackToFeed = () => {
-   navigation.navigate("feedScreen", {  });
+    if (navigation.canGoBack()) {
+      navigation.goBack();
+      return;
+    }
+
+    navigation.navigate("feedScreen");
   };
 
   if (loading) {

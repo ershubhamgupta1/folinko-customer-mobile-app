@@ -222,7 +222,12 @@ export default function OrderDetailScreen({ navigation, route }) {
               {orderItems.map((item, index) => {
                 const productId = getItemProductId(item);
                 return (
-                  <View key={String(productId || item?.id || index)} style={styles.itemCard}>
+                  <TouchableOpacity
+                    key={String(productId || item?.id || index)}
+                    style={styles.itemCard}
+                    disabled={!productId}
+                    onPress={() => productId && navigation.navigate("productDetail", { productId })}
+                  >
                     <Image source={{ uri: getItemImage(item) }} style={styles.itemImage} />
                     <View style={styles.itemInfo}>
                       <View style={styles.rowBetween}>
@@ -230,9 +235,6 @@ export default function OrderDetailScreen({ navigation, route }) {
                           <Text style={styles.itemTitle} numberOfLines={1}>{getItemTitle(item)}</Text>
                           {!!getItemSeller(item) ? <Text style={styles.itemSeller}>{getItemSeller(item)}</Text> : null}
                         </View>
-                        <TouchableOpacity style={styles.smallAction} disabled={!productId} onPress={() => productId && navigation.navigate("productDetail", { productId })}>
-                          <Text style={styles.smallActionText}>View</Text>
-                        </TouchableOpacity>
                       </View>
                       <View style={styles.trustRow}>
                         <Text style={styles.trustText}>Trust</Text>
@@ -241,7 +243,7 @@ export default function OrderDetailScreen({ navigation, route }) {
                       <Text style={styles.itemMeta}>{`Price ${formatMoney(getItemAmount(item))}`}</Text>
                       <Text style={styles.itemMeta}>{`Quantity ${getItemQuantity(item)}`}</Text>
                     </View>
-                  </View>
+                  </TouchableOpacity>
                 );
               })}
             </View>
@@ -314,8 +316,6 @@ const styles = StyleSheet.create({
   itemInfoMain: { flex: 1, marginRight: 12 },
   itemTitle: { fontSize: 13, fontWeight: "700", color: "#101828" },
   itemSeller: { fontSize: 11, color: "#667085", marginTop: 2 },
-  smallAction: { borderWidth: 1, borderColor: "#D0D5DD", borderRadius: 999, paddingHorizontal: 12, paddingVertical: 7, backgroundColor: "#FFFFFF" },
-  smallActionText: { fontSize: 11, fontWeight: "600", color: "#111827" },
   trustRow: { flexDirection: "row", alignItems: "center", marginTop: 8 },
   trustText: { fontSize: 11, color: "#475467" },
   progressBar: { width: 76, height: 6, borderRadius: 999, backgroundColor: "#E5E7EB", marginLeft: 8, overflow: "hidden" },
