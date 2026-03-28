@@ -1,5 +1,6 @@
 import React, { useCallback, useEffect, useState } from "react";
 import AsyncStorage from "@react-native-async-storage/async-storage";
+import { ResizeMode, Video } from "expo-av";
 import {
   ActivityIndicator,
   Image,
@@ -28,6 +29,7 @@ const FALLBACK_TOP_MARKETS = [
 const RECENTLY_VIEWED_STORAGE_KEY = "@recently_viewed_post_ids";
 const RECENT_SEARCH_TERMS_STORAGE_KEY = "@recent_search_terms";
 const FALLBACK_PRODUCT_IMAGE = "https://images.unsplash.com/photo-1603252109303-2751441dd157?auto=format&fit=crop&w=900&q=80";
+const FEATURED_REEL_URL = "https://folinko.com/uploads/feed/fashion.mp4";
 const MAX_RECENTLY_VIEWED = 6;
 const MAX_RECENT_SEARCH_TERMS = 6;
 const DEFAULT_RECENT_SEARCH_TERMS = ["saree", "jeans"];
@@ -301,6 +303,17 @@ export default function FeedScreen() {
           errorMessage={lookupError}
         />
 
+        <View style={styles.reelCard}>
+          <Video
+            source={{ uri: FEATURED_REEL_URL }}
+            style={styles.reelVideo}
+            resizeMode={ResizeMode.COVER}
+            shouldPlay
+            isLooping
+            isMuted
+          />
+        </View>
+
         <View style={styles.statsContainer}>
           <View style={styles.statBox}>
             <Text style={styles.statLabel}>Stores right now</Text>
@@ -465,6 +478,34 @@ const styles = StyleSheet.create({
     fontSize: 12,
     fontWeight: "600",
     color: "#111827",
+  },
+
+  reelCard: {
+    marginHorizontal: 28,
+    marginTop: 4,
+    marginBottom: 8,
+    borderRadius: 28,
+    overflow: "hidden",
+    borderWidth: 1,
+    borderColor: "#D8DEE8",
+    backgroundColor: "#000000",
+    shadowColor: "#000",
+    shadowOffset: { width: 0, height: 10 },
+    shadowOpacity: 0.08,
+    shadowRadius: 20,
+    elevation: 4,
+    width: '60%',
+    alignSelf: "center",
+    justifyContent: "center",
+    flex: 1,
+    display: 'flex'
+
+  },
+  reelVideo: {
+    width: "100%",
+    aspectRatio: 9 / 16,
+    maxHeight: 400,
+    backgroundColor: "#000000",
   },
 
   statsContainer: {
