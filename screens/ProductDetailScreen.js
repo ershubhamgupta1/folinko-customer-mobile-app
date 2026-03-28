@@ -11,7 +11,7 @@ import {
   TouchableOpacity,
   View,
 } from "react-native";
-import { SafeAreaView } from "react-native-safe-area-context";
+import { SafeAreaView, useSafeAreaInsets } from "react-native-safe-area-context";
 import { FontAwesome5 } from "@expo/vector-icons";
 import { useNavigation, useRoute } from "@react-navigation/native";
 import { useAuth } from "../contexts/AuthContext";
@@ -188,6 +188,7 @@ const formatMoney = (amount) => {
 export default function ProductDetailScreen() {
   const navigation = useNavigation();
   const route = useRoute();
+  const insets = useSafeAreaInsets();
   const { logout } = useAuth();
   const productId = route.params?.productId ?? route.params?.id;
   const [productData, setProductData] = useState(null);
@@ -558,8 +559,11 @@ export default function ProductDetailScreen() {
   }
 
   return (
-    <SafeAreaView style={styles.safeArea} edges={["top"]}>
-      <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={styles.contentContainer}>
+    <SafeAreaView style={styles.safeArea} edges={["top", "bottom"]}>
+      <ScrollView
+        showsVerticalScrollIndicator={false}
+        contentContainerStyle={[styles.contentContainer, { paddingBottom: insets.bottom + 28 }]}
+      >
         <View style={styles.headerRow}>
           <TouchableOpacity style={styles.backButton} onPress={handleBackToFeed}>
             <FontAwesome5 name="arrow-left" size={12} color="#111827" />

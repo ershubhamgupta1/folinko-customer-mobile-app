@@ -8,7 +8,7 @@ import {
   TouchableOpacity,
   View,
 } from "react-native";
-import { SafeAreaView } from "react-native-safe-area-context";
+import { SafeAreaView, useSafeAreaInsets } from "react-native-safe-area-context";
 import { FontAwesome5 } from "@expo/vector-icons";
 import Header from "../components/Header";
 import { orders } from "../services/api";
@@ -94,6 +94,7 @@ const getStatusStepIndex = (status) => {
 };
 
 export default function OrderDetailScreen({ navigation, route }) {
+  const insets = useSafeAreaInsets();
   const routeOrder = route?.params?.order || null;
   const routeOrderId = route?.params?.orderId || routeOrder?.id || "";
   const [order, setOrder] = useState(routeOrder);
@@ -147,8 +148,12 @@ export default function OrderDetailScreen({ navigation, route }) {
   };
 
   return (
-    <SafeAreaView style={styles.safeArea} edges={["top"]}>
-      <ScrollView style={styles.container} contentContainerStyle={styles.content} showsVerticalScrollIndicator={false}>
+    <SafeAreaView style={styles.safeArea} edges={["top", "bottom"]}>
+      <ScrollView
+        style={styles.container}
+        contentContainerStyle={[styles.content, { paddingBottom: insets.bottom + 32 }]}
+        showsVerticalScrollIndicator={false}
+      >
         <View style={styles.headerRow}>
           <TouchableOpacity style={styles.backButton} onPress={handleBack}>
             <FontAwesome5 name="arrow-left" size={12} color="#111827" />
