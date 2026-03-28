@@ -1,6 +1,7 @@
-import React, { useCallback, useEffect, useState } from "react";
+import React, { useCallback, useEffect, useMemo, useState } from "react";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import { ResizeMode, Video } from "expo-av";
+import * as Location from "expo-location";
 import {
   ActivityIndicator,
   Image,
@@ -32,12 +33,23 @@ const FALLBACK_PRODUCT_IMAGE = "https://images.unsplash.com/photo-1603252109303-
 const FEATURED_REEL_URL = "https://folinko.com/uploads/feed/fashion.mp4";
 const MAX_RECENTLY_VIEWED = 6;
 const MAX_RECENT_SEARCH_TERMS = 6;
+const MAX_VISIBLE_MARKET_CITIES = 4;
 const DEFAULT_RECENT_SEARCH_TERMS = ["saree", "jeans"];
 
 const formatMoney = (amount) => {
   const numericAmount = Number(amount || 0);
   return `INR ${numericAmount}`;
 };
+
+const formatCityLabel = (value) =>
+  String(value || "")
+    .trim()
+    .split(/\s+/)
+    .filter(Boolean)
+    .map((item) => item.charAt(0).toUpperCase() + item.slice(1).toLowerCase())
+    .join(" ");
+
+const getCityKey = (value) => formatCityLabel(value).toLowerCase();
 
 const normalizeRecentlyViewedItem = (post) => ({
   id: String(post?.id || ""),
@@ -52,12 +64,17 @@ export default function FeedScreen() {
   const [stores, setStores] = useState([]);
   const [marketsData, setMarketsData] = useState([]);
   const [displayedStores, setDisplayedStores] = useState([]);
+  const [selectedCity, setSelectedCity] = useState("");
+  const [activeDiscoveryFilters, setActiveDiscoveryFilters] = useState({});
+  const [showAllMarketplaceCities, setShowAllMarketplaceCities] = useState(false);
   const [recentSearchTerms, setRecentSearchTerms] = useState(DEFAULT_RECENT_SEARCH_TERMS);
   const [recentlyViewedItems, setRecentlyViewedItems] = useState([]);
   const [activeStoreQuery, setActiveStoreQuery] = useState("");
   const [loadingStores, setLoadingStores] = useState(true);
   const [applyingFilters, setApplyingFilters] = useState(false);
   const [storesError, setStoresError] = useState("");
+  const [detectingCity, setDetectingCity] = useState(false);
+  const [cityDetectionError, setCityDetectionError] = useState("");
   const [lookupUrl, setLookupUrl] = useState("");
   const [lookingUpPost, setLookingUpPost] = useState(false);
   const [lookupError, setLookupError] = useState("");
@@ -164,6 +181,37 @@ export default function FeedScreen() {
     []
   );
 
+  const loadDisplayedStores = useCallback(
+    async ({ city = selectedCity, q = activeStoreQuery, filters = activeDiscoveryFilters, showLoading = true } = {}) => {
+      const normalizedCity = formatCityLabel(city);
+      const normalizedQuery = String(q || "").trim();
+
+      if (showLoading) {
+        setLoadingStores(true);
+      }
+
+      setStoresError("");
+
+      try {
+        const shopsData = await shops.discover({
+          ...(filters || {}),
+          ...(normalizedCity ? { city: normalizedCity } : {}),
+          ...(normalizedQuery ? { q: normalizedQuery } : {}),
+        });
+
+        setDisplayedStores(Array.isArray(shopsData?.shops) ? shopsData.shops : []);
+      } catch (e) {
+        setDisplayedStores([]);
+        setStoresError(e?.message || "Failed to load discovery stores");
+      } finally {
+        if (showLoading) {
+          setLoadingStores(false);
+        }
+      }
+    },
+    [activeDiscoveryFilters, activeStoreQuery, selectedCity]
+  );
+
   const fetchData = async () => {
     try {
       setStoresError("");
@@ -189,6 +237,66 @@ export default function FeedScreen() {
     }
   };
 
+  const marketplaceCities = useMemo(() => {
+    const nextCities = new Map();
+
+    (marketsData.length ? marketsData : FALLBACK_TOP_MARKETS).forEach((market, index) => {
+      const cityLabel = formatCityLabel(market?.city || market?.name || market?.market_name);
+
+      if (!cityLabel) {
+        return;
+      }
+
+      const cityKey = getCityKey(cityLabel);
+
+      if (!nextCities.has(cityKey)) {
+        nextCities.set(cityKey, {
+          id: String(market?.id || cityKey || index),
+          city: cityLabel,
+          shopCount: Number(market?.post_count || 0),
+        });
+      }
+    });
+
+    if (selectedCity) {
+      const selectedCityKey = getCityKey(selectedCity);
+
+      if (selectedCityKey && !nextCities.has(selectedCityKey)) {
+        nextCities.set(selectedCityKey, {
+          id: selectedCityKey,
+          city: formatCityLabel(selectedCity),
+          shopCount: 0,
+        });
+      }
+    }
+
+    return Array.from(nextCities.values());
+  }, [marketsData, selectedCity]);
+
+  const visibleMarketplaceCities = useMemo(() => {
+    if (showAllMarketplaceCities || marketplaceCities.length <= MAX_VISIBLE_MARKET_CITIES) {
+      return marketplaceCities;
+    }
+
+    const defaultVisibleCities = marketplaceCities.slice(0, MAX_VISIBLE_MARKET_CITIES);
+    const selectedCityKey = getCityKey(selectedCity);
+    const hasVisibleSelectedCity = defaultVisibleCities.some((item) => getCityKey(item.city) === selectedCityKey);
+
+    if (!selectedCityKey || hasVisibleSelectedCity) {
+      return defaultVisibleCities;
+    }
+
+    const selectedCityItem = marketplaceCities.find((item) => getCityKey(item.city) === selectedCityKey);
+
+    if (!selectedCityItem) {
+      return defaultVisibleCities;
+    }
+
+    return [...defaultVisibleCities.slice(0, MAX_VISIBLE_MARKET_CITIES - 1), selectedCityItem];
+  }, [marketplaceCities, selectedCity, showAllMarketplaceCities]);
+
+  const hasMoreMarketplaceCities = marketplaceCities.length > MAX_VISIBLE_MARKET_CITIES;
+
   useEffect(() => {
     loadRecentlyViewedItems();
   }, [loadRecentlyViewedItems]);
@@ -198,16 +306,13 @@ export default function FeedScreen() {
   }, [loadRecentSearchTerms]);
 
   const handleApplyDiscoveryFilters = async (params) => {
+    const nextFilters = params || {};
+
     try {
       setApplyingFilters(true);
-      setStoresError("");
       setActiveStoreQuery("");
-      const shopsData = await shops.discover(params || {});
-      setDisplayedStores(Array.isArray(shopsData?.shops) ? shopsData.shops : []);
-    } catch (e) {
-      console.error("Failed to apply discovery filters:", e);
-      setDisplayedStores([]);
-      setStoresError(e?.message || "Failed to apply discovery filters");
+      setActiveDiscoveryFilters(nextFilters);
+      await loadDisplayedStores({ city: selectedCity, q: "", filters: nextFilters });
     } finally {
       setApplyingFilters(false);
     }
@@ -254,23 +359,63 @@ export default function FeedScreen() {
         return;
       }
 
-      try {
-        setLoadingStores(true);
-        setStoresError("");
-        setActiveStoreQuery(normalizedTerm);
-        await saveRecentSearchTerm(normalizedTerm);
-
-        const shopsData = await shops.discover({ q: normalizedTerm });
-        setDisplayedStores(Array.isArray(shopsData?.shops) ? shopsData.shops : []);
-      } catch (e) {
-        setDisplayedStores([]);
-        setStoresError(e?.message || `Failed to load stores for ${normalizedTerm}.`);
-      } finally {
-        setLoadingStores(false);
-      }
+      setActiveStoreQuery(normalizedTerm);
+      await saveRecentSearchTerm(normalizedTerm);
+      await loadDisplayedStores({ city: selectedCity, q: normalizedTerm, filters: activeDiscoveryFilters });
     },
-    [saveRecentSearchTerm]
+    [activeDiscoveryFilters, loadDisplayedStores, saveRecentSearchTerm, selectedCity]
   );
+
+  const handleSelectCity = useCallback(
+    async (city) => {
+      const nextCity = formatCityLabel(city);
+      setSelectedCity(nextCity);
+      setCityDetectionError("");
+      await loadDisplayedStores({ city: nextCity, q: activeStoreQuery, filters: activeDiscoveryFilters });
+    },
+    [activeDiscoveryFilters, activeStoreQuery, loadDisplayedStores]
+  );
+
+  const handleClearCityFilter = useCallback(async () => {
+    setSelectedCity("");
+    setCityDetectionError("");
+    await loadDisplayedStores({ city: "", q: activeStoreQuery, filters: activeDiscoveryFilters });
+  }, [activeDiscoveryFilters, activeStoreQuery, loadDisplayedStores]);
+
+  const handleAutoDetectCity = useCallback(async () => {
+    try {
+      setDetectingCity(true);
+      setCityDetectionError("");
+
+      const permissionResponse = await Location.requestForegroundPermissionsAsync();
+
+      if (permissionResponse.status !== "granted") {
+        throw new Error("Location permission is required to auto detect your city.");
+      }
+
+      const position = await Location.getCurrentPositionAsync({
+        accuracy: Location.Accuracy.Balanced,
+      });
+      const address = await Location.reverseGeocodeAsync({
+        latitude: position.coords.latitude,
+        longitude: position.coords.longitude,
+      });
+      const detectedCity = formatCityLabel(
+        address?.[0]?.city || address?.[0]?.subregion || address?.[0]?.district || address?.[0]?.region
+      );
+
+      if (!detectedCity) {
+        throw new Error("Could not detect your city.");
+      }
+
+      setSelectedCity(detectedCity);
+      await loadDisplayedStores({ city: detectedCity, q: activeStoreQuery, filters: activeDiscoveryFilters });
+    } catch (e) {
+      setCityDetectionError(e?.message || "Failed to auto detect your city.");
+    } finally {
+      setDetectingCity(false);
+    }
+  }, [activeDiscoveryFilters, activeStoreQuery, loadDisplayedStores]);
 
   const topMarkets = (marketsData.length ? marketsData : FALLBACK_TOP_MARKETS).slice(0, 6);
 
@@ -289,6 +434,67 @@ export default function FeedScreen() {
             </TouchableOpacity>
           ) : null}
         />
+        <View style={styles.marketplaceCard}>
+          <View style={styles.marketplaceHeaderRow}>
+            <View style={styles.marketplaceTitleWrap}>
+              <Text style={styles.marketplaceEyebrow}>Marketplace</Text>
+              <Text style={styles.marketplaceTitle}>Folinko</Text>
+            </View>
+
+            <View style={styles.marketplaceActionRow}>
+              <TouchableOpacity
+                style={styles.marketplaceActionButton}
+                onPress={handleAutoDetectCity}
+                disabled={detectingCity}
+              >
+                <FontAwesome5 name="crosshairs" size={18} color="#1F2937" />
+                <Text style={styles.marketplaceActionText}>{detectingCity ? "Detecting..." : "Auto detect"}</Text>
+              </TouchableOpacity>
+
+              {/* <TouchableOpacity style={styles.marketplaceActionButton} onPress={handleClearCityFilter}>
+                <FontAwesome5 name="map-marker-alt" size={18} color="#1F2937" />
+                <Text style={styles.marketplaceActionText}>{selectedCity || "All cities"}</Text>
+              </TouchableOpacity> */}
+            </View>
+          </View>
+
+          {!!cityDetectionError ? <Text style={styles.marketplaceErrorText}>{cityDetectionError}</Text> : null}
+
+          <View style={styles.marketplaceChipWrap}>
+            <TouchableOpacity
+              style={[styles.marketplaceChip, !selectedCity && styles.marketplaceChipActive]}
+              onPress={handleClearCityFilter}
+            >
+              <Text style={[styles.marketplaceChipTitle, !selectedCity && styles.marketplaceChipTitleActive]}>All</Text>
+            </TouchableOpacity>
+
+            {visibleMarketplaceCities.map((market) => {
+              const isSelected = getCityKey(selectedCity) === getCityKey(market.city);
+
+              return (
+                <TouchableOpacity
+                  key={market.id}
+                  style={[styles.marketplaceChip, isSelected && styles.marketplaceChipActive]}
+                  onPress={() => handleSelectCity(market.city)}
+                >
+                  <Text style={[styles.marketplaceChipTitle, isSelected && styles.marketplaceChipTitleActive]}>
+                    {market.city}
+                  </Text>
+                  <Text style={[styles.marketplaceChipCount, isSelected && styles.marketplaceChipCountActive]}>{` ${market.shopCount} ${market.shopCount === 1 ? "shop" : "shops"}`}</Text>
+                </TouchableOpacity>
+              );
+            })}
+
+            {hasMoreMarketplaceCities ? (
+              <TouchableOpacity
+                style={styles.marketplaceMoreChip}
+                onPress={() => setShowAllMarketplaceCities((value) => !value)}
+              >
+                <Text style={styles.marketplaceMoreChipText}>{showAllMarketplaceCities ? "Less" : "More"}</Text>
+              </TouchableOpacity>
+            ) : null}
+          </View>
+        </View>
         {/* Header */}
         <HeaderSearch
           value={lookupUrl}
@@ -463,6 +669,126 @@ export default function FeedScreen() {
 
 const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: "#F7F7F7" },
+  marketplaceCard: {
+    backgroundColor: "#FFFFFF",
+    marginHorizontal: 16,
+    marginTop: 12,
+    marginBottom: 12,
+    borderRadius: 34,
+    borderWidth: 1,
+    borderColor: "#D8DEE8",
+    paddingHorizontal: 16,
+    paddingTop: 18,
+    paddingBottom: 18,
+    shadowColor: "#000",
+    shadowOffset: { width: 0, height: 10 },
+    shadowOpacity: 0.08,
+    shadowRadius: 20,
+    elevation: 4,
+  },
+  marketplaceHeaderRow: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "flex-start",
+    flexWrap: "wrap",
+  },
+  marketplaceTitleWrap: {
+    marginRight: 12,
+    marginBottom: 12,
+  },
+  marketplaceEyebrow: {
+    fontSize: 14,
+    color: "#667085",
+    fontWeight: "500",
+  },
+  marketplaceTitle: {
+    marginTop: 6,
+    fontSize: 16,
+    lineHeight: 28,
+    fontWeight: "700",
+    color: "#101828",
+  },
+  marketplaceActionRow: {
+    flexDirection: "row",
+    flexWrap: "wrap",
+    justifyContent: "flex-end",
+    flex: 1,
+  },
+  marketplaceActionButton: {
+    flexDirection: "row",
+    alignItems: "center",
+    backgroundColor: "#FFFFFF",
+    borderRadius: 999,
+    borderWidth: 1,
+    borderColor: "#D8DEE8",
+    paddingHorizontal: 18,
+    paddingVertical: 8,
+    marginLeft: 10,
+    marginBottom: 10,
+  },
+  marketplaceActionText: {
+    marginLeft: 10,
+    fontSize: 12,
+    fontWeight: "500",
+    color: "#1F2937",
+  },
+  marketplaceErrorText: {
+    marginBottom: 10,
+    fontSize: 12,
+    color: "#B42318",
+  },
+  marketplaceChipWrap: {
+    flexDirection: "row",
+    flexWrap: "wrap",
+    marginTop: 4,
+  },
+  marketplaceChip: {
+    flexDirection: "row",
+    alignItems: "center",
+    backgroundColor: "#FFFFFF",
+    borderRadius: 26,
+    borderWidth: 1,
+    borderColor: "#D8DEE8",
+    paddingHorizontal: 18,
+    paddingVertical: 8,
+    marginRight: 12,
+    marginBottom: 12,
+  },
+  marketplaceChipActive: {
+    borderColor: "#F3B998",
+    borderWidth: 3,
+  },
+  marketplaceChipTitle: {
+    fontSize: 12,
+    fontWeight: "700",
+    color: "#101828",
+  },
+  marketplaceChipTitleActive: {
+    color: "#101828",
+  },
+  marketplaceChipCount: {
+    fontSize: 12,
+    color: "#667085",
+    fontWeight: "500",
+  },
+  marketplaceChipCountActive: {
+    color: "#667085",
+  },
+  marketplaceMoreChip: {
+    backgroundColor: "#F8F4EA",
+    borderRadius: 999,
+    borderWidth: 1,
+    borderColor: "#D8DEE8",
+    paddingHorizontal: 18,
+    paddingVertical: 16,
+    marginRight: 12,
+    marginBottom: 12,
+  },
+  marketplaceMoreChipText: {
+    fontSize: 15,
+    fontWeight: "600",
+    color: "#344054",
+  },
   loginButton: {
     flexDirection: "row",
     alignItems: "center",
@@ -567,7 +893,7 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     borderColor: "#D8DEE8",
     paddingHorizontal: 20,
-    paddingVertical: 20,
+    paddingVertical: 12,
     marginTop: 10,
     flexDirection: "row",
     alignItems: "center",
@@ -580,12 +906,12 @@ const styles = StyleSheet.create({
   },
   topMarketsName: {
     marginLeft: 14,
-    fontSize: 14,
+    fontSize: 12,
     fontWeight: "700",
     color: "#101828",
   },
   topMarketsCount: {
-    fontSize: 14,
+    fontSize: 12,
     fontWeight: "500",
     color: "#667085",
   },
@@ -622,9 +948,9 @@ const styles = StyleSheet.create({
     borderRadius: 999,
     borderWidth: 1,
     borderColor: "#D8DEE8",
-    paddingHorizontal: 28,
-    paddingVertical: 14,
-    marginRight: 12,
+    paddingHorizontal: 16,
+    paddingVertical: 8,
+    marginRight: 8,
     marginBottom: 8,
   },
   recentSearchChipActive: {
@@ -632,7 +958,7 @@ const styles = StyleSheet.create({
     borderColor: "#111827",
   },
   recentSearchChipText: {
-    fontSize: 16,
+    fontSize: 12,
     fontWeight: "500",
     color: "#111827",
   },

@@ -256,7 +256,7 @@ const CartScreen = () => {
                       onPress={() => handleRemoveItem(postId)}
                       disabled={isRemoving}
                     >
-                      <Text>{isRemoving ? "Removing..." : "Remove"}</Text>
+                      <Text style={{ fontSize: 12 }}>{isRemoving ? "Removing..." : "Remove"}</Text>
                     </TouchableOpacity>
                   </View>
 
@@ -276,7 +276,7 @@ const CartScreen = () => {
                       onPress={() => handleUpdateItemQuantity(postId, itemId, quantity)}
                       disabled={isUpdateDisabled}
                     >
-                      <Text>{isUpdating ? "Updating..." : "Update"}</Text>
+                      <Text style={{ fontSize: 12 }}>{isUpdating ? "Updating..." : "Update"}</Text>
                     </TouchableOpacity>
                   </View>
 
@@ -338,7 +338,7 @@ const styles = StyleSheet.create({
   },
 
   title: {
-    fontSize: 22,
+    fontSize: 18,
     fontWeight: "bold",
   },
 
@@ -381,7 +381,7 @@ const styles = StyleSheet.create({
   },
 
   productName: {
-    fontSize: 18,
+    fontSize: 14,
     fontWeight: "600",
   },
 
@@ -412,7 +412,7 @@ const styles = StyleSheet.create({
   },
 
   price: {
-    fontSize: 18,
+    fontSize: 14,
     fontWeight: "bold",
     marginTop: 6,
   },
@@ -430,6 +430,7 @@ const styles = StyleSheet.create({
     paddingVertical: 6,
     borderRadius: 20,
     alignSelf: "flex-start",
+    fontSize:22
   },
   removeBtnDisabled: {
     opacity: 0.6,
@@ -459,6 +460,7 @@ const styles = StyleSheet.create({
     borderRadius: 10,
     padding: 6,
     marginHorizontal: 8,
+    fontSize: 12
   },
 
   updateBtn: {
@@ -516,7 +518,7 @@ const styles = StyleSheet.create({
 
   summaryText: {
     color: "#666",
-    fontSize: 16,
+    fontSize: 12,
   },
 
   summaryValue: {
@@ -525,13 +527,13 @@ const styles = StyleSheet.create({
   },
 
   totalText: {
-    fontSize: 18,
+    fontSize: 14,
     fontWeight: "bold",
     marginTop: 8,
   },
 
   totalValue: {
-    fontSize: 18,
+    fontSize: 14,
     fontWeight: "bold",
     marginTop: 8,
   },
