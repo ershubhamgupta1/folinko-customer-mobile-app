@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useState } from "react";
 import {
+  Alert,
   ActivityIndicator,
   Image,
   Linking,
@@ -12,7 +13,7 @@ import {
 import { SafeAreaView } from "react-native-safe-area-context";
 import { FontAwesome5 } from "@expo/vector-icons";
 import { useNavigation, useRoute } from "@react-navigation/native";
-import { shops } from "../services/api";
+import { cart, shops } from "../services/api";
 
 
 const SOCIAL_META = [
@@ -27,6 +28,66 @@ const FALLBACK_POST_IMAGE =
 
 const getArray = (value) => (Array.isArray(value) ? value : []);
 
+const getStoreSinceYear = (shop) => {
+  const yearCandidates = [
+    shop?.since_year,
+    shop?.established_year,
+    shop?.founded_year,
+    shop?.created_year,
+    shop?.year_started,
+    shop?.created_at,
+  ];
+
+  for (const value of yearCandidates) {
+    if (value === null || value === undefined || value === "") {
+      continue;
+    }
+
+    const numericValue = Number(value);
+
+    if (Number.isFinite(numericValue) && numericValue >= 1900 && numericValue <= 2100) {
+      return Math.trunc(numericValue);
+    }
+
+    const normalizedValue = String(value).trim();
+    const yearMatch = normalizedValue.match(/\b(19|20)\d{2}\b/);
+
+    if (yearMatch) {
+      return Number(yearMatch[0]);
+    }
+
+    const parsedDate = new Date(normalizedValue);
+
+    if (!Number.isNaN(parsedDate.getTime())) {
+      return parsedDate.getFullYear();
+    }
+  }
+
+  return 2020;
+};
+
+const getStoreFulfilledOrders = (shop) => {
+  const countCandidates = [
+    shop?.fulfilled_orders_count,
+    shop?.orders_fulfilled,
+    shop?.fulfilled_orders,
+    shop?.completed_orders_count,
+    shop?.completed_order_count,
+    shop?.orders_completed,
+    shop?.order_count,
+  ];
+
+  for (const value of countCandidates) {
+    const numericValue = Number(value);
+
+    if (Number.isFinite(numericValue) && numericValue >= 0) {
+      return Math.trunc(numericValue);
+    }
+  }
+
+  return 2;
+};
+
 export default function StoreDetailScreen() {
   const navigation = useNavigation();
   const route = useRoute();
@@ -37,6 +98,7 @@ export default function StoreDetailScreen() {
   const [shopPosts, setShopPosts] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
+  const [addingPostId, setAddingPostId] = useState("");
 
   useEffect(() => {
     const fetchShop = async () => {
@@ -84,16 +146,14 @@ export default function StoreDetailScreen() {
 
   const normalizedStore = useMemo(() => {
     const shop = shopData || {};
+    console.log('shop=========', shop);
     const trustMeter = shop?.trust_meter || {};
     const verificationStatus = String(
       shop?.verification_status || trustMeter?.status || "UNVERIFIED"
     ).toUpperCase();
     const trustScore = Number(trustMeter?.score || 0);
-    const overview =
-      shop?.description ||
-      shop?.bio ||
-      `${shop?.name || "This store"} is a trusted local seller from ${shop?.city || "your city"}. They share curated products and marketplace updates on Folinko.`;
-
+    const sinceYear = getStoreSinceYear(shop);
+    const fulfilledOrders = getStoreFulfilledOrders(shop);
     return {
       id: String(shop?.id || ""),
       slug: shop?.slug || shopSlug || "",
@@ -108,7 +168,9 @@ export default function StoreDetailScreen() {
       verified: verificationStatus === "VERIFIED",
       currency: shop?.currency || "INR",
       promoted: Boolean(shop?.is_promoted),
-      overview,
+      overview: shop?.storefront_story,
+      sinceYear,
+      fulfilledOrders,
     };
   }, [shopData, shopPosts.length, shopSlug]);
 
@@ -150,6 +212,30 @@ export default function StoreDetailScreen() {
       await Linking.openURL(url);
     } catch (e) {
       console.error("Failed to open url", e);
+    }
+  };
+
+  const handleAddToCart = async (postId) => {
+    const normalizedPostId = String(postId || "").trim();
+
+    if (!normalizedPostId) {
+      Alert.alert("Error", "Product not available for cart.");
+      return;
+    }
+
+    try {
+      setAddingPostId(normalizedPostId);
+      const response = await cart.add(normalizedPostId, { quantity: 1 });
+
+      if (response === undefined || response?.error || response?.errors || response?.success === false) {
+        throw new Error(response?.message || "Failed to add product to cart.");
+      }
+
+      Alert.alert("Success", "Item added to cart.");
+    } catch (e) {
+      Alert.alert("Error", e?.message || "Failed to add product to cart.");
+    } finally {
+      setAddingPostId("");
     }
   };
 
@@ -235,7 +321,21 @@ export default function StoreDetailScreen() {
             <Text style={styles.aboutLabel}>About store</Text>
             <Text style={styles.aboutText}>{normalizedStore.overview}</Text>
 
-            <View style={styles.quickActionsRow}>
+            <View style={styles.storeHighlightsRow}>
+              <View style={styles.storeHighlightChip}>
+                <FontAwesome5 name="calendar-alt" size={16} color="#111827" />
+                <Text style={styles.storeHighlightText}>{`Since ${normalizedStore.sinceYear}`}</Text>
+              </View>
+
+              <View style={styles.storeHighlightChip}>
+                <FontAwesome5 name="truck" size={16} color="#111827" />
+                <Text style={styles.storeHighlightText}>
+                  {`${normalizedStore.fulfilledOrders} order${normalizedStore.fulfilledOrders === 1 ? "" : "s"} fulfilled`}
+                </Text>
+              </View>
+            </View>
+
+            {/* <View style={styles.quickActionsRow}>
               <TouchableOpacity style={styles.outlineAction}>
                 <FontAwesome5 name="comment" size={11} color="#111827" />
                 <Text style={styles.outlineActionText}>Message</Text>
@@ -244,7 +344,7 @@ export default function StoreDetailScreen() {
                 <FontAwesome5 name="share-alt" size={11} color="#111827" />
                 <Text style={styles.outlineActionText}>Follow link</Text>
               </TouchableOpacity>
-            </View>
+            </View> */}
           </View>
         </View>
 
@@ -277,29 +377,34 @@ export default function StoreDetailScreen() {
             <Image source={{ uri: item.imageUrl }} style={styles.postImage} />
 
             <View style={styles.postFooter}>
-              <Text style={styles.postTitle}>{item.title}</Text>
-              <Text style={styles.postSubMeta}>₹ {item.price}</Text>
-              <Text style={styles.postShareText}>↪ {item.shareCount}</Text>
+              <Text style={styles.postTitle} numberOfLines={2}>{item.title}</Text>
 
-              <View style={styles.postActionRow}>
+              <View style={styles.postMetaActionRow}>
+                <View style={styles.postMetaChip}>
+                  <Text style={styles.postSubMeta}>₹ {item.price}</Text>
+                </View>
+
+                <View style={styles.postMetaChip}>
+                  <FontAwesome5 name="share-alt" size={10} color="#6B7280" />
+                  <Text style={styles.postShareText}>{item.shareCount}</Text>
+                </View>
+
                 <TouchableOpacity
-                  style={styles.lightButton}
-                  onPress={() => openProductDetail(item.id)}
+                  style={[styles.lightButton, addingPostId === item.id && styles.lightButtonDisabled]}
+                  onPress={() => handleAddToCart(item.id)}
+                  disabled={addingPostId === item.id}
                 >
-                  <Text style={styles.lightButtonText}>View</Text>
+                  <Text style={styles.lightButtonText}>{addingPostId === item.id ? "Adding..." : "Add"}</Text>
                 </TouchableOpacity>
-                <TouchableOpacity style={styles.lightButton}>
-                  <Text style={styles.lightButtonText}>Add</Text>
-                </TouchableOpacity>
-              </View>
 
-              <TouchableOpacity
-                style={styles.openLinkButton}
+                <TouchableOpacity
+                style={[styles.openLinkButton, !item.socialUrl && styles.openLinkButtonDisabled]}
                 onPress={() => handleOpenUrl(item.socialUrl)}
                 disabled={!item.socialUrl}
               >
                 <Text style={styles.openLinkButtonText}>Open original</Text>
               </TouchableOpacity>
+              </View>
             </View>
           </TouchableOpacity>
         ))}
@@ -530,6 +635,33 @@ const styles = StyleSheet.create({
     lineHeight: 18,
     color: "#374151",
   },
+  storeHighlightsRow: {
+    marginTop: 14,
+    flexDirection: "row",
+    flexWrap: "wrap",
+    gap: 12,
+  },
+  storeHighlightChip: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 10,
+    backgroundColor: "#FFFFFF",
+    borderRadius: 999,
+    borderWidth: 1,
+    borderColor: "#E7DFD5",
+    paddingHorizontal: 18,
+    paddingVertical: 6,
+    shadowColor: "#111827",
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.08,
+    shadowRadius: 10,
+    elevation: 2,
+  },
+  storeHighlightText: {
+    fontSize: 11,
+    fontWeight: "600",
+    color: "#111827",
+  },
   quickActionsRow: {
     flexDirection: "row",
     gap: 8,
@@ -625,22 +757,35 @@ const styles = StyleSheet.create({
     fontSize: 14,
     fontWeight: "700",
     color: "#111827",
+    lineHeight: 20,
+  },
+  postMetaActionRow: {
+    marginTop: 10,
+    flexDirection: "row",
+    flexWrap: "wrap",
+    alignItems: "center",
+    gap: 8,
+  },
+  postMetaChip: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 6,
+    paddingHorizontal: 10,
+    paddingVertical: 7,
+    borderRadius: 999,
+    backgroundColor: "#FAF7F2",
+    borderWidth: 1,
+    borderColor: "#E7DFD5",
   },
   postSubMeta: {
-    fontSize: 12,
+    fontSize: 11,
     color: "#111827",
-    marginTop: 4,
     fontWeight: "700",
   },
   postShareText: {
-    marginTop: 4,
-    fontSize: 10,
+    fontSize: 11,
     color: "#6B7280",
-  },
-  postActionRow: {
-    flexDirection: "row",
-    gap: 8,
-    marginTop: 10,
+    fontWeight: "600",
   },
   lightButton: {
     borderRadius: 999,
@@ -650,18 +795,29 @@ const styles = StyleSheet.create({
     paddingVertical: 8,
     backgroundColor: "#FFFFFF",
   },
+  lightButtonDisabled: {
+    opacity: 0.6,
+  },
   lightButtonText: {
     fontSize: 11,
     fontWeight: "600",
     color: "#111827",
   },
   openLinkButton: {
-    marginTop: 10,
-    alignSelf: "flex-start",
+    borderRadius: 999,
+    borderWidth: 1,
+    borderColor: "#E7DFD5",
+    paddingHorizontal: 14,
+    paddingVertical: 8,
+    backgroundColor: "#F8F4EE",
+  },
+  openLinkButtonDisabled: {
+    opacity: 0.5,
   },
   openLinkButtonText: {
     fontSize: 11,
     color: "#6B7280",
+    fontWeight: "600",
   },
   emptyCard: {
     backgroundColor: "#FFFFFF",
