@@ -34,6 +34,14 @@ export const AuthProvider = ({ children }) => {
       const token = await getAuthToken();
       if (token) {
         const userData = await businessAuth.getMe();
+
+        if (!userData || userData?.error || userData?.errors || userData?.success === false) {
+          await removeAuthToken();
+          setUser(null);
+          setIsAuthenticated(false);
+          return;
+        }
+
         setUser(userData);
         setIsAuthenticated(true);
       } else {
@@ -56,7 +64,6 @@ export const AuthProvider = ({ children }) => {
     try {
       setLoading(true);
       const response = await businessAuth.login(email, password);
-      console.log('response========', response);
 
       const nextUser =
         response?.user ||
@@ -76,11 +83,15 @@ export const AuthProvider = ({ children }) => {
   };
 
   const register = async (email, password) => {
+    console.log('enter in register======',email, password)
     try {
       setLoading(true);
       const response = await businessAuth.register(email, password);
+      console.log('response=========', response);
       return response;
     } catch (error) {
+      console.log('error=========', error);
+
       throw error;
     } finally {
       setLoading(false);

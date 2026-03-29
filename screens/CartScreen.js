@@ -309,28 +309,31 @@ const CartScreen = () => {
         </View>
 
         {/* Summary */}
-        <View style={styles.summaryCard}>
-          <Text style={styles.smallLabel}>Summary</Text>
+        {
+          cartItems.length > 0 &&
+          <View style={styles.summaryCard}>
+            <Text style={styles.smallLabel}>Summary</Text>
 
-          <View style={styles.rowBetween}>
-            <Text style={styles.summaryText}>Subtotal</Text>
-            <Text style={styles.summaryValue}>{formatMoney(subtotalAmount)}</Text>
+            <View style={styles.rowBetween}>
+              <Text style={styles.summaryText}>Subtotal</Text>
+              <Text style={styles.summaryValue}>{formatMoney(subtotalAmount)}</Text>
+            </View>
+
+            <View style={styles.rowBetween}>
+              <Text style={styles.summaryText}>Delivery</Text>
+              <Text style={styles.summaryValue}>{formatMoney(deliveryAmount)}</Text>
+            </View>
+
+            <View style={styles.rowBetween}>
+              <Text style={styles.totalText}>Total</Text>
+              <Text style={styles.totalValue}>{formatMoney(totalAmount)}</Text>
+            </View>
+
+            <TouchableOpacity style={styles.checkoutBtn} onPress={() => navigation.navigate("checkoutScreen")}>
+              <Text style={styles.checkoutText}>Proceed to Checkout</Text>
+            </TouchableOpacity>
           </View>
-
-          <View style={styles.rowBetween}>
-            <Text style={styles.summaryText}>Delivery</Text>
-            <Text style={styles.summaryValue}>{formatMoney(deliveryAmount)}</Text>
-          </View>
-
-          <View style={styles.rowBetween}>
-            <Text style={styles.totalText}>Total</Text>
-            <Text style={styles.totalValue}>{formatMoney(totalAmount)}</Text>
-          </View>
-
-          <TouchableOpacity style={styles.checkoutBtn} onPress={() => navigation.navigate("checkoutScreen")}>
-            <Text style={styles.checkoutText}>Proceed to Checkout</Text>
-          </TouchableOpacity>
-        </View>
+        }
       </ScrollView>
 
     </SafeAreaView>

@@ -516,18 +516,15 @@ export default function CheckoutScreen() {
       setCardFormSuccess("");
 
       const brand = inferCardBrand(cardNumber);
-      const response = await paymentMethods.create({
-        type: "card",
-        name: holderName,
-        holder_name: holderName,
-        card_holder_name: holderName,
-        brand,
+      const payload = {
+        kind: "CARD",
+        label: brand,
         card_brand: brand,
-        card_number: cardNumber,
-        last4: cardNumber.slice(-4),
-        exp_month: String(monthNumber).padStart(2, "0"),
-        exp_year: expYear,
-      });
+        card_last4: cardNumber.slice(-4),
+        card_exp_month: monthNumber,
+        card_exp_year: Number(expYear),
+      };
+      const response = await paymentMethods.create(payload);
 
       if (isFailedResponse(response)) {
         throw new Error(response?.message || "Failed to add card");

@@ -238,7 +238,10 @@ export const customerAuth = {
     throw new Error(errorMessage);
   },
 
-  getMe: () => apiRequest('/api/customer/auth/me'),
+  getMe: () =>
+    apiRequest('/api/customer/auth/me', {
+      skipAuthRedirectOnUnauthorized: true,
+    }),
 };
 
 export const businessAuth = customerAuth;

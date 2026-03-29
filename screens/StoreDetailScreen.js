@@ -33,7 +33,6 @@ export default function StoreDetailScreen() {
   const shopSlug = route.params?.shopSlug;
   // const shopSlug = 'sharma-sarees';
 
-  console.log('shopSlug=========',shopSlug);
   const [shopData, setShopData] = useState({});
   const [shopPosts, setShopPosts] = useState([]);
   const [loading, setLoading] = useState(true);

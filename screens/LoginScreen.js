@@ -18,10 +18,20 @@ const LoginScreen = ({ navigation }) => {
   const [isLogin, setIsLogin] = useState(true);
   const [loading, setLoading] = useState(false);
   const { login, register } = useAuth();
+  const trimmedEmail = email.trim();
+  const isPasswordValidForRegister = password.length >= 8 && password.length <= 128;
+  const isFormValid = isLogin
+    ? Boolean(trimmedEmail && password)
+    : Boolean(trimmedEmail && password && isPasswordValidForRegister);
 
   const handleSubmit = async () => {
     if (!email || !password) {
       Alert.alert('Error', 'Please fill in all fields');
+      return;
+    }
+
+    if (!isLogin && !isPasswordValidForRegister) {
+      Alert.alert('Error', 'Password length must be between 8 and 128 characters');
       return;
     }
 
@@ -81,9 +91,9 @@ const LoginScreen = ({ navigation }) => {
           </View>
 
           <TouchableOpacity
-            style={[styles.button, loading && styles.buttonDisabled]}
+            style={[styles.button, (!isFormValid || loading) && styles.buttonDisabled]}
             onPress={handleSubmit}
-            disabled={loading}
+            disabled={!isFormValid || loading}
           >
             <Text style={styles.buttonText}>
               {loading ? 'Loading...' : (isLogin ? 'Login' : 'Register')}
