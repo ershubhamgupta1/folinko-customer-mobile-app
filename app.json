@@ -46,14 +46,14 @@
         "android.permission.READ_MEDIA_VIDEO",
         "android.permission.READ_MEDIA_AUDIO"
       ],
-      "package": "com.ershubhamgupta1.mobilesellerapp"
+      "package": "com.ershubhamgupta1.mobilecustomerapp"
     },
     "web": {
       "favicon": "./assets/favicon.png"
     },
     "extra": {
       "eas": {
-        "projectId": "de1f2fa0-b261-4013-84f4-22cd5eb78f80"
+        "projectId": "07e25111-6db6-4e01-a7e2-e28ecb3c690f"
       }
     },
     "owner": "ershubhamgupta1"

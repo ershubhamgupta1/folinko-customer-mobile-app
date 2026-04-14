@@ -58,11 +58,35 @@ const normalizeRecentlyViewedItem = (post) => ({
   image: post?.cover_image_url || post?.images?.[0]?.url || FALLBACK_PRODUCT_IMAGE,
 });
 
+const normalizeInfluencersResponse = (response) => {
+  if (!response || response?.error || response?.errors || response?.success === false) {
+    return [];
+  }
+
+  const candidateLists = [
+    response?.influencers,
+    response?.data?.influencers,
+    response?.data?.results,
+    response?.data,
+    response?.results,
+    response?.items,
+  ];
+
+  for (const list of candidateLists) {
+    if (Array.isArray(list)) {
+      return list;
+    }
+  }
+
+  return [];
+};
+
 export default function FeedScreen() {
   const navigation = useNavigation();
   const { isAuthenticated } = useAuth();
   const [stores, setStores] = useState([]);
   const [marketsData, setMarketsData] = useState([]);
+  const [influencers, setInfluencers] = useState([]);
   const [displayedStores, setDisplayedStores] = useState([]);
   const [selectedCity, setSelectedCity] = useState("");
   const [activeDiscoveryFilters, setActiveDiscoveryFilters] = useState({});
@@ -216,22 +240,29 @@ export default function FeedScreen() {
     try {
       setStoresError("");
       setLoadingStores(true);
-      const [marketsRes, shopsData] = await Promise.all([
+      const [marketsRes, shopsData, influencersRes] = await Promise.all([
         markets.list(),
         shops.discover(),
+        shops.discover({ account_type: "influencer", verified: true, page: 1, page_size: 20 }).catch(() => null),
       ]);
+      console.log('shopsData===========', shopsData);
 
       const nextStores = Array.isArray(shopsData?.shops) ? shopsData.shops : [];
       const nextMarkets = Array.isArray(marketsRes?.markets) ? marketsRes.markets : [];
+      const nextInfluencers = Array.isArray(influencersRes?.shops)
+        ? influencersRes.shops
+        : normalizeInfluencersResponse(influencersRes);
       setStores(nextStores);
       setDisplayedStores(nextStores);
       setMarketsData(nextMarkets);
+      setInfluencers(nextInfluencers);
     } catch (e) {
       console.error("Failed to load feed data:", e);
       setStoresError(e?.message || "Failed to load discovery stores");
       setStores([]);
       setDisplayedStores([]);
       setMarketsData([]);
+      setInfluencers([]);
     } finally {
       setLoadingStores(false);
     }
@@ -418,6 +449,119 @@ export default function FeedScreen() {
   }, [activeDiscoveryFilters, activeStoreQuery, loadDisplayedStores]);
 
   const topMarkets = (marketsData.length ? marketsData : FALLBACK_TOP_MARKETS).slice(0, 6);
+
+  const trendingInfluencers = useMemo(() => {
+    const normalizedInfluencers = Array.isArray(influencers) ? influencers : [];
+
+    const normalizedFromApi = normalizedInfluencers
+      .filter((item) => item)
+      .map((item, index) => {
+        const store = item?.shop || item?.store || item?.business || item?.seller || item;
+        const slug = String(
+          store?.slug ||
+            store?.username ||
+            store?.handle ||
+            item?.slug ||
+            item?.username ||
+            item?.handle ||
+            ""
+        );
+        const name =
+          store?.name ||
+          store?.full_name ||
+          store?.fullName ||
+          item?.name ||
+          item?.full_name ||
+          item?.fullName ||
+          "Creator";
+        const city = formatCityLabel(store?.city || item?.city);
+        const isVerified =
+          store?.verified ??
+          store?.is_verified ??
+          store?.verification_status === "VERIFIED" ??
+          item?.verified ??
+          item?.is_verified ??
+          item?.verification_status === "VERIFIED";
+        const listings = Number(
+          store?.post_count ??
+            store?.listings_count ??
+            store?.products_count ??
+            item?.post_count ??
+            item?.listings_count ??
+            item?.products_count ??
+            0
+        );
+        const imageUrl =
+          store?.cover_image_url ||
+          store?.coverImage ||
+          store?.avatar_url ||
+          store?.profile_image_url ||
+          item?.cover_image_url ||
+          item?.avatar_url ||
+          item?.profile_image_url ||
+          "https://images.unsplash.com/photo-1524504388940-b1c1722653e1?auto=format&fit=crop&w=900&q=80";
+
+        return {
+          id: String(store?.id || item?.id || slug || index),
+          store,
+          name,
+          handle: slug ? `@${slug}` : "@creator",
+          city: city || "",
+          isVerified: Boolean(isVerified),
+          listings: Number.isFinite(listings) ? Math.max(0, Math.trunc(listings)) : 0,
+          imageUrl,
+        };
+      });
+
+    if (normalizedFromApi.length) {
+      return normalizedFromApi;
+    }
+
+    const normalizedStores = Array.isArray(stores) ? stores : [];
+
+    return [...normalizedStores]
+      .filter((store) => store?.id)
+      .sort((a, b) => {
+        const aVerified = (a?.verified ?? a?.verification_status === "VERIFIED") ? 1 : 0;
+        const bVerified = (b?.verified ?? b?.verification_status === "VERIFIED") ? 1 : 0;
+
+        if (aVerified !== bVerified) {
+          return bVerified - aVerified;
+        }
+
+        const aPosts = Number(a?.post_count || 0);
+        const bPosts = Number(b?.post_count || 0);
+
+        if (aPosts !== bPosts) {
+          return bPosts - aPosts;
+        }
+
+        const aName = String(a?.name || "");
+        const bName = String(b?.name || "");
+        return aName.localeCompare(bName);
+      })
+      .slice(0, 10)
+      .map((store) => {
+        const isVerified = store?.verified ?? store?.verification_status === "VERIFIED";
+        const slug = String(store?.slug || "");
+        const cityLabel = formatCityLabel(store?.city);
+        const postCount = Number(store?.post_count || 0);
+
+        return {
+          id: String(store?.id),
+          store,
+          name: store?.name || "Creator",
+          handle: slug ? `@${slug}` : "@creator",
+          city: cityLabel || "",
+          isVerified: Boolean(isVerified),
+          listings: Number.isFinite(postCount) ? postCount : 0,
+          imageUrl:
+            store?.cover_image_url ||
+            store?.coverImage ||
+            "https://images.unsplash.com/photo-1524504388940-b1c1722653e1?auto=format&fit=crop&w=900&q=80",
+        };
+      });
+  }, [influencers, stores]);
 
   return (
     <SafeAreaView style={styles.container}>
@@ -609,6 +753,52 @@ export default function FeedScreen() {
         <ScrollView horizontal showsHorizontalScrollIndicator={false}>
           {stores.map((store) => (
             <StoreCard key={store.id} store={store} horizontal />
+          ))}
+        </ScrollView>
+
+        <Text style={styles.sectionTitle}>Trending influencers</Text>
+        <Text style={styles.influencerSubtitle}>Explore influencers near you. Tap to open their storefront.</Text>
+
+        <ScrollView
+          horizontal
+          showsHorizontalScrollIndicator={false}
+          contentContainerStyle={styles.influencerScrollContent}
+        >
+          {trendingInfluencers.map((creator) => (
+            <TouchableOpacity
+              key={creator.id}
+              activeOpacity={0.92}
+              style={styles.influencerCard}
+              onPress={() =>
+                navigation.navigate("storeDetail", {
+                  shopSlug: creator.store?.slug,
+                  store: creator.store,
+                  accountType: "influencer",
+                })
+              }
+            >
+              <Image source={{ uri: creator.imageUrl }} style={styles.influencerImage} />
+
+              <View style={styles.influencerInfoPanel}>
+                <View style={styles.influencerNameRow}>
+                  <Text style={styles.influencerName} numberOfLines={1}>
+                    {creator.name}
+                  </Text>
+
+                  {creator.isVerified ? (
+                    <View style={styles.influencerVerifiedPill}>
+                      <FontAwesome5 name="check-circle" size={12} color="#047857" />
+                      <Text style={styles.influencerVerifiedText}>Verified</Text>
+                    </View>
+                  ) : null}
+                </View>
+
+                <Text style={styles.influencerMeta} numberOfLines={1}>
+                  {creator.city ? `${creator.handle} · ${creator.city}` : creator.handle}
+                </Text>
+                <Text style={styles.influencerListings}>{`${creator.listings} listing${creator.listings === 1 ? "" : "s"}`}</Text>
+              </View>
+            </TouchableOpacity>
           ))}
         </ScrollView>
 
@@ -1102,6 +1292,100 @@ const styles = StyleSheet.create({
     lineHeight: 22,
     color: "#344054",
     fontWeight: "500",
+  },
+
+  influencerSectionHeader: {
+    marginTop: 18,
+    paddingHorizontal: 16,
+  },
+  influencerEyebrow: {
+    fontSize: 14,
+    fontWeight: "500",
+    color: "#667085",
+  },
+  influencerTitle: {
+    marginTop: 6,
+    fontSize: 24,
+    lineHeight: 30,
+    fontWeight: "700",
+    color: "#101828",
+  },
+  influencerSubtitle: {
+    marginTop: -4,
+    paddingHorizontal: 16,
+    fontSize: 14,
+    lineHeight: 20,
+    fontWeight: "500",
+    color: "#475467",
+  },
+  influencerScrollContent: {
+    paddingLeft: 16,
+    paddingRight: 10,
+    paddingTop: 14,
+    paddingBottom: 10,
+  },
+  influencerCard: {
+    width: 250,
+    marginRight: 14,
+    borderRadius: 26,
+    backgroundColor: "#FFFFFF",
+    borderWidth: 1,
+    borderColor: "#D8DEE8",
+    overflow: "hidden",
+    shadowColor: "#000",
+    shadowOffset: { width: 0, height: 10 },
+    shadowOpacity: 0.08,
+    shadowRadius: 20,
+    elevation: 4,
+  },
+  influencerImage: {
+    width: "100%",
+    height: 240,
+    backgroundColor: "#E5E7EB",
+  },
+  influencerInfoPanel: {
+    paddingHorizontal: 16,
+    paddingVertical: 14,
+  },
+  influencerNameRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
+    gap: 10,
+  },
+  influencerName: {
+    flex: 1,
+    fontSize: 16,
+    fontWeight: "700",
+    color: "#101828",
+  },
+  influencerVerifiedPill: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 6,
+    paddingHorizontal: 12,
+    paddingVertical: 6,
+    borderRadius: 999,
+    backgroundColor: "#ECFDF3",
+    borderWidth: 1,
+    borderColor: "#A7F3D0",
+  },
+  influencerVerifiedText: {
+    fontSize: 12,
+    fontWeight: "600",
+    color: "#047857",
+  },
+  influencerMeta: {
+    marginTop: 10,
+    fontSize: 14,
+    fontWeight: "500",
+    color: "#475467",
+  },
+  influencerListings: {
+    marginTop: 10,
+    fontSize: 16,
+    fontWeight: "700",
+    color: "#101828",
   },
 
   sectionTitle: {

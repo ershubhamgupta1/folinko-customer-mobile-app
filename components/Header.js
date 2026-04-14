@@ -60,7 +60,7 @@ const Header = ({
       default:
         return (
           <View style={styles.defaultHeaderContent}>
-            <Text style={styles.logo}>{title || 'E-KOM'}</Text>
+            <Text style={styles.logo}>{title || 'Folinko'}</Text>
             {rightComponent || (
               showIcons && (
                 <View style={styles.headerIcons}>

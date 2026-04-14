@@ -17,7 +17,7 @@ export const setNavigationRef = (ref) => {
       if (navigationRef?.isReady?.()) {
         navigationRef.reset({
           index: 0,
-          routes: [{ name: 'Login' }],
+          routes: [{ name: 'feedScreen' }],
         });
         pendingAuthRedirect = false;
       }
@@ -32,7 +32,7 @@ const safeRedirectToLogin = () => {
     if (navigationRef?.isReady?.()) {
       navigationRef.reset({
         index: 0,
-        routes: [{ name: 'Login' }],
+        routes: [{ name: 'feedScreen' }],
       });
       pendingAuthRedirect = false;
       return;
@@ -49,7 +49,7 @@ const safeRedirectToLogin = () => {
       if (pendingAuthRedirect && navigationRef?.isReady?.()) {
         navigationRef.reset({
           index: 0,
-          routes: [{ name: 'Login' }],
+          routes: [{ name: 'feedScreen' }],
         });
         pendingAuthRedirect = false;
       }
@@ -125,7 +125,7 @@ const apiRequest = async (endpoint, options = {}) => {
         await removeAuthToken();
         // Navigate to LoginScreen
         safeRedirectToLogin();
-        console.warn('Authentication expired - redirecting to login');
+        console.warn('Authentication expired - redirecting to feed');
         return;
       }
 
@@ -151,7 +151,7 @@ const apiRequest = async (endpoint, options = {}) => {
       await removeAuthToken();
       // Navigate to LoginScreen
       safeRedirectToLogin();
-      console.warn('Authentication error - redirecting to login');
+      console.warn('Authentication error - redirecting to feed');
       return;
     }
     
@@ -258,9 +258,9 @@ export const feed = {
 
 // Discover shops + shop profile (public)
 export const shops = {
-  discover: ({ city, q, sort, verified, photo, min_posts, page = 1, page_size = 30 } = {}) =>
+  discover: ({ city, q, sort, verified, photo, account_type, min_posts, page = 1, page_size = 30 } = {}) =>
     apiRequest(
-      `/api/customer/shops${toQueryString({ city, q, sort, verified, photo, min_posts, page, page_size })}`
+      `/api/customer/shops${toQueryString({ city, q, sort, verified, photo, account_type, min_posts, page, page_size })}`
     ),
 
   getBySlug: (slug, { page = 1, page_size = 30 } = {}) =>
@@ -363,6 +363,13 @@ export const reviews = {
     }),
 };
 
+export const collaboration = {
+  influencers: ({ page = 1, page_size = 20 } = {}) =>
+    apiRequest(`/api/business/collaboration/influencers${toQueryString({ page, page_size })}`, {
+      skipAuthRedirectOnUnauthorized: true,
+    }),
+};
+
 // Export all services as default
 export default {
   healthCheck,
@@ -378,6 +385,7 @@ export default {
   paymentMethods,
   orders,
   reviews,
+  collaboration,
   setAuthToken,
   getAuthToken,
   removeAuthToken,

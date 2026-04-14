@@ -1,0 +1,196 @@
+# 📱 Expo APK Build Guide (EAS Method)
+
+## 🚀 Step 0: Prerequisites
+
+* Node.js installed
+* Expo project ready
+* Expo account (create at https://expo.dev)
+
+---
+
+## 🔹 Step 1: Install EAS CLI
+
+```bash
+npm install -g eas-cli
+```
+
+---
+
+## 🔹 Step 2: Login to Expo
+
+```bash
+eas login
+```
+
+---
+
+## 🔹 Step 3: Go to your project
+
+```bash
+cd your-project-folder
+```
+
+---
+
+## 🔹 Step 4: Configure EAS
+
+```bash
+eas build:configure
+```
+
+👉 Select:
+
+* Android
+
+This will create `eas.json`
+
+---
+
+## 🔹 Step 5: Update eas.json for APK
+
+Edit `eas.json`:
+
+```json
+{
+  "build": {
+    "preview": {
+      "android": {
+        "buildType": "apk"
+      }
+    },
+    "production": {
+      "android": {
+        "buildType": "apk"
+      }
+    }
+  }
+}
+```
+
+---
+
+## 🔹 Step 6: Install Required Dependencies (IMPORTANT)
+
+```bash
+npx expo install react-native-gesture-handler
+npx expo install react-native-screens react-native-safe-area-context
+```
+
+---
+
+## 🔹 Step 7: Add Gesture Handler Import
+
+In `App.js` or `index.js` (top of file):
+
+```js
+import 'react-native-gesture-handler';
+```
+
+---
+
+## 🔹 Step 8: Clean & Verify Project
+
+```bash
+rm -rf node_modules package-lock.json
+npm install
+npx expo doctor
+npx expo start -c
+```
+
+---
+
+## 🔹 Step 9: Test Bundle Locally (VERY IMPORTANT)
+
+```bash
+npx expo export
+```
+
+👉 Fix any errors before building
+
+---
+
+## 🔹 Step 10: Build APK
+
+```bash
+eas build -p android --profile preview
+```
+
+---
+
+## 🔹 Step 11: Download APK
+
+* After build completes
+* Open the link shown in terminal
+* Download APK file
+
+---
+
+## ⚡ Optional: Clear Cache if Build Fails
+
+```bash
+eas build --clear-cache
+```
+
+---
+
+## ❗ Common Errors & Fixes
+
+### 1. Module not found (like gesture-handler)
+
+✔ Install missing dependency using:
+
+```bash
+npx expo install <package-name>
+```
+
+---
+
+### 2. Environment variables not working
+
+Add in `eas.json`:
+
+```json
+{
+  "build": {
+    "preview": {
+      "env": {
+        "API_URL": "https://your-api.com"
+      }
+    }
+  }
+}
+```
+
+---
+
+### 3. Build fails at "Bundle JavaScript"
+
+✔ Run:
+
+```bash
+npx expo export
+```
+
+Fix errors locally first
+
+---
+
+## 🧠 Best Practices
+
+* Use `preview` for testing APK
+* Use `production` for final builds
+* Keep dependencies clean
+* Always test locally before EAS build
+
+---
+
+## ⏱️ Build Time
+
+* 10–20 minutes (average)
+* Depends on queue + project size
+
+---
+
+## 🎯 Done!
+
+Your APK is ready to install or share 🎉

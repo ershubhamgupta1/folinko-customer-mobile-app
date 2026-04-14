@@ -3,6 +3,7 @@ import AsyncStorage from "@react-native-async-storage/async-storage";
 import {
   Alert,
   ActivityIndicator,
+  Dimensions,
   Image,
   Linking,
   ScrollView,
@@ -189,7 +190,7 @@ export default function ProductDetailScreen() {
   const navigation = useNavigation();
   const route = useRoute();
   const insets = useSafeAreaInsets();
-  const { logout } = useAuth();
+  const { logout, isAuthenticated } = useAuth();
   const productId = route.params?.productId ?? route.params?.id;
   const [productData, setProductData] = useState(null);
   const [loading, setLoading] = useState(true);
@@ -208,6 +209,7 @@ export default function ProductDetailScreen() {
   const [cartFeedback, setCartFeedback] = useState({ type: "", message: "" });
   const [savingToWishlist, setSavingToWishlist] = useState(false);
   const [wishlistFeedback, setWishlistFeedback] = useState({ type: "", message: "" });
+  const [currentImageIndex, setCurrentImageIndex] = useState(0);
 
   useEffect(() => {
     const fetchProduct = async () => {
@@ -227,6 +229,7 @@ export default function ProductDetailScreen() {
           posts.getById(productId),
           posts.related(productId).catch(() => ({ posts: [] })),
         ]);
+        console.log('response=========>>>>', JSON.stringify(response))
         setProductData(response?.post || null);
         setRelatedProductsData(Array.isArray(relatedRes?.posts) ? relatedRes.posts : []);
       } catch (e) {
@@ -356,14 +359,20 @@ export default function ProductDetailScreen() {
     const trustMeter = Number(trustMeterData?.score || 0);
     const reviewCount = Number(post?.review_count || 0);
 
+    const allImages = [
+      post?.cover_image_url,
+      ...(post?.images?.map(img => img?.url) || [])
+    ].filter(Boolean);
+
     return {
-      id: String(post?.id || productId || "1"),
+      id: String(post?.id || productId),
       title,
       category,
       location: city,
       price,
       seller,
       imageUrl,
+      allImages: allImages.length > 0 ? allImages : [imageUrl], // Ensure at least one image
       caption: post?.caption || "Hello caption",
       color: post?.attributes?.color || "",
       deliveryTitle: "Delivery in 2-5 days",
@@ -435,6 +444,10 @@ export default function ProductDetailScreen() {
   const handleAddToCart = async () => {
     const targetPostId = productData?.id || productId;
 
+    if (!isAuthenticated) {
+      navigation.navigate('Login');
+      return;
+    }
     if (!targetPostId) {
       setCartFeedback({ type: "error", message: "Product not available for cart." });
       return;
@@ -463,6 +476,12 @@ export default function ProductDetailScreen() {
 
     if (!targetPostId) {
       setCartFeedback({ type: "error", message: "Product not available for checkout." });
+      return;
+    }
+
+    // Check if user is authenticated
+    if (!isAuthenticated) {
+      navigation.navigate('Login');
       return;
     }
 
@@ -583,7 +602,40 @@ export default function ProductDetailScreen() {
             </View>
           </View>
 
-          <Image source={{ uri: normalizedProduct.imageUrl }} style={styles.heroImage} />
+          <ScrollView
+            horizontal
+            showsHorizontalScrollIndicator={false}
+            pagingEnabled
+            style={styles.heroImageScrollView}
+            onMomentumScrollEnd={(event) => {
+              const contentOffset = event.nativeEvent.contentOffset;
+              const index = Math.round(contentOffset.x / Dimensions.get('window').width);
+              setCurrentImageIndex(index);
+            }}
+          >
+            {normalizedProduct.allImages.map((imageUrl, index) => (
+              <Image
+                key={index}
+                source={{ uri: imageUrl }}
+                style={styles.heroImage}
+              />
+            ))}
+          </ScrollView>
+
+          {/* Pagination dots */}
+          {normalizedProduct.allImages.length > 1 && (
+            <View style={styles.paginationDots}>
+              {normalizedProduct.allImages.map((_, index) => (
+                <View
+                  key={index}
+                  style={[
+                    styles.dot,
+                    index === currentImageIndex ? styles.activeDot : styles.inactiveDot
+                  ]}
+                />
+              ))}
+            </View>
+          )}
         </View>
 
         <View style={styles.sectionCard}>
@@ -992,10 +1044,37 @@ const styles = StyleSheet.create({
     fontWeight: "600",
     color: "#111827",
   },
-  heroImage: {
+  heroImageScrollView: {
     width: "100%",
     height: 390,
+  },
+  heroImage: {
+    width: Dimensions.get('window').width,
+    height: 390,
     backgroundColor: "#E5E7EB",
+  },
+  paginationDots: {
+    flexDirection: "row",
+    justifyContent: "center",
+    alignItems: "center",
+    position: "absolute",
+    bottom: 16,
+    left: 0,
+    right: 0,
+    gap: 8,
+  },
+  dot: {
+    width: 8,
+    height: 8,
+    borderRadius: 4,
+  },
+  activeDot: {
+    backgroundColor: "#111827",
+  },
+  inactiveDot: {
+    backgroundColor: "rgba(255, 255, 255, 0.7)",
+    borderWidth: 1,
+    borderColor: "#111827",
   },
   quickNavRow: {
     flexDirection: "row",

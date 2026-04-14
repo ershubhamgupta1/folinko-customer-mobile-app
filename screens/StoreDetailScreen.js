@@ -13,7 +13,10 @@ import {
 import { SafeAreaView } from "react-native-safe-area-context";
 import { FontAwesome5 } from "@expo/vector-icons";
 import { useNavigation, useRoute } from "@react-navigation/native";
-import { cart, shops } from "../services/api";
+import { API_BASE, cart, shops } from "../services/api";
+import { useAuth } from "../contexts/AuthContext";
+import LiveTypingAnimation from "../components/LiveTypingAnimation";
+import MultiTypewriter from "../components/MultiTextLiveTypingAnimation";
 
 
 const SOCIAL_META = [
@@ -92,13 +95,16 @@ export default function StoreDetailScreen() {
   const navigation = useNavigation();
   const route = useRoute();
   const shopSlug = route.params?.shopSlug;
+  const routeAccountType = route.params?.accountType;
   // const shopSlug = 'sharma-sarees';
 
+  const { isAuthenticated } = useAuth();
   const [shopData, setShopData] = useState({});
   const [shopPosts, setShopPosts] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
   const [addingPostId, setAddingPostId] = useState("");
+  const [measurementsOpen, setMeasurementsOpen] = useState(false);
 
   useEffect(() => {
     const fetchShop = async () => {
@@ -115,12 +121,37 @@ export default function StoreDetailScreen() {
 
       try {
         const response = await shops.getBySlug(shopSlug);
+        console.log('shop slug response--------', JSON.stringify(response))
         const nextShop =
           response?.shop ||
           response?.data?.shop ||
           response?.profile ||
           response?.store ||
           null;
+
+        const responseMeasurements =
+          response?.measurements ||
+          response?.body_measurements ||
+          response?.bodyMeasurements ||
+          response?.data?.measurements ||
+          response?.data?.body_measurements ||
+          response?.shop?.measurements ||
+          response?.shop?.body_measurements ||
+          response?.shop?.profile?.measurements ||
+          response?.shop?.profile?.body_measurements ||
+          null;
+
+        const mergedShop = nextShop
+          ? {
+              ...nextShop,
+              measurements:
+                nextShop?.measurements ||
+                nextShop?.body_measurements ||
+                nextShop?.profile?.measurements ||
+                responseMeasurements ||
+                null,
+            }
+          : nextShop;
         const nextPostsCandidates = [
           response?.posts,
           response?.items,
@@ -130,7 +161,7 @@ export default function StoreDetailScreen() {
         const nextPosts =
           nextPostsCandidates.find((candidate) => Array.isArray(candidate) && candidate.length >= 0) || [];
 
-        setShopData(nextShop);
+        setShopData(mergedShop);
         setShopPosts(nextPosts);
       } catch (e) {
         setError(e?.message || "Failed to load store");
@@ -152,8 +183,89 @@ export default function StoreDetailScreen() {
       shop?.verification_status || trustMeter?.status || "UNVERIFIED"
     ).toUpperCase();
     const trustScore = Number(trustMeter?.score || 0);
-    const sinceYear = getStoreSinceYear(shop);
-    const fulfilledOrders = getStoreFulfilledOrders(shop);
+
+    const accountType = String(routeAccountType || shop?.account_type || shop?.accountType || "business").toLowerCase();
+    const isInfluencer = accountType === "influencer";
+    const sinceYear = isInfluencer ? 2020 : getStoreSinceYear(shop);
+    const fulfilledOrders = isInfluencer ? 0 : getStoreFulfilledOrders(shop);
+    const slug = shop?.slug || shopSlug || "";
+    const handle = slug ? `@${slug}` : "";
+    console.log('shopData==========', shopData)
+    const influencerFieldMeasurements = {
+      wearing: shopData?.influencer_wearing_size,
+      height_cm: shopData?.influencer_height_cm,
+      weight_kg: shopData?.influencer_weight_kg,
+      bust_cm: shopData?.influencer_bust_cm,
+      waist_cm: shopData?.influencer_waist_cm,
+      hip_cm: shopData?.influencer_hip_cm,
+    };
+
+    console.log('influencerFieldMeasurements', influencerFieldMeasurements);
+
+    const resolvedMeasurements = influencerFieldMeasurements;
+
+    const normalizeMeasurementValue = (value, { unit, allowNumber = true } = {}) => {
+      if (value === null || value === undefined) return "";
+      if (typeof value === "string") {
+        const trimmed = value.trim();
+        if (!trimmed) return "";
+        return trimmed;
+      }
+      if (allowNumber) {
+        const numeric = Number(value);
+        if (Number.isFinite(numeric)) {
+          const normalized = Number.isInteger(numeric) ? String(numeric) : String(numeric);
+          return unit ? `${normalized} ${unit}` : normalized;
+        }
+      }
+      return String(value).trim();
+    };
+
+    const pickMeasurement = (keys, options) => {
+      console.log('resolvedMeasurements', resolvedMeasurements)
+      for (const key of keys) {
+        const raw = resolvedMeasurements?.[key];
+        const formatted = normalizeMeasurementValue(raw, options);
+        if (formatted) return formatted;
+      }
+      return "";
+    };
+
+    const measurementChips = isInfluencer
+      ? [
+          {
+            label: "Wearing",
+            value: pickMeasurement(["wearing", "wearing_size", "wearingSize", "outfit", "size"], { allowNumber: false }),
+          },
+          {
+            label: "Height",
+            value: pickMeasurement(["height", "height_cm", "heightCm", "heightInCm"], { unit: "cm" }),
+          },
+          {
+            label: "Weight",
+            value: pickMeasurement(["weight", "weight_kg", "weightKg", "weightInKg"], { unit: "kg" }),
+          },
+          {
+            label: "Bust",
+            value: pickMeasurement(["bust", "bust_cm", "bustCm"], { unit: "cm" }),
+          },
+          {
+            label: "Waist",
+            value: pickMeasurement(["waist", "waist_cm", "waistCm"], { unit: "cm" }),
+          },
+          {
+            label: "Hip",
+            value: pickMeasurement(["hip", "hip_cm", "hipCm"], { unit: "cm" }),
+          },
+        ]
+          .map((item) => ({
+            ...item,
+            value: item.value === null || item.value === undefined ? "" : String(item.value).trim(),
+          }))
+          .filter((item) => item.value)
+      : [];
+
+      console.log("measurementChips", measurementChips);
     return {
       id: String(shop?.id || ""),
       slug: shop?.slug || shopSlug || "",
@@ -171,8 +283,12 @@ export default function StoreDetailScreen() {
       overview: shop?.storefront_story,
       sinceYear,
       fulfilledOrders,
+      accountType,
+      isInfluencer,
+      handle,
+      measurementChips,
     };
-  }, [shopData, shopPosts.length, shopSlug]);
+  }, [routeAccountType, shopData, shopSlug]);
 
   const normalizedPosts = useMemo(() => {
     return getArray(shopPosts).map((item, index) => ({
@@ -184,6 +300,8 @@ export default function StoreDetailScreen() {
       platform: String(item?.social_platform || "instagram").toLowerCase(),
       socialUrl: item?.social_url || normalizedStore?.social_url,
       shareCount: Number(item?.share_count || 0),
+      collabRequestId: item?.collab_request_id ?? item?.collabRequestId ?? item?.request_id ?? item?.requestId,
+      customerUrlPath: item?.customer_url_path ?? item?.customerUrlPath,
     }));
   }, [normalizedStore.currency, normalizedStore?.social_url, shopPosts]);
 
@@ -215,11 +333,26 @@ export default function StoreDetailScreen() {
     }
   };
 
+  const handleOpenGroup = async (post) => {
+    const customerUrlPath = String(post?.customerUrlPath || "").trim();
+    const targetUrl = customerUrlPath
+      ? `${API_BASE}${customerUrlPath.startsWith("/") ? "" : "/"}${customerUrlPath}`
+      : post?.socialUrl;
+
+    await handleOpenUrl(targetUrl);
+  };
+
   const handleAddToCart = async (postId) => {
     const normalizedPostId = String(postId || "").trim();
 
     if (!normalizedPostId) {
       Alert.alert("Error", "Product not available for cart.");
+      return;
+    }
+
+    // Check if user is authenticated
+    if (!isAuthenticated) {
+      navigation.navigate('Login');
       return;
     }
 
@@ -266,6 +399,8 @@ export default function StoreDetailScreen() {
       </SafeAreaView>
     );
   }
+  const storeTypeMessages = normalizedStore.overview.split('.').map(message=> message+'.');
+  console.log('storeTypeMessages.overview==========', storeTypeMessages)
 
   return (
     <SafeAreaView style={styles.safeArea} edges={["top"]}>
@@ -273,13 +408,21 @@ export default function StoreDetailScreen() {
 
         <View style={styles.heroCard}>
           <Image source={{ uri: normalizedStore.coverImage }} style={styles.heroBackground} />
-          <View style={styles.heroOverlay} />
+          <View style={styles.heroOverlay} pointerEvents="none" />
 
           <View style={styles.heroTopRow}>
             <View>
-              <Text style={styles.heroEyebrow}>Store</Text>
+              <Text style={styles.heroEyebrow}>{normalizedStore.isInfluencer ? "Storefront" : "Store"}</Text>
               <Text style={styles.heroTitle}>{normalizedStore.name}</Text>
-              <Text style={styles.heroMeta}>{normalizedStore.city} · {normalizedStore.category}</Text>
+              {normalizedStore.isInfluencer ? (
+                <Text style={styles.heroMeta}>
+                  {normalizedStore.handle && normalizedStore.city
+                    ? `${normalizedStore.handle} · ${normalizedStore.city}`
+                    : normalizedStore.handle || normalizedStore.city}
+                </Text>
+              ) : (
+                <Text style={styles.heroMeta}>{normalizedStore.city} · {normalizedStore.category}</Text>
+              )}
             </View>
 
             <TouchableOpacity style={styles.backButton} onPress={() => navigation.goBack()}>
@@ -290,50 +433,123 @@ export default function StoreDetailScreen() {
 
           <View style={styles.heroInfoCard}>
             <View style={styles.badgeRow}>
-              <View style={styles.infoBadge}>
-                <FontAwesome5 name="th-large" size={10} color="#EF6C00" />
-                <Text style={styles.infoBadgeText}>{normalizedStore.postCount} posts</Text>
-              </View>
-              <View style={styles.infoBadge}>
-                <FontAwesome5 name="check-circle" size={10} color="#16A34A" />
-                <Text style={styles.infoBadgeText}>{normalizedStore.verificationStatus}</Text>
-              </View>
-              <View style={styles.infoBadge}>
-                <FontAwesome5 name="shield-alt" size={10} color="#2563EB" />
-                <Text style={styles.infoBadgeText}>Trust {normalizedStore.trustScore}</Text>
-              </View>
+              {normalizedStore.isInfluencer ? (
+                <>
+                  <View style={styles.influencerVerifiedBadge}>
+                    <View style={styles.influencerVerifiedIconWrap}>
+                      <FontAwesome5 name="check" size={10} color="#16A34A" />
+                    </View>
+                    <Text style={styles.influencerBadgeText}>Verified</Text>
+                  </View>
+
+                  <View style={styles.influencerTrustBadge}>
+                    <View style={styles.influencerTrustIconWrap}>
+                      <FontAwesome5 name="shield-alt" size={10} color="#E11D48" />
+                    </View>
+                    <Text style={styles.influencerBadgeText}>Trust</Text>
+                    <View style={styles.influencerTrustBarTrack}>
+                      <View
+                        style={[
+                          styles.influencerTrustBarFill,
+                          { width: `${Math.max(0, Math.min(100, normalizedStore.trustScore))}%` },
+                        ]}
+                      />
+                    </View>
+                  </View>
+                </>
+              ) : (
+                <>
+                  <View style={styles.infoBadge}>
+                    <FontAwesome5 name="th-large" size={10} color="#EF6C00" />
+                    <Text style={styles.infoBadgeText}>{normalizedStore.postCount} posts</Text>
+                  </View>
+                  <View style={styles.infoBadge}>
+                    <FontAwesome5 name="check-circle" size={10} color="#16A34A" />
+                    <Text style={styles.infoBadgeText}>{normalizedStore.verificationStatus}</Text>
+                  </View>
+                  <View style={styles.infoBadge}>
+                    <FontAwesome5 name="shield-alt" size={10} color="#2563EB" />
+                    <Text style={styles.infoBadgeText}>Trust {normalizedStore.trustScore}</Text>
+                  </View>
+                </>
+              )}
             </View>
 
-            <View style={styles.socialRow}>
-              {socialLinks.map((item) => (
+            {normalizedStore.isInfluencer ? (
+              <View style={styles.measurementsWrap}>
                 <TouchableOpacity
-                  key={item.key}
-                  style={[styles.socialChip, !item.url && styles.socialChipMuted]}
-                  onPress={() => handleOpenUrl(item.url)}
-                  disabled={!item.url}
+                  style={styles.measurementsTrigger}
+                  onPress={() => setMeasurementsOpen((prev) => !prev)}
+                  activeOpacity={0.9}
+                  hitSlop={{ top: 6, bottom: 6, left: 6, right: 6 }}
                 >
-                  <FontAwesome5 name={item.icon} size={10} color="#111827" />
-                  <Text style={styles.socialChipText}>{item.label}</Text>
+                  <View style={styles.measurementsTriggerLeft}>
+                    <FontAwesome5 name="ruler-combined" size={12} color="#111827" />
+                    <Text style={styles.measurementsTriggerText}>View body measurements</Text>
+                  </View>
+                  <FontAwesome5
+                    name={measurementsOpen ? "chevron-up" : "chevron-down"}
+                    size={10}
+                    color="#111827"
+                  />
                 </TouchableOpacity>
-              ))}
+
+                {measurementsOpen ? (
+                  normalizedStore.measurementChips.length ? (
+                    <View style={styles.measurementsRow}>
+                      {normalizedStore.measurementChips.map((chip) => (
+                        <View key={chip.label} style={styles.measurementChip}>
+                          <Text style={styles.measurementChipText}>{`${chip.label} ${chip.value}`}</Text>
+                        </View>
+                      ))}
+                    </View>
+                  ) : (
+                    <View style={styles.measurementsRow}>
+                      <View style={styles.measurementChip}>
+                        <Text style={styles.measurementChipText}>No measurements available</Text>
+                      </View>
+                    </View>
+                  )
+                ) : null}
+              </View>
+            ) : null}
+
+            {!normalizedStore.isInfluencer ? (
+              <View style={styles.socialRow}>
+                {socialLinks.map((item) => (
+                  <TouchableOpacity
+                    key={item.key}
+                    style={[styles.socialChip, !item.url && styles.socialChipMuted]}
+                    onPress={() => handleOpenUrl(item.url)}
+                    disabled={!item.url}
+                  >
+                    <FontAwesome5 name={item.icon} size={10} color="#111827" />
+                    <Text style={styles.socialChipText}>{item.label}</Text>
+                  </TouchableOpacity>
+                ))}
+              </View>
+            ) : null}
+
+            {/* <Text style={styles.aboutText}>{normalizedStore.overview}</Text> */}
+            <View style={{ marginTop: 12 }}>
+              <MultiTypewriter messages={storeTypeMessages} />
             </View>
 
-            <Text style={styles.aboutLabel}>About store</Text>
-            <Text style={styles.aboutText}>{normalizedStore.overview}</Text>
+            {!normalizedStore.isInfluencer ? (
+              <View style={styles.storeHighlightsRow}>
+                <View style={styles.storeHighlightChip}>
+                  <FontAwesome5 name="calendar-alt" size={16} color="#111827" />
+                  <Text style={styles.storeHighlightText}>{`Since ${normalizedStore.sinceYear}`}</Text>
+                </View>
 
-            <View style={styles.storeHighlightsRow}>
-              <View style={styles.storeHighlightChip}>
-                <FontAwesome5 name="calendar-alt" size={16} color="#111827" />
-                <Text style={styles.storeHighlightText}>{`Since ${normalizedStore.sinceYear}`}</Text>
+                <View style={styles.storeHighlightChip}>
+                  <FontAwesome5 name="truck" size={16} color="#111827" />
+                  <Text style={styles.storeHighlightText}>
+                    {`${normalizedStore.fulfilledOrders} order${normalizedStore.fulfilledOrders === 1 ? "" : "s"} fulfilled`}
+                  </Text>
+                </View>
               </View>
-
-              <View style={styles.storeHighlightChip}>
-                <FontAwesome5 name="truck" size={16} color="#111827" />
-                <Text style={styles.storeHighlightText}>
-                  {`${normalizedStore.fulfilledOrders} order${normalizedStore.fulfilledOrders === 1 ? "" : "s"} fulfilled`}
-                </Text>
-              </View>
-            </View>
+            ) : null}
 
             {/* <View style={styles.quickActionsRow}>
               <TouchableOpacity style={styles.outlineAction}>
@@ -354,13 +570,19 @@ export default function StoreDetailScreen() {
           </View>
         ) : null}
 
-        {normalizedPosts.map((item) => (
-          <TouchableOpacity
-            key={item.id}
-            activeOpacity={0.92}
-            style={styles.postCard}
-            onPress={() => openProductDetail(item.id)}
+        {normalizedPosts.length > 0 ? (
+          <ScrollView
+            horizontal
+            showsHorizontalScrollIndicator={false}
+            contentContainerStyle={styles.horizontalPostsScroll}
           >
+            {normalizedPosts.map((item) => (
+              <TouchableOpacity
+                key={item.id}
+                activeOpacity={0.92}
+                style={[styles.postCard, styles.postCardHorizontal]}
+                onPress={() => openProductDetail(item.id)}
+              >
             <View style={styles.postHeaderRow}>
               <View style={styles.platformChip}>
                 <FontAwesome5
@@ -378,6 +600,18 @@ export default function StoreDetailScreen() {
 
             <View style={styles.postFooter}>
               <Text style={styles.postTitle} numberOfLines={2}>{item.title}</Text>
+
+              {normalizedStore.isInfluencer ? (
+                <View style={styles.influencerPostFooterRow}>
+                  <View style={styles.influencerPostLabelChip}>
+                    <Text style={styles.influencerPostLabelText}>Linked product group</Text>
+                  </View>
+
+                  <TouchableOpacity style={styles.openLinkButton} onPress={() => handleOpenGroup(item)}>
+                    <Text style={styles.openLinkButtonText}>Open group</Text>
+                  </TouchableOpacity>
+                </View>
+              ) : (
 
               <View style={styles.postMetaActionRow}>
                 <View style={styles.postMetaChip}>
@@ -405,16 +639,17 @@ export default function StoreDetailScreen() {
                 <Text style={styles.openLinkButtonText}>Open original</Text>
               </TouchableOpacity>
               </View>
-            </View>
-          </TouchableOpacity>
-        ))}
-
-        {normalizedPosts.length === 0 ? (
+              )}
+              </View>
+               </TouchableOpacity>
+            ))}
+          </ScrollView>
+        ) : (
           <View style={styles.emptyCard}>
             <Text style={styles.stateTitle}>No posts yet</Text>
             <Text style={styles.stateSubtitle}>This store hasn’t published any visible posts yet.</Text>
           </View>
-        ) : null}
+        )}
       </ScrollView>
     </SafeAreaView>
   );
@@ -517,7 +752,7 @@ const styles = StyleSheet.create({
   },
   heroBackground: {
     width: "100%",
-    height: 170,
+    height: 400,
     position: "absolute",
     top: 0,
     left: 0,
@@ -527,7 +762,7 @@ const styles = StyleSheet.create({
     top: 0,
     left: 0,
     right: 0,
-    height: 170,
+    height: 400,
     backgroundColor: "rgba(255,255,255,0.72)",
   },
   heroTopRow: {
@@ -623,6 +858,108 @@ const styles = StyleSheet.create({
     fontSize: 10,
     color: "#111827",
     fontWeight: "500",
+  },
+  measurementsWrap: {
+    marginTop: 12,
+  },
+  measurementsTrigger: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
+    borderRadius: 12,
+    borderWidth: 2,
+    borderColor: "#2563EB",
+    backgroundColor: "#FFFFFF",
+    paddingHorizontal: 12,
+    paddingVertical: 10,
+  },
+  measurementsTriggerLeft: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 8,
+  },
+  measurementsTriggerText: {
+    fontSize: 11,
+    fontWeight: "600",
+    color: "#111827",
+  },
+  measurementsRow: {
+    marginTop: 10,
+    flexDirection: "row",
+    flexWrap: "wrap",
+    gap: 8,
+  },
+  measurementChip: {
+    borderRadius: 999,
+    borderWidth: 1,
+    borderColor: "#E5E7EB",
+    backgroundColor: "#F3F4F6",
+    paddingHorizontal: 10,
+    paddingVertical: 6,
+  },
+  measurementChipText: {
+    fontSize: 10,
+    fontWeight: "600",
+    color: "#111827",
+  },
+  influencerVerifiedBadge: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 8,
+    backgroundColor: "rgba(255,255,255,0.92)",
+    borderRadius: 999,
+    paddingHorizontal: 14,
+    paddingVertical: 9,
+    borderWidth: 1,
+    borderColor: "#E5E7EB",
+  },
+  influencerVerifiedIconWrap: {
+    width: 18,
+    height: 18,
+    borderRadius: 999,
+    backgroundColor: "#DCFCE7",
+    alignItems: "center",
+    justifyContent: "center",
+    borderWidth: 1,
+    borderColor: "#86EFAC",
+  },
+  influencerTrustBadge: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 8,
+    backgroundColor: "rgba(255,255,255,0.92)",
+    borderRadius: 999,
+    paddingHorizontal: 14,
+    paddingVertical: 9,
+    borderWidth: 1,
+    borderColor: "#E5E7EB",
+  },
+  influencerTrustIconWrap: {
+    width: 18,
+    height: 18,
+    borderRadius: 999,
+    backgroundColor: "#FFE4E6",
+    alignItems: "center",
+    justifyContent: "center",
+    borderWidth: 1,
+    borderColor: "#FDA4AF",
+  },
+  influencerBadgeText: {
+    fontSize: 11,
+    fontWeight: "700",
+    color: "#111827",
+  },
+  influencerTrustBarTrack: {
+    width: 86,
+    height: 10,
+    borderRadius: 999,
+    backgroundColor: "#E5E7EB",
+    overflow: "hidden",
+  },
+  influencerTrustBarFill: {
+    height: "100%",
+    borderRadius: 999,
+    backgroundColor: "#FB7185",
   },
   aboutLabel: {
     marginTop: 12,
@@ -723,6 +1060,15 @@ const styles = StyleSheet.create({
     marginBottom: 10,
     overflow: "hidden",
   },
+  postCardHorizontal: {
+    width: 280,
+    marginRight: 12,
+    marginBottom: 0,
+  },
+  horizontalPostsScroll: {
+    paddingHorizontal: 8,
+    paddingVertical: 8,
+  },
   postHeaderRow: {
     paddingHorizontal: 10,
     paddingTop: 10,
@@ -758,6 +1104,27 @@ const styles = StyleSheet.create({
     fontWeight: "700",
     color: "#111827",
     lineHeight: 20,
+  },
+  influencerPostFooterRow: {
+    marginTop: 12,
+    flexDirection: "row",
+    flexWrap: "wrap",
+    alignItems: "center",
+    justifyContent: "space-between",
+    gap: 10,
+  },
+  influencerPostLabelChip: {
+    borderRadius: 999,
+    borderWidth: 1,
+    borderColor: "#E7DFD5",
+    backgroundColor: "#FAF7F2",
+    paddingHorizontal: 12,
+    paddingVertical: 8,
+  },
+  influencerPostLabelText: {
+    fontSize: 11,
+    fontWeight: "600",
+    color: "#111827",
   },
   postMetaActionRow: {
     marginTop: 10,

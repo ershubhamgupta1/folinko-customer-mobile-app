@@ -17,7 +17,7 @@ const LoginScreen = ({ navigation }) => {
   const [password, setPassword] = useState('');
   const [isLogin, setIsLogin] = useState(true);
   const [loading, setLoading] = useState(false);
-  const { login, register } = useAuth();
+  const { login, register, isAuthenticated } = useAuth();
   const trimmedEmail = email.trim();
   const isPasswordValidForRegister = password.length >= 8 && password.length <= 128;
   const isFormValid = isLogin
@@ -51,6 +51,21 @@ const LoginScreen = ({ navigation }) => {
     }
   };
 
+  const handleOpenFeed = () => {
+    if (isAuthenticated) {
+      navigation.reset({
+        index: 0,
+        routes: [{ name: 'Main', params: { screen: 'Feed' } }],
+      });
+      return;
+    }
+
+    navigation.reset({
+      index: 0,
+      routes: [{ name: 'feedScreen' }],
+    });
+  };
+
   return (
     <KeyboardAvoidingView 
       style={styles.container} 
@@ -59,7 +74,7 @@ const LoginScreen = ({ navigation }) => {
       <ScrollView keyboardShouldPersistTaps="handled"
          contentContainerStyle={styles.scrollContainer}>
         <View style={styles.header}>
-          <Text style={styles.logo}>E-KOM</Text>
+          <Text style={styles.logo}>Folinko</Text>
           <Text style={styles.subtitle}>
             {isLogin ? 'Welcome back!' : 'Create your account'}
           </Text>
@@ -73,6 +88,7 @@ const LoginScreen = ({ navigation }) => {
               value={email}
               onChangeText={setEmail}
               placeholder="Enter your email"
+              placeholderTextColor="#6b7280"
               keyboardType="email-address"
               autoCapitalize="none"
               autoCorrect={false}
@@ -86,6 +102,7 @@ const LoginScreen = ({ navigation }) => {
               value={password}
               onChangeText={setPassword}
               placeholder="Enter your password"
+              placeholderTextColor="#6b7280"
               secureTextEntry
             />
           </View>
@@ -98,6 +115,14 @@ const LoginScreen = ({ navigation }) => {
             <Text style={styles.buttonText}>
               {loading ? 'Loading...' : (isLogin ? 'Login' : 'Register')}
             </Text>
+          </TouchableOpacity>
+
+          <TouchableOpacity
+            style={styles.secondaryButton}
+            onPress={handleOpenFeed}
+            disabled={loading}
+          >
+            <Text style={styles.secondaryButtonText}>Continue to feed</Text>
           </TouchableOpacity>
 
           <TouchableOpacity
@@ -176,6 +201,7 @@ const styles = StyleSheet.create({
     padding: 12,
     fontSize: 16,
     backgroundColor: '#f8f9fa',
+    color: '#111827',
   },
   button: {
     backgroundColor: '#f59e0b',
@@ -189,6 +215,20 @@ const styles = StyleSheet.create({
   },
   buttonText: {
     color: 'white',
+    fontSize: 16,
+    fontWeight: '600',
+  },
+  secondaryButton: {
+    marginTop: 12,
+    borderRadius: 8,
+    padding: 16,
+    alignItems: 'center',
+    borderWidth: 1,
+    borderColor: '#e1e8ed',
+    backgroundColor: '#fff',
+  },
+  secondaryButtonText: {
+    color: '#000',
     fontSize: 16,
     fontWeight: '600',
   },
