@@ -23,6 +23,7 @@ const SOCIAL_META = [
   { key: "instagram", label: "Instagram", icon: "instagram" },
   { key: "facebook", label: "Facebook", icon: "facebook-f" },
   { key: "youtube", label: "YouTube", icon: "youtube" },
+  { key: "pinterest", label: "Pinterest", icon: "pinterest" },
 ];
 
 const FALLBACK_POST_IMAGE =
@@ -121,7 +122,6 @@ export default function StoreDetailScreen() {
 
       try {
         const response = await shops.getBySlug(shopSlug);
-        console.log('shop slug response--------', JSON.stringify(response))
         const nextShop =
           response?.shop ||
           response?.data?.shop ||
@@ -177,7 +177,6 @@ export default function StoreDetailScreen() {
 
   const normalizedStore = useMemo(() => {
     const shop = shopData || {};
-    console.log('shop=========', shop);
     const trustMeter = shop?.trust_meter || {};
     const verificationStatus = String(
       shop?.verification_status || trustMeter?.status || "UNVERIFIED"
@@ -190,7 +189,6 @@ export default function StoreDetailScreen() {
     const fulfilledOrders = isInfluencer ? 0 : getStoreFulfilledOrders(shop);
     const slug = shop?.slug || shopSlug || "";
     const handle = slug ? `@${slug}` : "";
-    console.log('shopData==========', shopData)
     const influencerFieldMeasurements = {
       wearing: shopData?.influencer_wearing_size,
       height_cm: shopData?.influencer_height_cm,
@@ -199,8 +197,6 @@ export default function StoreDetailScreen() {
       waist_cm: shopData?.influencer_waist_cm,
       hip_cm: shopData?.influencer_hip_cm,
     };
-
-    console.log('influencerFieldMeasurements', influencerFieldMeasurements);
 
     const resolvedMeasurements = influencerFieldMeasurements;
 
@@ -222,7 +218,6 @@ export default function StoreDetailScreen() {
     };
 
     const pickMeasurement = (keys, options) => {
-      console.log('resolvedMeasurements', resolvedMeasurements)
       for (const key of keys) {
         const raw = resolvedMeasurements?.[key];
         const formatted = normalizeMeasurementValue(raw, options);
@@ -265,7 +260,6 @@ export default function StoreDetailScreen() {
           .filter((item) => item.value)
       : [];
 
-      console.log("measurementChips", measurementChips);
     return {
       id: String(shop?.id || ""),
       slug: shop?.slug || shopSlug || "",
@@ -307,13 +301,16 @@ export default function StoreDetailScreen() {
 
   const socialLinks = useMemo(() => {
     const shop = shopData || {};
-    return SOCIAL_META.map((item) => ({
-      ...item,
-      url:
-        shop?.social_links?.[item.key] ||
-        shop?.[`${item.key}_url`] ||
-        (item.key === "instagram" ? shop?.social_url : ""),
-    }));
+    return SOCIAL_META.map((item) => {
+      const handle = shop?.[`${item.key}_handle`] || "";
+      // Check if handle is valid (not empty, not "None", not null)
+      const isValid = handle && handle !== "None" && handle.trim() !== "";
+      return {
+        ...item,
+        url: isValid ? handle : "",
+        disabled: !isValid, // Add disabled flag for invalid handles
+      };
+    });
   }, [shopData]);
 
   const navigateToTab = (screen) => {
@@ -400,8 +397,6 @@ export default function StoreDetailScreen() {
     );
   }
   const storeTypeMessages = normalizedStore.overview.split('.').map(message=> message+'.');
-  console.log('storeTypeMessages.overview==========', storeTypeMessages)
-
   return (
     <SafeAreaView style={styles.safeArea} edges={["top"]}>
       <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={styles.contentContainer}>
@@ -519,11 +514,21 @@ export default function StoreDetailScreen() {
                 {socialLinks.map((item) => (
                   <TouchableOpacity
                     key={item.key}
-                    style={[styles.socialChip, !item.url && styles.socialChipMuted]}
+                    style={[styles.socialChip, item.disabled && styles.socialChipMuted]}
                     onPress={() => handleOpenUrl(item.url)}
-                    disabled={!item.url}
+                    disabled={item.disabled}
                   >
-                    <FontAwesome5 name={item.icon} size={10} color="#111827" />
+                    <FontAwesome5 
+                      name={item.icon} 
+                      size={10} 
+                      color={
+                        item.disabled ? '#9CA3AF' :
+                        item.key === 'instagram' ? '#E4405F' :
+                        item.key === 'facebook' ? '#1877F2' :
+                        item.key === 'youtube' ? '#FF0000' :
+                        item.key === 'pinterest' ? '#BD081C' : '#111827'
+                      } 
+                    />
                     <Text style={styles.socialChipText}>{item.label}</Text>
                   </TouchableOpacity>
                 ))}
@@ -583,7 +588,7 @@ export default function StoreDetailScreen() {
                 style={[styles.postCard, styles.postCardHorizontal]}
                 onPress={() => openProductDetail(item.id)}
               >
-            <View style={styles.postHeaderRow}>
+            {/* <View style={styles.postHeaderRow}>
               <View style={styles.platformChip}>
                 <FontAwesome5
                   name={item.platform === "facebook" ? "facebook-f" : item.platform === "youtube" ? "youtube" : "instagram"}
@@ -594,7 +599,7 @@ export default function StoreDetailScreen() {
                   {item.platform.charAt(0).toUpperCase() + item.platform.slice(1)}
                 </Text>
               </View>
-            </View>
+            </View> */}
 
             <Image source={{ uri: item.imageUrl }} style={styles.postImage} />
 
@@ -852,7 +857,7 @@ const styles = StyleSheet.create({
     paddingVertical: 6,
   },
   socialChipMuted: {
-    opacity: 0.55,
+    // opacity: 0.55,
   },
   socialChipText: {
     fontSize: 10,

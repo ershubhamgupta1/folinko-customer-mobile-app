@@ -229,7 +229,6 @@ export default function ProductDetailScreen() {
           posts.getById(productId),
           posts.related(productId).catch(() => ({ posts: [] })),
         ]);
-        console.log('response=========>>>>', JSON.stringify(response))
         setProductData(response?.post || null);
         setRelatedProductsData(Array.isArray(relatedRes?.posts) ? relatedRes.posts : []);
       } catch (e) {

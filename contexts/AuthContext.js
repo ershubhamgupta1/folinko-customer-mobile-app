@@ -83,15 +83,11 @@ export const AuthProvider = ({ children }) => {
   };
 
   const register = async (email, password) => {
-    console.log('enter in register======',email, password)
     try {
       setLoading(true);
       const response = await businessAuth.register(email, password);
-      console.log('response=========', response);
       return response;
     } catch (error) {
-      console.log('error=========', error);
-
       throw error;
     } finally {
       setLoading(false);

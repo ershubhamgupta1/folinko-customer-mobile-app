@@ -5,6 +5,7 @@ import * as Location from "expo-location";
 import {
   ActivityIndicator,
   Image,
+  Linking,
   TouchableOpacity,
   View,
   Text,
@@ -245,8 +246,6 @@ export default function FeedScreen() {
         shops.discover(),
         shops.discover({ account_type: "influencer", verified: true, page: 1, page_size: 20 }).catch(() => null),
       ]);
-      console.log('shopsData===========', shopsData);
-
       const nextStores = Array.isArray(shopsData?.shops) ? shopsData.shops : [];
       const nextMarkets = Array.isArray(marketsRes?.markets) ? marketsRes.markets : [];
       const nextInfluencers = Array.isArray(influencersRes?.shops)
@@ -381,6 +380,33 @@ export default function FeedScreen() {
       setLookingUpPost(false);
     }
   };
+
+  useEffect(() => {
+    // Handle URLs shared from other apps
+    const handleUrl = (url) => {
+      if (url && (url.includes('instagram.com') || url.includes('facebook.com') || url.includes('pinterest.com'))) {
+        // Auto-fill the lookup URL and trigger search
+        setLookupUrl(url);
+        handleLookupPost();
+      }
+    };
+
+    // Check for initial URL (when app is opened from shared link)
+    Linking.getInitialURL().then((url) => {
+      if (url) {
+        handleUrl(url);
+      }
+    });
+
+    // Listen for URL changes (when app is already open)
+    const subscription = Linking.addEventListener('url', ({ url }) => {
+      handleUrl(url);
+    });
+
+    return () => {
+      subscription?.remove();
+    };
+  }, []);
 
   const handleRecentSearchPress = useCallback(
     async (term) => {
