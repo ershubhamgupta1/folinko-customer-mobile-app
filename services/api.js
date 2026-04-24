@@ -340,14 +340,15 @@ export const paymentMethods = {
 
 // Checkout + Orders (requires customer token)
 export const orders = {
-  checkout: ({ post_id, address_id, payment_method_id } = {}) =>
+  checkout: ({ post_id, address_id, payment_method_id, delivery_mode } = {}) =>
     apiRequest('/api/customer/orders/checkout', {
       method: 'POST',
-      body: JSON.stringify(
-        post_id !== undefined || address_id !== undefined || payment_method_id !== undefined
-          ? { post_id, address_id, payment_method_id }
-          : {}
-      ),
+      body: JSON.stringify({
+        ...(post_id !== undefined ? { post_id } : {}),
+        ...(address_id !== undefined ? { address_id } : {}),
+        ...(payment_method_id !== undefined ? { payment_method_id } : {}),
+        ...(delivery_mode !== undefined ? { delivery_mode } : {}),
+      }),
     }),
   list: () => apiRequest('/api/customer/orders'),
   getById: (orderId) => apiRequest(`/api/customer/orders/${encodeURIComponent(String(orderId))}`),

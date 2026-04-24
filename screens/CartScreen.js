@@ -29,6 +29,8 @@ const CartScreen = () => {
     navigation.navigate("productDetail", { productId });
   };
 
+  console.log('cartItems=========', JSON.stringify(cartItems))
+
   const onRefresh = useCallback(() => {
     setRefreshing(true);
     fetchCart({ isRefresh: true });

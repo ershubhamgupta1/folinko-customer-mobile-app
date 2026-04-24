@@ -7,6 +7,7 @@
     "icon": "./assets/icon.png",
     "userInterfaceStyle": "light",
     "newArchEnabled": true,
+    "scheme": "folinko",
     "plugins": [
       [
         "expo-media-library",
@@ -21,6 +22,19 @@
             ]
           }
         }
+      ],
+      [
+        "expo-share-intent",
+        {
+          "disableIOS": true,
+          "androidIntentFilters": [
+            "text/*",
+            "image/*"
+          ],
+          "androidMultiIntentFilters": [
+            "image/*"
+          ]
+        }
       ]
     ],
     "splash": {
@@ -30,7 +44,17 @@
     },
     "ios": {
       "supportsTablet": true,
-      "bundleIdentifier": "com.ershubhamgupta1.mobilesellerapp"
+      "bundleIdentifier": "com.ershubhamgupta1.mobilesellerapp",
+      "infoPlist": {
+        "LSApplicationQueriesSchemes": [
+          "instagram",
+          "fb",
+          "pinterest"
+        ],
+        "NSUserActivityTypes": [],
+        "UIFileSharingEnabled": true,
+        "LSSupportsOpeningDocumentsInPlace": true
+      }
     },
     "android": {
       "adaptiveIcon": {
@@ -46,16 +70,105 @@
         "android.permission.READ_MEDIA_VIDEO",
         "android.permission.READ_MEDIA_AUDIO"
       ],
-      "package": "com.ershubhamgupta1.mobilecustomerapp"
+      "package": "com.ershubhamgupta1.mobilecustomerapp",
+      "intentFilters": [
+        {
+          "action": "VIEW",
+          "data": {
+            "scheme": "https",
+            "host": "www.instagram.com"
+          },
+          "category": [
+            "BROWSABLE",
+            "DEFAULT"
+          ]
+        },
+        {
+          "action": "VIEW",
+          "data": {
+            "scheme": "https",
+            "host": "www.facebook.com"
+          },
+          "category": [
+            "BROWSABLE",
+            "DEFAULT"
+          ]
+        },
+        {
+          "action": "VIEW",
+          "data": {
+            "scheme": "https",
+            "host": "www.pinterest.com"
+          },
+          "category": [
+            "BROWSABLE",
+            "DEFAULT"
+          ]
+        },
+        {
+          "action": "SEND",
+          "data": {
+            "mimeType": "text/plain"
+          },
+          "category": [
+            "DEFAULT"
+          ]
+        },
+        {
+          "action": "SEND",
+          "data": {
+            "mimeType": "text/*"
+          },
+          "category": [
+            "DEFAULT"
+          ]
+        },
+        {
+          "action": "SEND",
+          "data": {
+            "mimeType": "image/*"
+          },
+          "category": [
+            "DEFAULT"
+          ]
+        },
+        {
+          "action": "SEND",
+          "data": {
+            "mimeType": "video/*"
+          },
+          "category": [
+            "DEFAULT"
+          ]
+        },
+        {
+          "action": "SEND_MULTIPLE",
+          "data": {
+            "mimeType": "text/*"
+          },
+          "category": [
+            "DEFAULT"
+          ]
+        },
+        {
+          "action": "SEND_MULTIPLE",
+          "data": {
+            "mimeType": "image/*"
+          },
+          "category": [
+            "DEFAULT"
+          ]
+        }
+      ]
     },
     "web": {
       "favicon": "./assets/favicon.png"
     },
     "extra": {
       "eas": {
-        "projectId": "07e25111-6db6-4e01-a7e2-e28ecb3c690f"
+        "projectId": "cb888bda-df98-4af2-9d2f-977c14c57f55"
       }
     },
-    "owner": "ershubhamgupta1"
+    "owner": "shubhamgupta49160"
   }
 }

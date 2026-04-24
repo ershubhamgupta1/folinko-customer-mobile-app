@@ -497,14 +497,10 @@ export default function ProductDetailScreen() {
     try {
       setBuyingNow(true);
       setCartFeedback({ type: "", message: "" });
-
-      const response = await cart.add(targetPostId, { quantity: 1 });
-
-      if (response === undefined || response?.error || response?.errors || response?.success === false) {
-        throw new Error(response?.message || "Failed to continue to checkout.");
-      }
-
-      navigation.navigate("checkoutScreen");
+      navigation.navigate("checkoutScreen", {
+        postId: targetPostId,
+        buyNowPost: productData || { id: targetPostId },
+      });
     } catch (e) {
       setCartFeedback({ type: "error", message: e?.message || "Failed to continue to checkout." });
     } finally {

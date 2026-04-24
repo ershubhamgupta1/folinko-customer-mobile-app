@@ -18,6 +18,7 @@ import UserProfileScreen from '../screens/UserProfileScreen';
 import OrderDetailScreen from '../screens/OrderDetailScreen';
 import ProductDetailScreen from '../screens/ProductDetailScreen';
 import StoreDetailScreen from '../screens/StoreDetailScreen';
+import HandleShareScreen from '../screens/HandleShareScreen';
 
 const Tab = createBottomTabNavigator();
 const Stack = createStackNavigator();
@@ -138,6 +139,7 @@ const AppNavigator = () => {
           <Stack.Screen name="feedScreen" component={FeedScreen} />
           <Stack.Screen name="productDetail" component={ProductDetailScreen} />
           <Stack.Screen name="storeDetail" component={StoreDetailScreen} />
+          <Stack.Screen name="handleShare" component={HandleShareScreen} />
           <Stack.Screen name="Login" component={LoginScreen} />
         </Stack.Group>
       ) : (
@@ -145,6 +147,7 @@ const AppNavigator = () => {
           <Stack.Screen name="feedScreen" component={FeedScreen} />
           <Stack.Screen name="productDetail" component={ProductDetailScreen} />
           <Stack.Screen name="storeDetail" component={StoreDetailScreen} />
+          <Stack.Screen name="handleShare" component={HandleShareScreen} />
           <Stack.Screen name="Login" component={LoginScreen} />
         </Stack.Group>
       )}

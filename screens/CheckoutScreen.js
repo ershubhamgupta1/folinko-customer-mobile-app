@@ -12,7 +12,7 @@ import {
 } from "react-native";
 import { SafeAreaView, useSafeAreaInsets } from "react-native-safe-area-context";
 import { FontAwesome5 } from "@expo/vector-icons";
-import { useNavigation } from "@react-navigation/native";
+import { useFocusEffect, useNavigation, useRoute } from "@react-navigation/native";
 import { addresses, cart, orders, paymentMethods } from "../services/api";
 
 const FALLBACK_CART_IMAGE =
@@ -141,6 +141,7 @@ const getCreatedAddressId = (response) => {
 
 export default function CheckoutScreen() {
   const navigation = useNavigation();
+  const route = useRoute();
   const insets = useSafeAreaInsets();
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
@@ -185,10 +186,14 @@ export default function CheckoutScreen() {
     label: "",
     upiId: "",
   });
-
+  const buyNowPost = route?.params?.buyNowPost || null;
+  const buyNowPostId = String(route?.params?.postId || buyNowPost?.id || "").trim();
+  const isBuyNowFlow = !!buyNowPostId;
   const fetchCheckoutData = useCallback(async ({ isRefresh, preferredAddressId, preferredPaymentMethodId } = {}) => {
     if (!isRefresh) {
       setLoading(true);
+    } else {
+      setRefreshing(true);
     }
 
     setError("");
@@ -198,13 +203,18 @@ export default function CheckoutScreen() {
       addresses.list(),
       paymentMethods.list(),
     ]);
-
+    console.log('cartResult===========',JSON.stringify(cartResult))
+    
     try {
       if (cartResult.status !== "fulfilled" || isFailedResponse(cartResult.value)) {
-        throw new Error(cartResult.status === "fulfilled" ? cartResult.value?.message || "Failed to load checkout" : "Failed to load checkout");
+        if (!isBuyNowFlow) {
+          throw new Error(cartResult.status === "fulfilled" ? cartResult.value?.message || "Failed to load checkout" : "Failed to load checkout");
+        }
       }
 
-      const cartResponse = cartResult.value;
+      const cartResponse = cartResult.status === "fulfilled" && !isFailedResponse(cartResult.value)
+        ? cartResult.value
+        : null;
       const nextCartItems = Array.isArray(cartResponse?.items) ? cartResponse.items : [];
       const nextSubtotal = Number(cartResponse?.subtotal_amount || 0);
       const nextAddresses =
@@ -218,6 +228,7 @@ export default function CheckoutScreen() {
 
       setCartItems(nextCartItems);
       setSubtotalAmount(nextSubtotal);
+      console.log('nextAddresses========', nextAddresses);
       setAddressItems(nextAddresses);
       setPaymentMethodItems(nextPaymentMethods);
       setSelectedAddressId((current) => {
@@ -258,15 +269,20 @@ export default function CheckoutScreen() {
       setLoading(false);
       setRefreshing(false);
     }
-  }, []);
+  }, [isBuyNowFlow]);
 
   useEffect(() => {
     fetchCheckoutData();
   }, [fetchCheckoutData]);
 
-  const onRefresh = useCallback(() => {
-    setRefreshing(true);
-    fetchCheckoutData({ isRefresh: true });
+  useFocusEffect(
+    useCallback(() => {
+      fetchCheckoutData({ isRefresh: true });
+    }, [fetchCheckoutData])
+  );
+
+  const onRefresh = useCallback(async () => {
+    await fetchCheckoutData({ isRefresh: true });
   }, [fetchCheckoutData]);
 
   const handleAddressFieldChange = (field, value) => {
@@ -474,14 +490,38 @@ export default function CheckoutScreen() {
   };
 
   const deliveryAmount = useMemo(() => {
+    if (isBuyNowFlow) {
+      return Number(buyNowPost?.delivery_fee_amount || buyNowPost?.delivery_fee || 0);
+    }
+
     return cartItems.reduce((sum, item) => {
       return sum + Number(item?.post?.delivery_fee_amount || item?.delivery_fee_amount || 0);
     }, 0);
-  }, [cartItems]);
+  }, [buyNowPost, cartItems, isBuyNowFlow]);
+
+  const checkoutItems = useMemo(() => {
+    if (isBuyNowFlow) {
+      return [{
+        id: buyNowPostId,
+        post: buyNowPost || { id: buyNowPostId },
+        quantity: 1,
+      }];
+    }
+
+    return cartItems;
+  }, [buyNowPost, buyNowPostId, cartItems, isBuyNowFlow]);
+
+  const itemsAmount = useMemo(() => {
+    if (isBuyNowFlow) {
+      return Number(buyNowPost?.price || 0);
+    }
+
+    return Number(subtotalAmount || 0);
+  }, [buyNowPost, isBuyNowFlow, subtotalAmount]);
 
   const totalAmount = useMemo(() => {
-    return Number(subtotalAmount || 0) + Number(deliveryAmount || 0);
-  }, [subtotalAmount, deliveryAmount]);
+    return Number(itemsAmount || 0) + Number(deliveryAmount || 0);
+  }, [itemsAmount, deliveryAmount]);
 
   const handleAddCard = async () => {
     const holderName = cardForm.holderName.trim();
@@ -605,8 +645,13 @@ export default function CheckoutScreen() {
   };
 
   const handlePlaceOrder = async () => {
-    if (cartItems.length === 0) {
+    if (!isBuyNowFlow && cartItems.length === 0) {
       setError("Your cart is empty.");
+      return;
+    }
+
+    if (isBuyNowFlow && !buyNowPostId) {
+      setError("Product not available for checkout.");
       return;
     }
 
@@ -624,13 +669,31 @@ export default function CheckoutScreen() {
       setPlacingOrder(true);
       setError("");
 
-      const response = await orders.checkout({
-        address_id: selectedAddressId,
-        payment_method_id: selectedPaymentMethodId,
-      });
+      const postIdsToCheckout = isBuyNowFlow
+        ? [buyNowPostId]
+        : Array.from(
+            new Set(
+              cartItems
+                .map((item) => String(item?.post_id || item?.post?.id || "").trim())
+                .filter(Boolean)
+            )
+          );
 
-      if (isFailedResponse(response)) {
-        throw new Error(response?.message || "Failed to place order");
+      if (postIdsToCheckout.length === 0) {
+        throw new Error("No products found to place order.");
+      }
+
+      for (const postId of postIdsToCheckout) {
+        const response = await orders.checkout({
+          post_id: postId,
+          address_id: selectedAddressId,
+          payment_method_id: selectedPaymentMethodId,
+          delivery_mode: "domestic",
+        });
+
+        if (isFailedResponse(response)) {
+          throw new Error(response?.message || "Failed to place order");
+        }
       }
 
       navigation.navigate("orderScreen");
@@ -1001,12 +1064,12 @@ export default function CheckoutScreen() {
               <View style={styles.sectionCard}>
                 <Text style={styles.sectionKicker}>Items</Text>
 
-                {cartItems.length === 0 ? (
+                {checkoutItems.length === 0 ? (
                   <View style={styles.emptyStateBox}>
                     <Text style={styles.emptyStateText}>No items in your cart.</Text>
                   </View>
                 ) : (
-                  cartItems.map((item) => {
+                  checkoutItems.map((item) => {
                     const post = item?.post || {};
                     const imageUrl = post?.images?.[0]?.url || post?.cover_image_url || FALLBACK_CART_IMAGE;
                     const quantity = Number(item?.quantity || 1);
@@ -1035,7 +1098,7 @@ export default function CheckoutScreen() {
 
                 <View style={styles.summaryRow}>
                   <Text style={styles.summaryLabel}>Items</Text>
-                  <Text style={styles.summaryValue}>{formatMoney(subtotalAmount)}</Text>
+                  <Text style={styles.summaryValue}>{formatMoney(itemsAmount)}</Text>
                 </View>
                 <View style={styles.summaryRow}>
                   <Text style={styles.summaryLabel}>Delivery</Text>
@@ -1053,6 +1116,7 @@ export default function CheckoutScreen() {
                 <Text style={styles.policyText}>By placing your order you agree to our policies (MWP).</Text>
               </View>
 
+              {!isBuyNowFlow ? (
               <View style={styles.sectionCard}>
                 <Text style={styles.sectionKicker}>Need to change items?</Text>
                 <TouchableOpacity style={styles.editCartBtn} onPress={() => navigation.navigate("Main", { screen: "cart" })}>
@@ -1060,6 +1124,7 @@ export default function CheckoutScreen() {
                   <FontAwesome5 name="arrow-right" size={12} color="#344054" />
                 </TouchableOpacity>
               </View>
+              ) : null}
             </>
           ) : null}
         </View>

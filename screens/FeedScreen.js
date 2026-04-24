@@ -17,7 +17,7 @@ import HeaderSearch from "../components/HeaderSearch";
 import StoreCard from "../components/StoreCard";
 import DiscoveryCard from "../components/DiscoveryCard";
 import Header from "../components/Header";
-import { useNavigation } from "@react-navigation/native";
+import { useNavigation, useRoute } from "@react-navigation/native";
 import { FontAwesome5 } from "@expo/vector-icons";
 import { useAuth } from "../contexts/AuthContext";
 import { markets, posts, shops } from "../services/api";
@@ -84,6 +84,8 @@ const normalizeInfluencersResponse = (response) => {
 
 export default function FeedScreen() {
   const navigation = useNavigation();
+  const route = useRoute();
+  const sharedUrl = route.params?.sharedUrl;
   const { isAuthenticated } = useAuth();
   const [stores, setStores] = useState([]);
   const [marketsData, setMarketsData] = useState([]);
@@ -348,7 +350,7 @@ export default function FeedScreen() {
     }
   };
 
-  const handleLookupPost = async () => {
+  const handleLookupPost = useCallback(async () => {
     const normalizedUrl = String(lookupUrl || "").trim();
 
     if (!normalizedUrl) {
@@ -379,11 +381,20 @@ export default function FeedScreen() {
     } finally {
       setLookingUpPost(false);
     }
-  };
+  }, [lookupUrl, navigation, saveRecentlyViewedPostId]);
+
+  useEffect(() => {
+    // Handle shared URL from HandleShareScreen
+    if (sharedUrl) {
+      setLookupUrl(sharedUrl);
+      handleLookupPost();
+    }
+  }, [sharedUrl, handleLookupPost]);
 
   useEffect(() => {
     // Handle URLs shared from other apps
     const handleUrl = (url) => {
+      console.log('Received URL:', url);
       if (url && (url.includes('instagram.com') || url.includes('facebook.com') || url.includes('pinterest.com'))) {
         // Auto-fill the lookup URL and trigger search
         setLookupUrl(url);
@@ -406,7 +417,7 @@ export default function FeedScreen() {
     return () => {
       subscription?.remove();
     };
-  }, []);
+  }, [handleLookupPost]);
 
   const handleRecentSearchPress = useCallback(
     async (term) => {

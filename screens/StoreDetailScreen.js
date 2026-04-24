@@ -122,6 +122,8 @@ export default function StoreDetailScreen() {
 
       try {
         const response = await shops.getBySlug(shopSlug);
+
+        console.log('get by slug--------', shopSlug, response)
         const nextShop =
           response?.shop ||
           response?.data?.shop ||
