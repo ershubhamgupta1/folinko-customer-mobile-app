@@ -6,6 +6,7 @@ import {
   ActivityIndicator,
   Image,
   Linking,
+  TextInput,
   TouchableOpacity,
   View,
   Text,
@@ -96,6 +97,7 @@ export default function FeedScreen() {
   const [showAllMarketplaceCities, setShowAllMarketplaceCities] = useState(false);
   const [recentSearchTerms, setRecentSearchTerms] = useState(DEFAULT_RECENT_SEARCH_TERMS);
   const [recentlyViewedItems, setRecentlyViewedItems] = useState([]);
+  const [feedSearchQuery, setFeedSearchQuery] = useState("");
   const [activeStoreQuery, setActiveStoreQuery] = useState("");
   const [loadingStores, setLoadingStores] = useState(true);
   const [applyingFilters, setApplyingFilters] = useState(false);
@@ -225,7 +227,6 @@ export default function FeedScreen() {
           ...(normalizedCity ? { city: normalizedCity } : {}),
           ...(normalizedQuery ? { q: normalizedQuery } : {}),
         });
-
         setDisplayedStores(Array.isArray(shopsData?.shops) ? shopsData.shops : []);
       } catch (e) {
         setDisplayedStores([]);
@@ -337,6 +338,29 @@ export default function FeedScreen() {
     loadRecentSearchTerms();
   }, [loadRecentSearchTerms]);
 
+  const handleFeedSearch = useCallback(
+    async (nextQuery = feedSearchQuery) => {
+      const normalizedQuery = String(nextQuery || "").trim();
+
+      try {
+        setActiveStoreQuery(normalizedQuery);
+
+        if (normalizedQuery) {
+          await saveRecentSearchTerm(normalizedQuery);
+        }
+
+        await loadDisplayedStores({
+          city: selectedCity,
+          q: normalizedQuery,
+          filters: activeDiscoveryFilters,
+        });
+      } catch (e) {
+        setStoresError(e?.message || "Failed to load discovery stores");
+      }
+    },
+    [activeDiscoveryFilters, feedSearchQuery, loadDisplayedStores, saveRecentSearchTerm, selectedCity]
+  );
+
   const handleApplyDiscoveryFilters = async (params) => {
     const nextFilters = params || {};
 
@@ -363,6 +387,22 @@ export default function FeedScreen() {
       setLookupError("");
 
       const response = await posts.lookupByUrl(normalizedUrl);
+      console.log('lookup url=======', response)
+      const lookupType = String(response?.lookup_type || response?.lookupType || "").toLowerCase();
+      const redirectShopSlug = String(response?.shop_slug || response?.shopSlug || "").trim();
+      const matchedSocialUrl = String(
+        response?.matched_social_url ?? response?.matchedSocialUrl ?? normalizedUrl
+      ).trim();
+
+      if (lookupType === "shop_redirect" && redirectShopSlug) {
+        setLookupUrl("");
+        navigation.navigate("storeDetail", {
+          shopSlug: redirectShopSlug,
+          ...(matchedSocialUrl ? { matchedLookupSocialUrl: matchedSocialUrl } : {}),
+        });
+        return;
+      }
+
       const postId =
         response?.post_id ??
         response?.postId ??
@@ -375,6 +415,7 @@ export default function FeedScreen() {
       }
 
       await saveRecentlyViewedPostId(postId);
+      setLookupUrl("");
       navigation.navigate("productDetail", { productId: postId });
     } catch (e) {
       setLookupError("No product found for this post URL.");
@@ -427,11 +468,10 @@ export default function FeedScreen() {
         return;
       }
 
-      setActiveStoreQuery(normalizedTerm);
-      await saveRecentSearchTerm(normalizedTerm);
-      await loadDisplayedStores({ city: selectedCity, q: normalizedTerm, filters: activeDiscoveryFilters });
+      setFeedSearchQuery(normalizedTerm);
+      await handleFeedSearch(normalizedTerm);
     },
-    [activeDiscoveryFilters, loadDisplayedStores, saveRecentSearchTerm, selectedCity]
+    [handleFeedSearch]
   );
 
   const handleSelectCity = useCallback(
@@ -615,6 +655,42 @@ export default function FeedScreen() {
             </TouchableOpacity>
           ) : null}
         />
+        <View style={styles.topFeedSearchCard}>
+          <View style={styles.topFeedSearchRow}>
+            <View style={styles.topFeedSearchInputWrap}>
+              <TextInput
+                placeholder="Search shops, products, material..."
+                placeholderTextColor="#98A2B3"
+                style={styles.topFeedSearchInput}
+                value={feedSearchQuery}
+                onChangeText={(value) => {
+                  setFeedSearchQuery(value);
+
+                  if (!String(value || "").trim()) {
+                    setActiveStoreQuery("");
+                    setStoresError("");
+                    loadDisplayedStores({ city: selectedCity, q: "", filters: activeDiscoveryFilters });
+                  } else if (storesError) {
+                    setStoresError("");
+                  }
+                }}
+                onSubmitEditing={() => handleFeedSearch()}
+                returnKeyType="search"
+                editable={!loadingStores}
+              />
+            </View>
+
+            <TouchableOpacity
+              style={[styles.topFeedSearchButton, loadingStores && styles.topFeedSearchButtonDisabled]}
+              onPress={() => handleFeedSearch()}
+              disabled={loadingStores}
+            >
+              <FontAwesome5 name="search" size={20} color="#111827" />
+              <Text style={styles.topFeedSearchButtonText}>{loadingStores ? "Searching..." : "Search"}</Text>
+            </TouchableOpacity>
+          </View>
+        </View>
+
         <View style={styles.marketplaceCard}>
           <View style={styles.marketplaceHeaderRow}>
             <View style={styles.marketplaceTitleWrap}>
@@ -857,7 +933,7 @@ export default function FeedScreen() {
 
         {!loadingStores && !storesError && displayedStores.length === 0 ? (
           <View style={styles.stateCard}>
-            <Text style={styles.stateText}>No shops found for the selected filters.</Text>
+            <Text style={styles.stateText}>Ask sellers to create a shop and post inventory, or remove city/search filters.</Text>
           </View>
         ) : null}
 
@@ -1030,6 +1106,52 @@ const styles = StyleSheet.create({
     marginLeft: 8,
     fontSize: 12,
     fontWeight: "600",
+    color: "#111827",
+  },
+
+  topFeedSearchCard: {
+    marginHorizontal: 16,
+    marginTop: 10,
+    marginBottom: 8,
+  },
+  topFeedSearchRow: {
+    flexDirection: "row",
+    alignItems: "center",
+  },
+  topFeedSearchInputWrap: {
+    flex: 1,
+    backgroundColor: "#FFFFFF",
+    borderRadius: 30,
+    borderWidth: 3,
+    borderColor: "#F3D3BB",
+    minHeight: 42,
+    justifyContent: "center",
+    paddingHorizontal: 18,
+    marginRight: 12,
+  },
+  topFeedSearchInput: {
+    fontSize: 14,
+    color: "#344054",
+    paddingVertical: 0,
+  },
+  topFeedSearchButton: {
+    minHeight: 42,
+    paddingHorizontal: 22,
+    borderRadius: 26,
+    borderWidth: 1,
+    borderColor: "#D8DEE8",
+    backgroundColor: "#FFFFFF",
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  topFeedSearchButtonDisabled: {
+    opacity: 0.7,
+  },
+  topFeedSearchButtonText: {
+    marginLeft: 10,
+    fontSize: 14,
+    fontWeight: "500",
     color: "#111827",
   },
 

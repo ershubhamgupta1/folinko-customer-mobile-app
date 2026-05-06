@@ -25,11 +25,22 @@ const CartScreen = () => {
   const [updatingItemId, setUpdatingItemId] = useState("");
   const [removingItemId, setRemovingItemId] = useState("");
 
-  const openProductDetail = (productId) => {
-    navigation.navigate("productDetail", { productId });
-  };
+  const openProductDetail = (item) => {
+    const productId = String(item?.post?.id || item?.post_id || "").trim();
+    const checkoutPostId = String(item?.post_id || item?.post?.id || "").trim();
 
-  console.log('cartItems=========', JSON.stringify(cartItems))
+    if (!productId) {
+      return;
+    }
+
+    navigation.navigate("productDetail", {
+      productId,
+      checkoutPostId,
+      originAccountType: item?.is_collab ? "influencer" : "business",
+      originCollabRequestId: item?.collab_request_id ?? "",
+      originCustomerUrlPath: item?.customer_url_path ?? "",
+    });
+  };
 
   const onRefresh = useCallback(() => {
     setRefreshing(true);
@@ -87,7 +98,7 @@ const CartScreen = () => {
     setQtyByItemId((prev) => ({ ...prev, [String(itemId)]: next }));
   };
 
-  const handleUpdateItemQuantity = async (postId, itemId, currentQuantity) => {
+  const handleUpdateItemQuantity = async (postId, itemId, currentQuantity, collabRequestId) => {
     const targetPostId = String(postId || "");
     const targetItemId = String(itemId || "");
     const nextQuantity = Number.parseInt(qtyByItemId[targetItemId] ?? String(currentQuantity ?? ""), 10);
@@ -110,7 +121,10 @@ const CartScreen = () => {
       setUpdatingItemId(targetItemId);
       setError("");
 
-      const response = await cart.updateQuantity(targetPostId, { quantity: nextQuantity });
+      const response = await cart.updateQuantity(targetPostId, {
+        quantity: nextQuantity,
+        collab_request_id: collabRequestId,
+      });
 
       if (response === undefined || response?.error || response?.errors || response?.success === false) {
         throw new Error(response?.message || "Failed to update cart item");
@@ -124,7 +138,7 @@ const CartScreen = () => {
     }
   };
 
-  const handleRemoveItem = async (postId) => {
+  const handleRemoveItem = async (postId, collabRequestId) => {
     const targetPostId = String(postId || "");
 
     if (!targetPostId) {
@@ -136,7 +150,9 @@ const CartScreen = () => {
       setRemovingItemId(targetPostId);
       setError("");
 
-      const response = await cart.remove(targetPostId);
+      const response = await cart.remove(targetPostId, {
+        collab_request_id: collabRequestId,
+      });
 
       if (response === undefined || response?.error || response?.errors || response?.success === false) {
         throw new Error(response?.message || "Failed to remove cart item");
@@ -212,7 +228,9 @@ const CartScreen = () => {
             const quantity = Number(item?.quantity || 1);
             const itemTotal = price * quantity;
             const itemId = String(item?.id);
-            const postId = String(post?.id || "");
+            const postId = String(item?.post_id || post?.id || "");
+            const collabRequestId = item?.collab_request_id ?? "";
+            const isInfluencerCartItem = Boolean(item?.is_collab || collabRequestId);
             const nextQtyValue = qtyByItemId[itemId] ?? String(quantity);
             const parsedNextQty = Number.parseInt(nextQtyValue, 10);
             const isUpdating = updatingItemId === itemId;
@@ -229,7 +247,7 @@ const CartScreen = () => {
                 key={itemId}
                 activeOpacity={0.92}
                 style={styles.productCard}
-                onPress={() => openProductDetail(post?.id)}
+                onPress={() => openProductDetail(item)}
               >
                 <View style={styles.productMediaColumn}>
                   <Image source={{ uri: imageUrl }} style={styles.image} />
@@ -248,7 +266,7 @@ const CartScreen = () => {
 
                     <TouchableOpacity
                       style={[styles.updateBtn, isUpdateDisabled && styles.updateBtnDisabled]}
-                      onPress={() => handleUpdateItemQuantity(postId, itemId, quantity)}
+                      onPress={() => handleUpdateItemQuantity(postId, itemId, quantity, collabRequestId)}
                       disabled={isUpdateDisabled}
                     >
                       <Text style={styles.updateBtnText}>{isUpdating ? "Updating..." : "Update"}</Text>
@@ -273,9 +291,14 @@ const CartScreen = () => {
                         <View style={styles.progressFill} />
                       </View>
                     </View>
+                  {isInfluencerCartItem ? (
+                    <View style={styles.collabTag}>
+                      <Text style={styles.collabTagText}>Collab Request</Text>
+                    </View>
+                  ) : null}
                   <TouchableOpacity
                     style={[styles.removeBtn, isRemoving && styles.removeBtnDisabled]}
-                    onPress={() => handleRemoveItem(postId)}
+                    onPress={() => handleRemoveItem(postId, collabRequestId)}
                     disabled={isRemoving}
                   >
                     <Text style={styles.removeBtnText}>{isRemoving ? "Removing..." : "Remove"}</Text>
@@ -517,6 +540,23 @@ const styles = StyleSheet.create({
     fontSize: 12,
     color: "#C2410C",
     fontWeight: "600",
+  },
+
+  collabTag: {
+    alignSelf: "flex-start",
+    marginTop: 10,
+    borderWidth: 1,
+    borderColor: "#FED7AA",
+    backgroundColor: "#FFF7ED",
+    borderRadius: 999,
+    paddingHorizontal: 12,
+    paddingVertical: 7,
+  },
+
+  collabTagText: {
+    fontSize: 12,
+    color: "#C2410C",
+    fontWeight: "500",
   },
 
   qtyColumn: {

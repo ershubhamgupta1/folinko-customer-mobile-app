@@ -263,8 +263,8 @@ export const shops = {
       `/api/customer/shops${toQueryString({ city, q, sort, verified, photo, account_type, min_posts, page, page_size })}`
     ),
 
-  getBySlug: (slug, { page = 1, page_size = 30 } = {}) =>
-    apiRequest(`/api/customer/shops/${encodeURIComponent(slug)}${toQueryString({ page, page_size })}`),
+  getBySlug: (slug, { page = 1, page_size = 30, link } = {}) =>
+    apiRequest(`/api/customer/shops/${encodeURIComponent(slug)}${toQueryString({ page, page_size, link })}`),
 };
 
 // Posts (public)
@@ -294,20 +294,37 @@ export const wishlist = {
 // Cart (requires customer token)
 export const cart = {
   get: () => apiRequest('/api/customer/cart'),
-  add: (postId, { quantity } = {}) =>
+  add: (postId, { quantity, collab_request_id } = {}) =>
     apiRequest(`/api/customer/cart/${encodeURIComponent(String(postId))}`, {
       method: 'POST',
-      body: JSON.stringify(quantity !== undefined ? { quantity } : {}),
+      body: JSON.stringify({
+        ...(quantity !== undefined ? { quantity } : {}),
+        ...(collab_request_id !== undefined && collab_request_id !== null && collab_request_id !== ''
+          ? { collab_request_id }
+          : {}),
+      }),
     }),
-  updateQuantity: (postId, { quantity }) =>
+  updateQuantity: (postId, { quantity, collab_request_id } = {}) =>
     apiRequest(`/api/customer/cart/${encodeURIComponent(String(postId))}`, {
       method: 'PUT',
-      body: JSON.stringify({ quantity }),
+      body: JSON.stringify({
+        quantity,
+        ...(collab_request_id !== undefined && collab_request_id !== null && collab_request_id !== ''
+          ? { collab_request_id }
+          : {}),
+      }),
     }),
-  remove: (postId) =>
-    apiRequest(`/api/customer/cart/${encodeURIComponent(String(postId))}`, {
+  remove: (postId, { collab_request_id } = {}) =>
+    apiRequest(
+      `/api/customer/cart/${encodeURIComponent(String(postId))}${
+        collab_request_id !== undefined && collab_request_id !== null && collab_request_id !== ''
+          ? `?collab_request_id=${encodeURIComponent(String(collab_request_id))}`
+          : ''
+      }`,
+      {
       method: 'DELETE',
-    }),
+      }
+    ),
 };
 
 // Saved addresses (requires customer token)
@@ -340,7 +357,7 @@ export const paymentMethods = {
 
 // Checkout + Orders (requires customer token)
 export const orders = {
-  checkout: ({ post_id, address_id, payment_method_id, delivery_mode } = {}) =>
+  checkout: ({ post_id, address_id, payment_method_id, delivery_mode, collab_request_id } = {}) =>
     apiRequest('/api/customer/orders/checkout', {
       method: 'POST',
       body: JSON.stringify({
@@ -348,6 +365,9 @@ export const orders = {
         ...(address_id !== undefined ? { address_id } : {}),
         ...(payment_method_id !== undefined ? { payment_method_id } : {}),
         ...(delivery_mode !== undefined ? { delivery_mode } : {}),
+        ...(collab_request_id !== undefined && collab_request_id !== null && collab_request_id !== ''
+          ? { collab_request_id }
+          : {}),
       }),
     }),
   list: () => apiRequest('/api/customer/orders'),

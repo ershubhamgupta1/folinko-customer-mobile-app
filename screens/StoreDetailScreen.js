@@ -29,7 +29,6 @@ const SOCIAL_META = [
 const FALLBACK_POST_IMAGE =
   "https://images.unsplash.com/photo-1529139574466-a303027c1d8b?auto=format&fit=crop&w=1000&q=80";
 
-
 const getArray = (value) => (Array.isArray(value) ? value : []);
 
 const getStoreSinceYear = (shop) => {
@@ -97,6 +96,7 @@ export default function StoreDetailScreen() {
   const route = useRoute();
   const shopSlug = route.params?.shopSlug;
   const routeAccountType = route.params?.accountType;
+  const matchedLookupSocialUrl = String(route.params?.matchedLookupSocialUrl || "").trim();
   // const shopSlug = 'sharma-sarees';
 
   const { isAuthenticated } = useAuth();
@@ -121,9 +121,13 @@ export default function StoreDetailScreen() {
       setError("");
 
       try {
-        const response = await shops.getBySlug(shopSlug);
+        const response = await shops.getBySlug(shopSlug, {
+          page: 1,
+          page_size: 60,
+          ...(matchedLookupSocialUrl ? { link: matchedLookupSocialUrl } : {}),
+        });
 
-        console.log('get by slug--------', shopSlug, response)
+        console.log(" matchedLookupSocialUr lresponse========", response, matchedLookupSocialUrl)
         const nextShop =
           response?.shop ||
           response?.data?.shop ||
@@ -175,7 +179,7 @@ export default function StoreDetailScreen() {
     };
 
     fetchShop();
-  }, [shopSlug]);
+  }, [matchedLookupSocialUrl, shopSlug]);
 
   const normalizedStore = useMemo(() => {
     const shop = shopData || {};
@@ -268,7 +272,7 @@ export default function StoreDetailScreen() {
       name: shop?.name || "Store",
       city: shop?.city || "Delhi",
       category: shop?.category || "Fashion",
-      coverImage: shop?.cover_image_url ,
+      coverImage: shop?.cover_image_url,
       postCount: Number(shop?.post_count || shopPosts.length || 0),
       trustScore,
       trustLabel: trustMeter?.label || "New",
@@ -312,15 +316,28 @@ export default function StoreDetailScreen() {
         url: isValid ? handle : "",
         disabled: !isValid, // Add disabled flag for invalid handles
       };
-    });
+    }).filter((item) => !item.disabled);
   }, [shopData]);
 
   const navigateToTab = (screen) => {
     navigation.navigate("Main", { screen });
   };
 
-  const openProductDetail = (productId) => {
-    navigation.navigate("productDetail", { productId });
+  const openProductDetail = (post) => {
+    const targetProductId = String(post?.id || "").trim();
+
+    if (!targetProductId) {
+      return;
+    }
+
+    navigation.navigate("productDetail", {
+      productId: targetProductId,
+      checkoutPostId: targetProductId,
+      originAccountType: normalizedStore.accountType,
+      originCollabRequestId: post?.collabRequestId ?? "",
+      originCustomerUrlPath: post?.customerUrlPath ?? "",
+      originShopSlug: shopSlug,
+    });
   };
 
   const handleOpenUrl = async (url) => {
@@ -341,8 +358,9 @@ export default function StoreDetailScreen() {
     await handleOpenUrl(targetUrl);
   };
 
-  const handleAddToCart = async (postId) => {
-    const normalizedPostId = String(postId || "").trim();
+  const handleAddToCart = async (post) => {
+    const normalizedPostId = String(post?.id || "").trim();
+    const collabRequestId = post?.collabRequestId ?? "";
 
     if (!normalizedPostId) {
       Alert.alert("Error", "Product not available for cart.");
@@ -357,7 +375,10 @@ export default function StoreDetailScreen() {
 
     try {
       setAddingPostId(normalizedPostId);
-      const response = await cart.add(normalizedPostId, { quantity: 1 });
+      const response = await cart.add(normalizedPostId, {
+        quantity: 1,
+        collab_request_id: collabRequestId,
+      });
 
       if (response === undefined || response?.error || response?.errors || response?.success === false) {
         throw new Error(response?.message || "Failed to add product to cart.");
@@ -390,7 +411,13 @@ export default function StoreDetailScreen() {
           <Text style={styles.stateSubtitle}>{error}</Text>
           <TouchableOpacity
             style={styles.retryButton}
-            onPress={() => navigation.replace("storeDetail", { shopSlug })}
+            onPress={() =>
+              navigation.replace("storeDetail", {
+                shopSlug,
+                ...(routeAccountType ? { accountType: routeAccountType } : {}),
+                ...(matchedLookupSocialUrl ? { matchedLookupSocialUrl } : {}),
+              })
+            }
           >
             <Text style={styles.retryButtonText}>Retry</Text>
           </TouchableOpacity>
@@ -398,7 +425,13 @@ export default function StoreDetailScreen() {
       </SafeAreaView>
     );
   }
-  const storeTypeMessages = normalizedStore.overview.split('.').map(message=> message+'.');
+
+  const storeTypeMessages = (normalizedStore?.overview || "")
+    .split('.')
+    .map((message) => message.trim())
+    .filter(Boolean)
+    .map((message) => `${message}.`);
+
   return (
     <SafeAreaView style={styles.safeArea} edges={["top"]}>
       <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={styles.contentContainer}>
@@ -511,20 +544,19 @@ export default function StoreDetailScreen() {
               </View>
             ) : null}
 
-            {!normalizedStore.isInfluencer ? (
+            {socialLinks.length > 0 ? (
               <View style={styles.socialRow}>
-                {socialLinks.map((item) => (
+                {socialLinks.map((item) => {
+                  return (
                   <TouchableOpacity
                     key={item.key}
-                    style={[styles.socialChip, item.disabled && styles.socialChipMuted]}
+                    style={styles.socialChip}
                     onPress={() => handleOpenUrl(item.url)}
-                    disabled={item.disabled}
                   >
                     <FontAwesome5 
                       name={item.icon} 
                       size={10} 
                       color={
-                        item.disabled ? '#9CA3AF' :
                         item.key === 'instagram' ? '#E4405F' :
                         item.key === 'facebook' ? '#1877F2' :
                         item.key === 'youtube' ? '#FF0000' :
@@ -533,7 +565,8 @@ export default function StoreDetailScreen() {
                     />
                     <Text style={styles.socialChipText}>{item.label}</Text>
                   </TouchableOpacity>
-                ))}
+                )
+                })}
               </View>
             ) : null}
 
@@ -588,7 +621,7 @@ export default function StoreDetailScreen() {
                 key={item.id}
                 activeOpacity={0.92}
                 style={[styles.postCard, styles.postCardHorizontal]}
-                onPress={() => openProductDetail(item.id)}
+                onPress={() => openProductDetail(item)}
               >
             {/* <View style={styles.postHeaderRow}>
               <View style={styles.platformChip}>
@@ -632,7 +665,7 @@ export default function StoreDetailScreen() {
 
                 <TouchableOpacity
                   style={[styles.lightButton, addingPostId === item.id && styles.lightButtonDisabled]}
-                  onPress={() => handleAddToCart(item.id)}
+                  onPress={() => handleAddToCart(item)}
                   disabled={addingPostId === item.id}
                 >
                   <Text style={styles.lightButtonText}>{addingPostId === item.id ? "Adding..." : "Add"}</Text>
@@ -653,8 +686,12 @@ export default function StoreDetailScreen() {
           </ScrollView>
         ) : (
           <View style={styles.emptyCard}>
-            <Text style={styles.stateTitle}>No posts yet</Text>
-            <Text style={styles.stateSubtitle}>This store hasn’t published any visible posts yet.</Text>
+            <Text style={styles.stateTitle}>{matchedLookupSocialUrl ? "Matched post not available" : "No posts yet"}</Text>
+            <Text style={styles.stateSubtitle}>
+              {matchedLookupSocialUrl
+                ? "The post from the shared link is not available in this storefront right now."
+                : "This store hasn’t published any visible posts yet."}
+            </Text>
           </View>
         )}
       </ScrollView>

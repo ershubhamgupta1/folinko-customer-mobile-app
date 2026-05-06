@@ -20,7 +20,6 @@ const OrderScreen = () => {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
   const [orderList, setOrderList] = useState([]);
-  console.log('orderList=========', JSON.stringify(orderList))
   const onRefresh = useCallback(() => {
     setRefreshing(true);
     fetchOrders({ isRefresh: true });

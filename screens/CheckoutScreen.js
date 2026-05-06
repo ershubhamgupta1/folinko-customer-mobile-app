@@ -188,6 +188,7 @@ export default function CheckoutScreen() {
   });
   const buyNowPost = route?.params?.buyNowPost || null;
   const buyNowPostId = String(route?.params?.postId || buyNowPost?.id || "").trim();
+  const originCollabRequestId = route?.params?.originCollabRequestId ?? "";
   const isBuyNowFlow = !!buyNowPostId;
   const fetchCheckoutData = useCallback(async ({ isRefresh, preferredAddressId, preferredPaymentMethodId } = {}) => {
     if (!isRefresh) {
@@ -203,7 +204,6 @@ export default function CheckoutScreen() {
       addresses.list(),
       paymentMethods.list(),
     ]);
-    console.log('cartResult===========',JSON.stringify(cartResult))
     
     try {
       if (cartResult.status !== "fulfilled" || isFailedResponse(cartResult.value)) {
@@ -228,7 +228,6 @@ export default function CheckoutScreen() {
 
       setCartItems(nextCartItems);
       setSubtotalAmount(nextSubtotal);
-      console.log('nextAddresses========', nextAddresses);
       setAddressItems(nextAddresses);
       setPaymentMethodItems(nextPaymentMethods);
       setSelectedAddressId((current) => {
@@ -655,12 +654,12 @@ export default function CheckoutScreen() {
       return;
     }
 
-    if (!selectedAddressId) {
+    if (isBuyNowFlow && !selectedAddressId) {
       setError("Select a delivery address to continue.");
       return;
     }
 
-    if (!selectedPaymentMethodId) {
+    if (isBuyNowFlow && !selectedPaymentMethodId) {
       setError("Select a payment method to continue.");
       return;
     }
@@ -668,32 +667,17 @@ export default function CheckoutScreen() {
     try {
       setPlacingOrder(true);
       setError("");
+      const payload = {
+        ...(isBuyNowFlow ? { post_id: buyNowPostId } : {}),
+        ...(selectedAddressId ? { address_id: selectedAddressId } : {}),
+        ...(selectedPaymentMethodId ? { payment_method_id: selectedPaymentMethodId } : {}),
+        delivery_mode: "domestic",
+        ...(isBuyNowFlow && originCollabRequestId ? { collab_request_id: originCollabRequestId } : {}),
+      };
+      const response = await orders.checkout(payload);
 
-      const postIdsToCheckout = isBuyNowFlow
-        ? [buyNowPostId]
-        : Array.from(
-            new Set(
-              cartItems
-                .map((item) => String(item?.post_id || item?.post?.id || "").trim())
-                .filter(Boolean)
-            )
-          );
-
-      if (postIdsToCheckout.length === 0) {
-        throw new Error("No products found to place order.");
-      }
-
-      for (const postId of postIdsToCheckout) {
-        const response = await orders.checkout({
-          post_id: postId,
-          address_id: selectedAddressId,
-          payment_method_id: selectedPaymentMethodId,
-          delivery_mode: "domestic",
-        });
-
-        if (isFailedResponse(response)) {
-          throw new Error(response?.message || "Failed to place order");
-        }
+      if (isFailedResponse(response)) {
+        throw new Error(response?.message || "Failed to place order");
       }
 
       navigation.navigate("orderScreen");

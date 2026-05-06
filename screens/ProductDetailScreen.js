@@ -192,6 +192,11 @@ export default function ProductDetailScreen() {
   const insets = useSafeAreaInsets();
   const { logout, isAuthenticated } = useAuth();
   const productId = route.params?.productId ?? route.params?.id;
+  const checkoutPostId = String(route.params?.checkoutPostId || productId || "").trim();
+  const originAccountType = String(route.params?.originAccountType || "").trim().toLowerCase();
+  const originCollabRequestId = route.params?.originCollabRequestId ?? "";
+  const originCustomerUrlPath = route.params?.originCustomerUrlPath ?? "";
+  const originShopSlug = route.params?.originShopSlug ?? "";
   const [productData, setProductData] = useState(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
@@ -441,7 +446,7 @@ export default function ProductDetailScreen() {
   };
 
   const handleAddToCart = async () => {
-    const targetPostId = productData?.id || productId;
+    const targetPostId = checkoutPostId || productData?.id || productId;
 
     if (!isAuthenticated) {
       navigation.navigate('Login');
@@ -452,11 +457,24 @@ export default function ProductDetailScreen() {
       return;
     }
 
+    if (!selectedSize) {
+      setCartFeedback({ type: "error", message: "Please select size before adding to cart." });
+      return;
+    }
+
+    if (colorOptions.length && !selectedColor) {
+      setCartFeedback({ type: "error", message: "Please select color before adding to cart." });
+      return;
+    }
+
     try {
       setAddingToCart(true);
       setCartFeedback({ type: "", message: "" });
 
-      const response = await cart.add(targetPostId, { quantity: 1 });
+      const response = await cart.add(targetPostId, {
+        quantity: 1,
+        collab_request_id: originCollabRequestId,
+      });
 
       if (response === undefined || response?.error || response?.errors || response?.success === false) {
         throw new Error(response?.message || "Failed to add product to cart.");
@@ -471,7 +489,7 @@ export default function ProductDetailScreen() {
   };
 
   const handleBuyNow = async () => {
-    const targetPostId = productData?.id || productId;
+    const targetPostId = checkoutPostId || productData?.id || productId;
 
     if (!targetPostId) {
       setCartFeedback({ type: "error", message: "Product not available for checkout." });
@@ -500,6 +518,11 @@ export default function ProductDetailScreen() {
       navigation.navigate("checkoutScreen", {
         postId: targetPostId,
         buyNowPost: productData || { id: targetPostId },
+        checkoutPostId: targetPostId,
+        originAccountType,
+        originCollabRequestId,
+        originCustomerUrlPath,
+        originShopSlug,
       });
     } catch (e) {
       setCartFeedback({ type: "error", message: e?.message || "Failed to continue to checkout." });
@@ -634,7 +657,7 @@ export default function ProductDetailScreen() {
         </View>
 
         <View style={styles.sectionCard}>
-          <Text style={styles.captionText}>{normalizedProduct.caption}</Text>
+          {/* <Text style={styles.captionText}>{normalizedProduct.caption}</Text> */}
 
           <View style={styles.priceCard}>
             <Text style={styles.priceLabel}>Price</Text>

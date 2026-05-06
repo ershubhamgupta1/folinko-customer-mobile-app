@@ -9,12 +9,16 @@ import TypewriterText from "./LiveTypingAnimation";
 
 const MultiTypewriter = ({messages}) => {
   const [textIndex, setTextIndex] = useState(0);
+  const safeMessages = Array.isArray(messages) ? messages.filter(Boolean) : [];
+  if (!safeMessages.length) {
+    return null;
+  }
 
   return (
     <TypewriterText
-      text={messages[textIndex]}
+      text={safeMessages[textIndex]}
       onComplete={() =>
-        setTextIndex((prev) => (prev + 1) % messages.length)
+        setTextIndex((prev) => (prev + 1) % safeMessages.length)
       }
     />
   );
