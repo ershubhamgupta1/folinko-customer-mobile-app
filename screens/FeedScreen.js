@@ -1,4 +1,4 @@
-import React, { useCallback, useEffect, useMemo, useState } from "react";
+import React, { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import { ResizeMode, Video } from "expo-av";
 import * as Location from "expo-location";
@@ -22,6 +22,7 @@ import { useNavigation, useRoute } from "@react-navigation/native";
 import { FontAwesome5 } from "@expo/vector-icons";
 import { useAuth } from "../contexts/AuthContext";
 import { markets, posts, shops } from "../services/api";
+
 
 const FALLBACK_TOP_MARKETS = [
   { id: "market-1", city: "Noida", post_count: 4 },
@@ -107,6 +108,7 @@ export default function FeedScreen() {
   const [lookupUrl, setLookupUrl] = useState("");
   const [lookingUpPost, setLookingUpPost] = useState(false);
   const [lookupError, setLookupError] = useState("");
+  const lastHandledExternalUrlRef = useRef("");
 
   useEffect(() => {
     fetchData();
@@ -374,8 +376,8 @@ export default function FeedScreen() {
     }
   };
 
-  const handleLookupPost = useCallback(async () => {
-    const normalizedUrl = String(lookupUrl || "").trim();
+  const handleLookupPost = useCallback(async (incomingUrl) => {
+    const normalizedUrl = String(incomingUrl || lookupUrl || "").trim();
 
     if (!normalizedUrl) {
       setLookupError("Paste a social post link to search.");
@@ -425,32 +427,46 @@ export default function FeedScreen() {
   }, [lookupUrl, navigation, saveRecentlyViewedPostId]);
 
   useEffect(() => {
-    // Handle shared URL from HandleShareScreen
     if (sharedUrl) {
-      setLookupUrl(sharedUrl);
-      handleLookupPost();
+      const normalizedSharedUrl = String(sharedUrl).trim();
+
+      if (!normalizedSharedUrl || lastHandledExternalUrlRef.current === normalizedSharedUrl) {
+        return;
+      }
+
+      lastHandledExternalUrlRef.current = normalizedSharedUrl;
+      setLookupUrl(normalizedSharedUrl);
+      handleLookupPost(normalizedSharedUrl);
     }
   }, [sharedUrl, handleLookupPost]);
 
   useEffect(() => {
-    // Handle URLs shared from other apps
     const handleUrl = (url) => {
-      console.log('Received URL:', url);
-      if (url && (url.includes('instagram.com') || url.includes('facebook.com') || url.includes('pinterest.com'))) {
-        // Auto-fill the lookup URL and trigger search
-        setLookupUrl(url);
-        handleLookupPost();
+      const normalizedUrl = String(url || "").trim();
+
+      console.log('Received URL:', normalizedUrl);
+      if (
+        normalizedUrl &&
+        (normalizedUrl.includes('instagram.com') ||
+          normalizedUrl.includes('facebook.com') ||
+          normalizedUrl.includes('pinterest.com'))
+      ) {
+        if (lastHandledExternalUrlRef.current === normalizedUrl) {
+          return;
+        }
+
+        lastHandledExternalUrlRef.current = normalizedUrl;
+        setLookupUrl(normalizedUrl);
+        handleLookupPost(normalizedUrl);
       }
     };
 
-    // Check for initial URL (when app is opened from shared link)
     Linking.getInitialURL().then((url) => {
       if (url) {
         handleUrl(url);
       }
     });
 
-    // Listen for URL changes (when app is already open)
     const subscription = Linking.addEventListener('url', ({ url }) => {
       handleUrl(url);
     });

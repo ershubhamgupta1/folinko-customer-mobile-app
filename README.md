@@ -16,6 +16,7 @@ Steps to create APK
 🔹 Step 4: Configure build
 
   eas build:configure
+npx expo prebuild --clean
 
 
 🔹 Step 5: Update eas.json for APK
@@ -40,6 +41,7 @@ Steps to create APK
 
 🔹 Step 6: Run Build
   eas build -p android --profile preview
+eas build --platform android --profile development
 
 🔹 Step 7: Download APK
 

@@ -8,6 +8,8 @@ import AppNavigator from './navigation/AppNavigator';
 import { setNavigationRef } from './services/api';
 
 const APP_SCHEME = 'folinko';
+let hasHandledInitialShare = false;
+let shareIntentHandled = false;
 const SHARE_INTENT_OPTIONS = {
   debug: __DEV__,
   scheme: APP_SCHEME,
@@ -29,7 +31,8 @@ const linking = {
     );
     console.log('App.js: hasPendingShareIntent:', hasPendingShareIntent);
 
-    if (hasPendingShareIntent) {
+    if (hasPendingShareIntent && !hasHandledInitialShare) {
+      hasHandledInitialShare = true;
       console.log('App.js: Returning handle-share URL');
       return `${APP_SCHEME}://handle-share`;
     }
@@ -46,9 +49,15 @@ const linking = {
     });
     const shareIntentSubscription = ShareIntentModule?.addListener?.('onStateChange', ({ value }) => {
       console.log('App.js: Share intent state change:', value);
-      if (value === 'pending') {
+      if (value === 'pending' && !shareIntentHandled) {
+        shareIntentHandled = true;
         console.log('App.js: Returning handle-share URL from share intent');
         listener(`${APP_SCHEME}://handle-share`);
+        return;
+      }
+
+      if (value !== 'pending') {
+        shareIntentHandled = false;
       }
     });
 

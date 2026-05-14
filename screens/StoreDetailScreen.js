@@ -1,8 +1,9 @@
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import {
   Alert,
   ActivityIndicator,
   Image,
+  InteractionManager,
   Linking,
   ScrollView,
   StyleSheet,
@@ -97,6 +98,10 @@ export default function StoreDetailScreen() {
   const shopSlug = route.params?.shopSlug;
   const routeAccountType = route.params?.accountType;
   const matchedLookupSocialUrl = String(route.params?.matchedLookupSocialUrl || "").trim();
+  const productNavigationLockRef = useRef(false);
+  const productNavigationTaskRef = useRef(null);
+  const productNavigationDelayRef = useRef(null);
+  const productNavigationVerifyRef = useRef(null);
   // const shopSlug = 'sharma-sarees';
 
   const { isAuthenticated } = useAuth();
@@ -106,6 +111,48 @@ export default function StoreDetailScreen() {
   const [error, setError] = useState("");
   const [addingPostId, setAddingPostId] = useState("");
   const [measurementsOpen, setMeasurementsOpen] = useState(false);
+
+  const clearPendingProductNavigation = () => {
+    productNavigationTaskRef.current?.cancel?.();
+    productNavigationTaskRef.current = null;
+
+    if (productNavigationDelayRef.current) {
+      clearTimeout(productNavigationDelayRef.current);
+      productNavigationDelayRef.current = null;
+    }
+
+    if (productNavigationVerifyRef.current) {
+      clearTimeout(productNavigationVerifyRef.current);
+      productNavigationVerifyRef.current = null;
+    }
+
+    productNavigationLockRef.current = false;
+  };
+
+  const handleBackPress = () => {
+    clearPendingProductNavigation();
+
+    if (matchedLookupSocialUrl) {
+      navigation.reset({
+        index: 0,
+        routes: [{ name: "feedScreen" }],
+      });
+      return;
+    }
+
+    if (navigation.canGoBack?.()) {
+      navigation.goBack();
+      return;
+    }
+
+    navigation.replace("feedScreen");
+  };
+
+  useEffect(() => {
+    return () => {
+      clearPendingProductNavigation();
+    };
+  }, []);
 
   useEffect(() => {
     const fetchShop = async () => {
@@ -330,13 +377,49 @@ export default function StoreDetailScreen() {
       return;
     }
 
-    navigation.navigate("productDetail", {
+    if (productNavigationLockRef.current) {
+      return;
+    }
+
+    productNavigationLockRef.current = true;
+
+    const productParams = {
       productId: targetProductId,
       checkoutPostId: targetProductId,
       originAccountType: normalizedStore.accountType,
       originCollabRequestId: post?.collabRequestId ?? "",
       originCustomerUrlPath: post?.customerUrlPath ?? "",
       originShopSlug: shopSlug,
+    };
+
+    const releaseNavigationLock = () => {
+      setTimeout(() => {
+        productNavigationLockRef.current = false;
+      }, 1200);
+    };
+
+    productNavigationTaskRef.current = InteractionManager.runAfterInteractions(() => {
+      productNavigationTaskRef.current = null;
+      productNavigationDelayRef.current = setTimeout(() => {
+        productNavigationDelayRef.current = null;
+        try {
+          navigation.push("productDetail", productParams);
+        } catch (error) {
+          navigation.replace("productDetail", productParams);
+        }
+
+        productNavigationVerifyRef.current = setTimeout(() => {
+          productNavigationVerifyRef.current = null;
+          const navigationState = navigation.getState?.();
+          const currentRouteName = navigationState?.routes?.[navigationState.routes.length - 1]?.name;
+
+          if (currentRouteName !== "productDetail") {
+            navigation.replace("productDetail", productParams);
+          }
+
+          releaseNavigationLock();
+        }, 700);
+      }, 250);
     });
   };
 
@@ -455,7 +538,7 @@ export default function StoreDetailScreen() {
               )}
             </View>
 
-            <TouchableOpacity style={styles.backButton} onPress={() => navigation.goBack()}>
+            <TouchableOpacity style={styles.backButton} onPress={handleBackPress}>
               <FontAwesome5 name="arrow-left" size={11} color="#111827" />
               <Text style={styles.backText}>Back</Text>
             </TouchableOpacity>
