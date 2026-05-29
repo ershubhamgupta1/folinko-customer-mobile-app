@@ -390,13 +390,53 @@ export default function FeedScreen() {
 
       const response = await posts.lookupByUrl(normalizedUrl);
       console.log('lookup url=======', response)
-      const lookupType = String(response?.lookup_type || response?.lookupType || "").toLowerCase();
-      const redirectShopSlug = String(response?.shop_slug || response?.shopSlug || "").trim();
-      const matchedSocialUrl = String(
-        response?.matched_social_url ?? response?.matchedSocialUrl ?? normalizedUrl
+      const lookupType = String(
+        response?.lookup_type ||
+        response?.lookupType ||
+        response?.data?.lookup_type ||
+        response?.data?.lookupType ||
+        ""
+      ).toLowerCase();
+      const redirectShopSlug = String(
+        response?.shop_slug ||
+        response?.shopSlug ||
+        response?.shop?.slug ||
+        response?.store?.slug ||
+        response?.redirect?.shop_slug ||
+        response?.redirect?.shopSlug ||
+        response?.data?.shop_slug ||
+        response?.data?.shopSlug ||
+        response?.data?.shop?.slug ||
+        response?.data?.store?.slug ||
+        ""
       ).trim();
+      const matchedSocialUrl = String(
+        response?.matched_social_url ??
+        response?.matchedSocialUrl ??
+        response?.data?.matched_social_url ??
+        response?.data?.matchedSocialUrl ??
+        normalizedUrl
+      ).trim();
+      const postId =
+        response?.post_id ??
+        response?.postId ??
+        response?.data?.post_id ??
+        response?.data?.postId ??
+        response?.id ??
+        response?.post?.id ??
+        response?.data?.id ??
+        response?.data?.post?.id;
+      const isExplicitStoreRedirect =
+        lookupType === "shop_redirect" ||
+        lookupType === "store_redirect" ||
+        lookupType === "shop" ||
+        lookupType === "store";
+      const shouldOpenStore = Boolean(
+        redirectShopSlug &&
+          (isExplicitStoreRedirect || (!postId && !lookupType))
+      );
 
-      if (lookupType === "shop_redirect" && redirectShopSlug) {
+      if (shouldOpenStore) {
         setLookupUrl("");
         navigation.navigate("storeDetail", {
           shopSlug: redirectShopSlug,
@@ -404,12 +444,6 @@ export default function FeedScreen() {
         });
         return;
       }
-
-      const postId =
-        response?.post_id ??
-        response?.postId ??
-        response?.id ??
-        response?.post?.id;
 
       if (!postId) {
         setLookupError("No product found for this post URL.");
