@@ -1,9 +1,8 @@
-import { useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import {
   Alert,
   ActivityIndicator,
-  Dimensions,
   Image,
   Linking,
   ScrollView,
@@ -215,6 +214,7 @@ export default function ProductDetailScreen() {
   const [savingToWishlist, setSavingToWishlist] = useState(false);
   const [wishlistFeedback, setWishlistFeedback] = useState({ type: "", message: "" });
   const [currentImageIndex, setCurrentImageIndex] = useState(0);
+  const [carouselWidth, setCarouselWidth] = useState(0);
 
   useEffect(() => {
     const fetchProduct = async () => {
@@ -246,6 +246,10 @@ export default function ProductDetailScreen() {
     };
 
     fetchProduct();
+  }, [productId]);
+
+  useEffect(() => {
+    setCurrentImageIndex(0);
   }, [productId]);
 
   useEffect(() => {
@@ -410,6 +414,26 @@ export default function ProductDetailScreen() {
       }))
       .filter((post) => post.id);
   }, [productData?.id, productId, relatedProductsData]);
+
+  const carouselImageCount = normalizedProduct.allImages.length;
+
+  const handleCarouselScroll = useCallback(
+    (event) => {
+      const { contentOffset, layoutMeasurement } = event.nativeEvent;
+      const pageWidth = layoutMeasurement.width;
+      if (pageWidth <= 0 || carouselImageCount <= 0) {
+        return;
+      }
+
+      const index = Math.max(
+        0,
+        Math.min(Math.round(contentOffset.x / pageWidth), carouselImageCount - 1)
+      );
+
+      setCurrentImageIndex((prev) => (prev === index ? prev : index));
+    },
+    [carouselImageCount]
+  );
 
   const navigateToTab = (screen) => {
     navigation.navigate("Main", { screen });
@@ -624,18 +648,27 @@ export default function ProductDetailScreen() {
             horizontal
             showsHorizontalScrollIndicator={false}
             pagingEnabled
+            nestedScrollEnabled
+            scrollEventThrottle={16}
             style={styles.heroImageScrollView}
-            onMomentumScrollEnd={(event) => {
-              const contentOffset = event.nativeEvent.contentOffset;
-              const index = Math.round(contentOffset.x / Dimensions.get('window').width);
-              setCurrentImageIndex(index);
+            onLayout={(event) => {
+              const width = event.nativeEvent.layout.width;
+              if (width > 0 && width !== carouselWidth) {
+                setCarouselWidth(width);
+              }
             }}
+            onScroll={handleCarouselScroll}
+            onMomentumScrollEnd={handleCarouselScroll}
+            onScrollEndDrag={handleCarouselScroll}
           >
             {normalizedProduct.allImages.map((imageUrl, index) => (
               <Image
-                key={index}
+                key={`${imageUrl}-${index}`}
                 source={{ uri: imageUrl }}
-                style={styles.heroImage}
+                style={[
+                  styles.heroImage,
+                  carouselWidth > 0 && { width: carouselWidth },
+                ]}
               />
             ))}
           </ScrollView>
@@ -1067,7 +1100,6 @@ const styles = StyleSheet.create({
     height: 390,
   },
   heroImage: {
-    width: Dimensions.get('window').width,
     height: 390,
     backgroundColor: "#E5E7EB",
   },

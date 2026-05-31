@@ -377,6 +377,7 @@ export default function FeedScreen() {
   };
 
   const handleLookupPost = useCallback(async (incomingUrl) => {
+    const isExternalShare = Boolean(String(incomingUrl || "").trim());
     const normalizedUrl = String(incomingUrl || lookupUrl || "").trim();
 
     if (!normalizedUrl) {
@@ -457,6 +458,10 @@ export default function FeedScreen() {
       setLookupError("No product found for this post URL.");
     } finally {
       setLookingUpPost(false);
+      if (isExternalShare) {
+        lastHandledExternalUrlRef.current = "";
+        navigation.setParams({ sharedUrl: undefined });
+      }
     }
   }, [lookupUrl, navigation, saveRecentlyViewedPostId]);
 

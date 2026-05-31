@@ -42,13 +42,27 @@ const HandleShareScreen = () => {
   const handledRef = useRef(false);
   const waitTimeoutRef = useRef(null);
   const navigationRef = useRef(false);
+  const lastProcessedShareKeyRef = useRef('');
   const { error, hasShareIntent, isReady, resetShareIntent, shareIntent } = useShareIntentContext();
   const hasNativePayload = hasIntentPayload(shareIntent);
+  const shareKey = String(
+    shareIntent?.webUrl ||
+    shareIntent?.text ||
+    shareIntent?.meta?.title ||
+    ''
+  ).trim();
 
   useEffect(() => {
-    if (handledRef.current) {
+    if (!shareKey) {
       return;
     }
+
+    if (lastProcessedShareKeyRef.current === shareKey) {
+      return;
+    }
+
+    handledRef.current = false;
+    navigationRef.current = false;
 
     const nativeModuleMissing = !ShareIntentModule;
     const intentDraft = hasNativePayload ? buildSharedDraftFromIntent(shareIntent) : null;
@@ -76,6 +90,7 @@ const HandleShareScreen = () => {
     }
 
     handledRef.current = true;
+    lastProcessedShareKeyRef.current = shareKey;
 
     if (waitTimeoutRef.current) {
       clearTimeout(waitTimeoutRef.current);
@@ -149,13 +164,16 @@ const HandleShareScreen = () => {
     };
 
     run();
-  }, [error, hasNativePayload, hasShareIntent, isReady, navigation, resetShareIntent, shareIntent]);
+  }, [error, hasNativePayload, hasShareIntent, isReady, navigation, resetShareIntent, shareIntent, shareKey]);
 
   useEffect(() => {
     return () => {
       if (waitTimeoutRef.current) {
         clearTimeout(waitTimeoutRef.current);
       }
+      handledRef.current = false;
+      navigationRef.current = false;
+      lastProcessedShareKeyRef.current = '';
     };
   }, []);
 
